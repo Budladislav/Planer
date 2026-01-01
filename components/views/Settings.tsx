@@ -1,0 +1,96 @@
+import React, { useRef } from 'react';
+import { useAppStore } from '../../store';
+import { Download, Upload, Trash2 } from 'lucide-react';
+
+export const SettingsView: React.FC = () => {
+  const { state, dispatch } = useAppStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "monofocus_backup.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file) return;
+     const reader = new FileReader();
+     reader.onload = (evt) => {
+        try {
+           const parsed = JSON.parse(evt.target?.result as string);
+           // Simple schema check
+           if (parsed.tasks && parsed.captures) {
+             dispatch({ type: 'IMPORT_DATA', payload: parsed });
+             alert("Data imported successfully!");
+           } else {
+             alert("Invalid file format.");
+           }
+        } catch (err) {
+           alert("Error parsing JSON.");
+        }
+     };
+     reader.readAsText(file);
+  };
+
+  const handleReset = () => {
+    if (window.confirm("ARE YOU SURE? This will wipe all data permanently.")) {
+       dispatch({ type: 'RESET_DATA' });
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
+
+      <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
+         <div className="p-6 flex items-center justify-between">
+            <div>
+               <h3 className="font-semibold text-slate-800">Export Data</h3>
+               <p className="text-sm text-slate-500">Download a JSON backup of your planner.</p>
+            </div>
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50">
+               <Download className="w-4 h-4" /> Export
+            </button>
+         </div>
+
+         <div className="p-6 flex items-center justify-between">
+            <div>
+               <h3 className="font-semibold text-slate-800">Import Data</h3>
+               <p className="text-sm text-slate-500">Restore from a backup file.</p>
+            </div>
+            <div>
+               <input 
+                 type="file" 
+                 accept=".json" 
+                 ref={fileInputRef} 
+                 className="hidden" 
+                 onChange={handleImport} 
+               />
+               <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50">
+                  <Upload className="w-4 h-4" /> Import
+               </button>
+            </div>
+         </div>
+
+         <div className="p-6 flex items-center justify-between bg-red-50">
+            <div>
+               <h3 className="font-semibold text-red-900">Danger Zone</h3>
+               <p className="text-sm text-red-700">Delete all tasks, events, and settings.</p>
+            </div>
+            <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded hover:bg-red-100">
+               <Trash2 className="w-4 h-4" /> Reset All
+            </button>
+         </div>
+      </div>
+      
+      <div className="text-center text-xs text-slate-400 mt-8">
+         MonoFocus v1.0 • Data stored locally in browser
+      </div>
+    </div>
+  );
+};
