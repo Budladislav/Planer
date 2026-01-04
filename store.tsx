@@ -2,6 +2,79 @@ import React, { createContext, useContext, useEffect, useReducer, useState } fro
 import { AppState, Capture, Task, CalendarEvent, INITIAL_STATE, ViewState } from './types';
 import { generateId, getTodayString } from './utils';
 
+// Migration function to normalize imported data
+const migrateAppState = (parsed: any): AppState => {
+  const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done'];
+  const migratedView =
+    parsed.lastActiveView === 'focus' ? 'today' :
+    allowedViews.includes(parsed.lastActiveView) ? parsed.lastActiveView : 'today';
+
+  // Migrate tasks: remove deprecated 'difficulty' field, ensure all required fields exist
+  const migratedTasks = Array.isArray(parsed.tasks)
+    ? parsed.tasks
+        .map((t: any) => {
+          if (!t || typeof t !== 'object') return null;
+          const { difficulty, ...rest } = t;
+          // Ensure required fields exist with defaults
+          return {
+            id: rest.id || generateId(),
+            title: rest.title || '',
+            status: rest.status === 'done' ? 'done' : 'todo',
+            plan: {
+              day: rest.plan?.day ?? null,
+              week: rest.plan?.week ?? null,
+            },
+            frog: rest.frog === true,
+            projectId: rest.projectId ?? null,
+            createdAt: rest.createdAt || new Date().toISOString(),
+            updatedAt: rest.updatedAt || new Date().toISOString(),
+            timeSpent: rest.timeSpent,
+          };
+        })
+        .filter((t: Task | null): t is Task => t !== null)
+    : [];
+
+  // Migrate captures: ensure all required fields exist
+  const migratedCaptures = Array.isArray(parsed.captures)
+    ? parsed.captures
+        .map((c: any) => {
+          if (!c || typeof c !== 'object') return null;
+          return {
+            id: c.id || generateId(),
+            text: c.text || '',
+            createdAt: c.createdAt || new Date().toISOString(),
+            status: c.status === 'processed' || c.status === 'archived' ? c.status : 'new',
+          };
+        })
+        .filter((c: Capture | null): c is Capture => c !== null)
+    : [];
+
+  // Migrate events: ensure all required fields exist
+  const migratedEvents = Array.isArray(parsed.events)
+    ? parsed.events
+        .map((e: any) => {
+          if (!e || typeof e !== 'object') return null;
+          return {
+            id: e.id || generateId(),
+            title: e.title || '',
+            date: e.date || getTodayString(),
+            time: e.time || '00:00',
+            note: e.note ?? null,
+          };
+        })
+        .filter((e: CalendarEvent | null): e is CalendarEvent => e !== null)
+    : [];
+
+  return {
+    captures: migratedCaptures,
+    tasks: migratedTasks,
+    events: migratedEvents,
+    activeTaskId: parsed.activeTaskId ?? null,
+    activeTaskStartedAt: parsed.activeTaskStartedAt ?? null,
+    lastActiveView: migratedView,
+  };
+};
+
 // Actions
 type Action =
   | { type: 'INIT_STATE'; payload: AppState }
@@ -15,7 +88,7 @@ type Action =
   | { type: 'UPDATE_EVENT'; payload: Partial<CalendarEvent> & { id: string } }
   | { type: 'DELETE_EVENT'; payload: string }
   | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
-  | { type: 'IMPORT_DATA'; payload: AppState }
+  | { type: 'IMPORT_DATA'; payload: any }
   | { type: 'RESET_DATA' };
 
 // Reducer
@@ -78,7 +151,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
         activeTaskStartedAt: action.payload.id ? (action.payload.startedAt ?? Date.now()) : null,
       };
     case 'IMPORT_DATA':
-        return action.payload;
+        // Apply migration to imported data
+        return migrateAppState(action.payload);
     case 'RESET_DATA':
         return INITIAL_STATE;
     default:
@@ -99,30 +173,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done'];
-        const migratedView =
-          parsed.lastActiveView === 'focus' ? 'today' :
-          allowedViews.includes(parsed.lastActiveView) ? parsed.lastActiveView : 'today';
-
-        const migratedTasks = Array.isArray(parsed.tasks)
-          ? parsed.tasks.map((t: any) => {
-              const { difficulty, ...rest } = t || {};
-              return rest;
-            })
-          : [];
-
-        const migrated: AppState = {
-          captures: Array.isArray(parsed.captures) ? parsed.captures : [],
-          tasks: migratedTasks,
-          events: Array.isArray(parsed.events) ? parsed.events : [],
-          activeTaskId: parsed.activeTaskId ?? null,
-          activeTaskStartedAt: parsed.activeTaskStartedAt ?? null,
-          lastActiveView: migratedView,
-        };
-
-        dispatch({ type: 'INIT_STATE', payload: migrated });
+        // Validate that parsed data is an object before migration
+        if (parsed && typeof parsed === 'object') {
+          const migrated = migrateAppState(parsed);
+          dispatch({ type: 'INIT_STATE', payload: migrated });
+        } else {
+          console.warn("Invalid data format in localStorage, starting with empty state");
+        }
       } catch (e) {
-        console.error("Failed to load state", e);
+        console.error("Failed to load state from localStorage:", e);
+        // Don't wipe localStorage on error - user might want to recover manually
+        // Just start with empty state
       }
     }
     setHydrated(true);

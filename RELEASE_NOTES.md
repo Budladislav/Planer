@@ -1,3 +1,10 @@
+## MonoFocus Planner — updates 1.1
+
+- **Bug fix**: Tasks in Today view now persist to the next day if not completed (previously disappeared).
+- **Backup improvements**: Enhanced import/export with full data validation and automatic migration.
+- **Backup filename**: Export files now include date and time (format: `monofocus_backup_YYYY-MM-DD_HH-MM-SS.json`).
+- **Data safety**: Improved error handling to prevent data loss during app updates.
+
 ## MonoFocus Planner — updates 1.0
 
 - Unified Today/Focus: single Today screen with focus mode, timer, and drag-and-drop ordering.

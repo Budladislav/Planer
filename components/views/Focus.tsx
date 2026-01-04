@@ -186,8 +186,15 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
 
   const activeTask = state.tasks.find(t => t.id === state.activeTaskId);
   
-  // All tasks for today
-  const allTodayTasks = state.tasks.filter(t => t.plan.day === todayStr);
+  // All tasks for today and past days that are not done
+  // Show tasks scheduled for today OR past days that are still todo
+  const allTodayTasks = state.tasks.filter(t => {
+    if (!t.plan.day) return false;
+    // Show today's tasks regardless of status
+    if (t.plan.day === todayStr) return true;
+    // Show past days' tasks only if they are still todo
+    return t.plan.day < todayStr && t.status === 'todo';
+  });
   const todoTasks = allTodayTasks.filter(t => t.status === 'todo');
   const doneTasks = allTodayTasks.filter(t => t.status === 'done');
   
