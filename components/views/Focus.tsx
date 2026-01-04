@@ -358,12 +358,14 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
       setTimeout(() => {
         // Save accumulated time
         const finalTime = timerSeconds;
+        // Always set plan.day to today when completing, so it appears in Done under today's date
         dispatch({ 
           type: 'UPDATE_TASK', 
           payload: { 
             id: activeTask.id, 
             status: 'done',
-            timeSpent: finalTime
+            timeSpent: finalTime,
+            plan: { day: todayStr, week: null }
           } 
         });
       dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
@@ -407,7 +409,15 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   const handleComplete = (id: string) => {
     // Remove from task order if present
     setTaskOrder(taskOrder.filter(taskId => taskId !== id));
-    dispatch({ type: 'UPDATE_TASK', payload: { id, status: 'done' } });
+    // Always set plan.day to today when completing, so it appears in Done under today's date
+    dispatch({ 
+      type: 'UPDATE_TASK', 
+      payload: { 
+        id, 
+        status: 'done',
+        plan: { day: todayStr, week: null }
+      } 
+    });
   };
 
   const handleUpdate = (id: string, updates: Partial<Task>) => {

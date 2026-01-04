@@ -1,3 +1,12 @@
+## MonoFocus Planner — updates 1.2
+
+- **Week view enhancement**: Added day-by-day task management with drag-and-drop between days and week bucket.
+- **Week view features**: Tasks can be moved between days, collapsed past days, "All → Today" button for current day.
+- **Events as tasks**: Events are now created as tasks (with `projectId: 'event'`) and can be moved to Today like regular tasks.
+- **Date/time formatting**: Unified date format (DD.MM.YYYY) and 24-hour time format throughout the app.
+- **UI language**: All interface text translated to English.
+- **Bug fix**: Fixed "Today" button in week day tasks not working.
+
 ## MonoFocus Planner — updates 1.1
 
 - **Bug fix**: Tasks in Today view now persist to the next day if not completed (previously disappeared).

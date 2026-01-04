@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange } from '../../utils';
 import { ArrowDownCircle, Trash2, Check, ChevronLeft, ChevronRight, Edit2, Plus } from 'lucide-react';
@@ -9,6 +9,88 @@ export const WeekView: React.FC = () => {
   const [quickAdd, setQuickAdd] = useState('');
 
   const weekTasks = state.tasks.filter(t => t.plan.week === currentWeek && !t.plan.day); // Tasks in bucket, not assigned to day yet
+
+  // Calculate dates for Mon-Sun of current week using UTC to avoid TZ drift
+  const weekDays = useMemo(() => {
+    const [yearStr, weekNumStr] = currentWeek.split('-W');
+    const year = parseInt(yearStr, 10);
+    const weekNum = parseInt(weekNumStr, 10);
+
+    // ISO: week 1 is the week with Jan 4th, Monday is day 1
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = jan4.getUTCDay() || 7; // Sunday -> 7
+    const firstMonday = new Date(jan4);
+    firstMonday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+
+    const weekStart = new Date(firstMonday);
+    weekStart.setUTCDate(firstMonday.getUTCDate() + (weekNum - 1) * 7);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setUTCDate(weekStart.getUTCDate() + i);
+      const iso = d.toISOString().split('T')[0]; // YYYY-MM-DD (UTC)
+      const dd = d.getUTCDate().toString().padStart(2, '0');
+      const mm = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+      const yyyy = d.getUTCFullYear();
+      const label = `${dd}.${mm}.${yyyy}`;
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+      days.push({ label, date: iso, weekday });
+    }
+    return days;
+  }, [currentWeek]);
+
+  // Simple drag-and-drop state
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)');
+    const update = () => setIsTouch(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  // Tasks grouped by day for current week
+  // Show tasks assigned to each day (plan.day === day.date)
+  const dayTasks = useMemo(() => {
+    const map: Record<string, typeof state.tasks> = {};
+    weekDays.forEach((day) => {
+      map[day.date] = state.tasks.filter((t) => t.plan.day === day.date);
+    });
+    return map;
+  }, [state.tasks, weekDays]);
+
+  // Auto-expand days that have tasks, but only for today and future days
+  const todayStr = getTodayString();
+  useEffect(() => {
+    const next = new Set(expandedDays);
+    weekDays.forEach((day) => {
+      // Only auto-expand if day is today or in the future, and has tasks
+      if (day.date >= todayStr && (dayTasks[day.date]?.length || 0) > 0) {
+        next.add(day.date);
+      } else if (day.date < todayStr) {
+        // Collapse past days
+        next.delete(day.date);
+      }
+    });
+    if (next.size !== expandedDays.size) {
+      setExpandedDays(next);
+    }
+  }, [weekDays, dayTasks, todayStr]);
+
+  const toggleDay = (date: string) => {
+    const next = new Set(expandedDays);
+    if (next.has(date)) {
+      next.delete(date);
+    } else {
+      next.add(date);
+    }
+    setExpandedDays(next);
+  };
   
   // Helper to change week
   const changeWeek = (delta: number) => {
@@ -20,6 +102,28 @@ export const WeekView: React.FC = () => {
      if (week < 1) { year--; week = 52; }
      
      setCurrentWeek(`${year}-W${week.toString().padStart(2, '0')}`);
+  };
+
+  const moveToWeekBucket = (id: string) => {
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id,
+        plan: { week: currentWeek, day: null },
+      },
+    });
+  };
+
+  const moveTask = (id: string, day: string | null) => {
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id,
+        plan: day ? { day, week: null } : { week: currentWeek, day: null },
+      },
+    });
+    setMoveTaskId(null);
+    if (day) setExpandedDays(prev => new Set(prev).add(day));
   };
 
   const handleQuickAdd = (e: React.FormEvent) => {
@@ -43,13 +147,173 @@ export const WeekView: React.FC = () => {
   };
 
   const handleMoveToToday = (id: string) => {
+    const todayStr = getTodayString();
     dispatch({
        type: 'UPDATE_TASK',
        payload: {
          id,
-         plan: { day: getTodayString(), week: null } // Remove from week bucket, move to day
+         plan: { day: todayStr, week: null } // Move to today, remove from week
        }
     });
+  };
+
+  const handleMoveAllDayToToday = (dayDate: string) => {
+    const tasksToMove = dayTasks[dayDate] || [];
+    tasksToMove.forEach(task => {
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          id: task.id,
+          plan: { day: getTodayString(), week: null },
+        },
+      });
+    });
+  };
+
+  const DayTaskItem: React.FC<{ task: typeof state.tasks[0] }> = ({ task }) => {
+    const { dispatch } = useAppStore();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editTitle, setEditTitle] = useState(task.title);
+    const [editFrog, setEditFrog] = useState(task.frog);
+
+    const handleMoveToTodayLocal = (id: string) => {
+      const todayStr = getTodayString();
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          id,
+          plan: { day: todayStr, week: null },
+        },
+      });
+    };
+
+    const handleSaveEdit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editTitle.trim()) return;
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          id: task.id,
+          title: editTitle.trim(),
+          frog: editFrog,
+        },
+      });
+      setIsEditing(false);
+    };
+
+    const handleCancelEdit = () => {
+      setIsEditing(false);
+      setEditTitle(task.title);
+      setEditFrog(task.frog);
+    };
+
+    if (isEditing) {
+      return (
+        <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+            <input
+              type="text"
+              required
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-center">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={editFrog}
+                onChange={(e) => setEditFrog(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded"
+              />
+              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save
+            </button>
+          </div>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100"
+        draggable={!isTouch}
+        onDragStart={() => !isTouch && setDragTaskId(task.id)}
+        onDragEnd={() => !isTouch && setDragTaskId(null)}
+      >
+        <div className="flex items-center gap-2">
+          {task.frog && <span>🐸</span>}
+          <span className={`text-sm ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            {task.title}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          {isTouch && (
+            <button
+              onClick={() => setMoveTaskId(task.id)}
+              className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100"
+              title="Move"
+            >
+              Move
+            </button>
+          )}
+          <button
+            onClick={() => setIsEditing(true)}
+            className="p-1 text-slate-400 hover:text-indigo-600"
+            title="Edit"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMoveToTodayLocal(task.id);
+            }}
+            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100"
+            title="To Today"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => {
+              dispatch({
+                type: 'UPDATE_TASK',
+                payload: {
+                  id: task.id,
+                  status: 'done',
+                  plan: { week: null, day: getTodayString() },
+                },
+              });
+            }}
+            className="p-1 text-slate-400 hover:text-green-600"
+            title="Mark Done"
+          >
+            <Check className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+            className="p-1 text-slate-400 hover:text-red-600"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const TaskItem: React.FC<{ task: typeof weekTasks[0] }> = ({ task }) => {
@@ -154,7 +418,12 @@ export const WeekView: React.FC = () => {
     }
 
     return (
-      <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm group">
+      <div
+        className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm group"
+        draggable={!isTouch}
+        onDragStart={() => !isTouch && setDragTaskId(task.id)}
+        onDragEnd={() => !isTouch && setDragTaskId(null)}
+      >
         <div className="flex items-center gap-3">
            <span className={`font-medium ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
              {task.title}
@@ -163,6 +432,15 @@ export const WeekView: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isTouch && (
+            <button
+              onClick={() => setMoveTaskId(task.id)}
+              className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded"
+              title="Move"
+            >
+              Move
+            </button>
+          )}
            <button 
              onClick={() => setIsEditing(true)}
              className="p-1.5 text-slate-400 hover:text-indigo-600"
@@ -218,22 +496,167 @@ export const WeekView: React.FC = () => {
 
       {/* Content - with bottom padding for fixed forms */}
       <div className="pb-48 lg:pb-24 min-h-[60vh] flex flex-col">
-        {weekTasks.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl w-full">
-              No tasks planned specifically for this week's bucket.
+        <div
+          className={`flex-1 space-y-3 rounded-lg border-2 border-dashed ${
+            dragTaskId ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
+          } p-3`}
+          onDragOver={(e) => !isTouch && e.preventDefault()}
+          onDrop={(e) => {
+            if (isTouch) return;
+            e.preventDefault();
+            if (!dragTaskId) return;
+            moveToWeekBucket(dragTaskId);
+            setDragTaskId(null);
+          }}
+        >
+          <div className="text-sm font-semibold text-slate-600">Week tasks (no date)</div>
+          {weekTasks.length === 0 ? (
+            <div className="text-sm text-slate-400 italic">
+              No tasks in week bucket. Drag a task here from a specific day.
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 space-y-3">
+          ) : (
             <div className="grid gap-3">
               {weekTasks.map(task => (
                 <TaskItem key={task.id} task={task} />
               ))}
             </div>
-          </div>
-        )}
+          )}
+          {isTouch && weekTasks.length > 0 && (
+            <div className="text-xs text-slate-400">
+              On mobile: use Move button on task to move to a day.
+            </div>
+          )}
+        </div>
+        {/* Days list with tasks */}
+        <div className="mt-6 space-y-3">
+          {weekDays.map((day) => {
+            const tasks = dayTasks[day.date] || [];
+            const tasksCount = tasks.length;
+            const isActive = dragTaskId !== null;
+            const isExpanded = expandedDays.has(day.date);
+            return (
+              <div
+                key={day.date}
+                onDragOver={(e) => !isTouch && e.preventDefault()}
+                onDrop={(e) => {
+                  if (isTouch) return;
+                  e.preventDefault();
+                  if (!dragTaskId) return;
+                  dispatch({
+                    type: 'UPDATE_TASK',
+                    payload: {
+                      id: dragTaskId,
+                      plan: { day: day.date, week: null },
+                    },
+                  });
+                  setDragTaskId(null);
+                  setExpandedDays(prev => new Set(prev).add(day.date));
+                }}
+                className={`rounded-lg border transition-colors bg-white ${
+                  isActive ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(day.date)}
+                    className="flex-1 flex items-center justify-between text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-800">{day.weekday}</span>
+                      <span className="text-xs text-slate-500">{day.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span>{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
+                      <span className="text-slate-400">{isExpanded ? '▾' : '▸'}</span>
+                    </div>
+                  </button>
+                  {tasksCount > 0 && day.date === todayStr && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveAllDayToToday(day.date);
+                      }}
+                      className="ml-2 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors flex items-center gap-1"
+                      title="Move all tasks to today"
+                    >
+                      <ArrowDownCircle className="w-3 h-3" />
+                      All → Today
+                    </button>
+                  )}
+                </div>
+                {isExpanded && (
+                  <div 
+                    className="px-4 pb-4 pt-0 border-t border-slate-100 space-y-2"
+                    onDragOver={(e) => !isTouch && e.preventDefault()}
+                    onDrop={(e) => {
+                      if (isTouch) return;
+                      e.preventDefault();
+                      if (!dragTaskId) return;
+                      dispatch({
+                        type: 'UPDATE_TASK',
+                        payload: {
+                          id: dragTaskId,
+                          plan: { day: day.date, week: null },
+                        },
+                      });
+                      setDragTaskId(null);
+                    }}
+                  >
+                    {tasksCount === 0 && (
+                      <div className="text-sm text-slate-400 italic">
+                        Drag a task here from week list or another day
+                      </div>
+                    )}
+                    {tasks.map((t) => (
+                      <DayTaskItem key={t.id} task={t} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Move modal for touch devices */}
+      {isTouch && moveTaskId && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => setMoveTaskId(null)}>
+          <div
+            className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="font-semibold text-slate-800">Where to move task?</div>
+              <button onClick={() => setMoveTaskId(null)} className="text-slate-400 hover:text-slate-600 text-sm">Close</button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => moveTask(moveTaskId, null)}
+                className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
+              >
+                Week bucket (no date)
+              </button>
+              <button
+                onClick={() => moveTask(moveTaskId, getTodayString())}
+                className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
+              >
+                Today
+              </button>
+              {weekDays.map((day) => (
+                <button
+                  key={day.date}
+                  onClick={() => moveTask(moveTaskId, day.date)}
+                  className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
+                >
+                  {day.weekday} {day.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Week Selector - Fixed at bottom (mobile) */}
       <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">

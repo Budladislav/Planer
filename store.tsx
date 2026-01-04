@@ -25,10 +25,10 @@ const migrateAppState = (parsed: any): AppState => {
               week: rest.plan?.week ?? null,
             },
             frog: rest.frog === true,
-            projectId: rest.projectId ?? null,
+            projectId: rest.projectId ?? null, // Can be 'event' string or null
             createdAt: rest.createdAt || new Date().toISOString(),
             updatedAt: rest.updatedAt || new Date().toISOString(),
-            timeSpent: rest.timeSpent,
+            timeSpent: rest.timeSpent, // Optional field
           };
         })
         .filter((t: Task | null): t is Task => t !== null)

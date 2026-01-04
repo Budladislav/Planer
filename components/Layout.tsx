@@ -17,8 +17,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
   const navItems: Array<{ view: ViewState; icon: any; label: string }> = [
     { view: 'settings', icon: Settings, label: 'Settings' },
-    { view: 'events', icon: Calendar, label: 'Events' },
     { view: 'inbox', icon: Inbox, label: 'Inbox' },
+    { view: 'events', icon: Calendar, label: 'Events' },
     { view: 'week', icon: List, label: 'Week' },
     { view: 'done', icon: CheckSquare, label: 'Done' },
     { view: 'today', icon: Target, label: 'Today' },
