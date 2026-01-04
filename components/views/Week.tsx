@@ -146,17 +146,6 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  const handleMoveToToday = (id: string) => {
-    const todayStr = getTodayString();
-    dispatch({
-       type: 'UPDATE_TASK',
-       payload: {
-         id,
-         plan: { day: todayStr, week: null } // Move to today, remove from week
-       }
-    });
-  };
-
   const handleMoveAllDayToToday = (dayDate: string) => {
     const tasksToMove = dayTasks[dayDate] || [];
     tasksToMove.forEach(task => {
@@ -175,17 +164,7 @@ export const WeekView: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
-
-    const handleMoveToTodayLocal = (id: string) => {
-      const todayStr = getTodayString();
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id,
-          plan: { day: todayStr, week: null },
-        },
-      });
-    };
+    const [showActions, setShowActions] = useState(false);
 
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -250,43 +229,50 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100"
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
+        onClick={() => setShowActions((prev) => !prev)}
       >
-        <div className="flex items-center gap-2">
-          {task.frog && <span>🐸</span>}
-          <span className={`text-sm ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-            {task.title}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          {isTouch && (
-            <button
-              onClick={() => setMoveTaskId(task.id)}
-              className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100"
-              title="Move"
-            >
-              Move
-            </button>
-          )}
-          <button
-            onClick={() => setIsEditing(true)}
-            className="p-1 text-slate-400 hover:text-indigo-600"
-            title="Edit"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {task.frog && <span className="flex-shrink-0">🐸</span>}
+            <span className={`text-sm truncate ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+              {task.title}
+            </span>
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleMoveToTodayLocal(task.id);
+              setMoveTaskId(task.id);
             }}
-            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100"
-            title="To Today"
+            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
+            title="Move"
           >
-            Today
+            Move
+          </button>
+        </div>
+
+        <div
+          className={`mt-3 flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+            showActions ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0 overflow-hidden'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+            title="Delete"
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+            title="Edit"
+          >
+            Edit
           </button>
           <button
             onClick={() => {
@@ -299,17 +285,10 @@ export const WeekView: React.FC = () => {
                 },
               });
             }}
-            className="p-1 text-slate-400 hover:text-green-600"
+            className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
             title="Mark Done"
           >
-            <Check className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-            className="p-1 text-slate-400 hover:text-red-600"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
+            Done
           </button>
         </div>
       </div>
@@ -321,6 +300,7 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
+    const [showActions, setShowActions] = useState(false);
 
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -419,64 +399,64 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm group"
+        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
+        onClick={() => setShowActions(prev => !prev)}
       >
-        <div className="flex items-center gap-3">
-           <span className={`font-medium ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-             {task.title}
-           </span>
-           {task.frog && <span>🐸</span>}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <span className={`font-medium truncate ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+              {task.title}
+            </span>
+            {task.frog && <span className="flex-shrink-0">🐸</span>}
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setMoveTaskId(task.id); }}
+            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
+            title="Move"
+          >
+            Move
+          </button>
         </div>
-        
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {isTouch && (
-            <button
-              onClick={() => setMoveTaskId(task.id)}
-              className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded"
-              title="Move"
-            >
-              Move
-            </button>
-          )}
-           <button 
-             onClick={() => setIsEditing(true)}
-             className="p-1.5 text-slate-400 hover:text-indigo-600"
-             title="Edit"
-           >
-             <Edit2 className="w-4 h-4" />
-           </button>
-           <button 
-             onClick={() => handleMoveToToday(task.id)}
-             className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded"
-             title="Do this Today"
-           >
-             <ArrowDownCircle className="w-3 h-3" />
-             To Today
-           </button>
-           <button 
-             onClick={() => {
-               dispatch({ 
-                 type: 'UPDATE_TASK', 
-                 payload: { 
-                   id: task.id, 
-                   status: 'done',
-                   plan: { week: null, day: getTodayString() } // Move to today when completed
-                 } 
-               });
-             }}
-             className="p-1.5 text-slate-400 hover:text-green-600"
-           >
-             <Check className="w-4 h-4" />
-           </button>
-           <button 
-             onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-             className="p-1.5 text-slate-400 hover:text-red-600"
-           >
-             <Trash2 className="w-4 h-4" />
-           </button>
+
+        <div
+          className={`mt-3 flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+            showActions ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0 overflow-hidden'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+            title="Delete"
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+            title="Edit"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              dispatch({
+                type: 'UPDATE_TASK',
+                payload: {
+                  id: task.id,
+                  status: 'done',
+                  plan: { week: null, day: getTodayString() }, // Move to today when completed
+                },
+              });
+            }}
+            className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
+            title="Mark Done"
+          >
+            Done
+          </button>
         </div>
       </div>
     );
@@ -588,7 +568,7 @@ export const WeekView: React.FC = () => {
                 </div>
                 {isExpanded && (
                   <div 
-                    className="px-4 pb-4 pt-0 border-t border-slate-100 space-y-2"
+                    className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2"
                     onDragOver={(e) => !isTouch && e.preventDefault()}
                     onDrop={(e) => {
                       if (isTouch) return;
