@@ -84,3 +84,14 @@ export const formatTime = (seconds: number): string => {
   }
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
+
+// Event title format: "HH:MM Title"
+export const parseEventTitle = (title: string): { time: string; plain: string } => {
+  const m = title.match(/^(\d{2}:\d{2})\s+(.*)$/);
+  if (m) return { time: m[1], plain: m[2] };
+  return { time: '09:00', plain: title };
+};
+
+export const formatEventTitle = (time: string, plain: string): string => {
+  return `${time} ${plain.trim()}`;
+};

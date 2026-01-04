@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
-import { Task } from '../../types';
-import { getTodayString, generateId, formatDateShort, getWeekString } from '../../utils';
+import { CalendarEvent } from '../../types';
+import { getTodayString, generateId, formatDateShort, getWeekString, formatEventTitle } from '../../utils';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
 export const EventsView: React.FC = () => {
@@ -18,40 +18,45 @@ export const EventsView: React.FC = () => {
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
 
-  const eventTasks = useMemo(
-    () => state.tasks.filter(t => t.projectId === 'event'),
-    [state.tasks]
-  );
-
-  const parseTitle = (title: string) => {
-    const m = title.match(/^(\d{2}:\d{2})\s+(.*)$/);
-    if (m) return { time: m[1], plain: m[2] };
-    return { time: '09:00', plain: title };
-  };
-
   // Sort events: by date (ascending), then by time (ascending)
-  const sortedEvents = [...eventTasks].sort((a, b) => {
-    if (a.plan.day !== b.plan.day) {
-      return (a.plan.day || '').localeCompare(b.plan.day || '');
-    }
-    const ta = parseTitle(a.title).time;
-    const tb = parseTitle(b.title).time;
-    return ta.localeCompare(tb);
-  });
+  const sortedEvents = useMemo(() => {
+    return [...state.events].sort((a, b) => {
+      if (a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      return a.time.localeCompare(b.time);
+    });
+  }, [state.events]);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
+    const eventId = generateId();
+    const eventTitle = formatEventTitle(newTime, newTitle.trim());
+
+    // Create event
+    dispatch({
+      type: 'ADD_EVENT',
+      payload: {
+        id: eventId,
+        title: newTitle.trim(),
+        date: newDate,
+        time: newTime,
+        note: null,
+      },
+    });
+
+    // Create task as a copy (independent from event)
     dispatch({
       type: 'ADD_TASK',
       payload: {
-        id: generateId(),
-        title: `${newTime} ${newTitle.trim()}`,
+        id: generateId(), // Different ID - independent copy
+        title: eventTitle,
         status: 'todo',
         plan: { day: newDate, week: getWeekString(newDate) },
         frog: false,
-        projectId: 'event',
+        projectId: null, // Not marked as event - it's just a regular task copy
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -62,25 +67,25 @@ export const EventsView: React.FC = () => {
     setNewTime('09:00');
   };
 
-  const handleStartEdit = (task: Task) => {
-    const parsed = parseTitle(task.title);
-    setEditingId(task.id);
-    setEditTitle(parsed.plain);
-    setEditDate(task.plan.day || getTodayString());
-    setEditTime(parsed.time);
+  const handleStartEdit = (event: CalendarEvent) => {
+    setEditingId(event.id);
+    setEditTitle(event.title);
+    setEditDate(event.date);
+    setEditTime(event.time);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId || !editTitle.trim()) return;
 
+    // Update only the event, not the task
     dispatch({
-      type: 'UPDATE_TASK',
+      type: 'UPDATE_EVENT',
       payload: {
         id: editingId,
-        title: `${editTime} ${editTitle.trim()}`,
-        plan: { day: editDate, week: getWeekString(editDate) },
-        projectId: 'event',
+        title: editTitle.trim(),
+        date: editDate,
+        time: editTime,
       },
     });
 
@@ -98,8 +103,9 @@ export const EventsView: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this event?')) {
-      dispatch({ type: 'DELETE_TASK', payload: id });
+    if (window.confirm('Delete this event? (The task copy will remain)')) {
+      // Delete only the event, not the task
+      dispatch({ type: 'DELETE_EVENT', payload: id });
     }
   };
 
@@ -108,7 +114,7 @@ export const EventsView: React.FC = () => {
       {/* Header - Centered */}
       <div className="text-center mb-6">
         <h2 className="text-3xl font-bold text-slate-900">Events</h2>
-        <p className="text-slate-500">Events are created as tasks for this day (can be moved to Today)</p>
+        <p className="text-slate-500">Events create a task copy in the corresponding day</p>
       </div>
 
       {/* Events List - with bottom padding for fixed form */}
@@ -145,7 +151,7 @@ export const EventsView: React.FC = () => {
                         <input
                           type="date"
                           required
-                        value={editDate}
+                          value={editDate}
                           onChange={(e) => setEditDate(e.target.value)}
                           className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
                         />
@@ -155,7 +161,7 @@ export const EventsView: React.FC = () => {
                         <input
                           type="time"
                           required
-                        value={editTime}
+                          value={editTime}
                           onChange={(e) => setEditTime(e.target.value)}
                           className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
                         />
@@ -177,11 +183,11 @@ export const EventsView: React.FC = () => {
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 text-slate-900">
-                      <span className="text-base">{formatDateShort(event.plan.day || '')}</span>
+                      <span className="text-base">{formatDateShort(event.date)}</span>
                       <span className="text-slate-400">,</span>
-                      <span className="text-base">{parseTitle(event.title).time}</span>
+                      <span className="text-base">{event.time}</span>
                       <span className="text-slate-400">,</span>
-                      <span className="text-base">{parseTitle(event.title).plain}</span>
+                      <span className="text-base">{event.title}</span>
                     </div>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -279,4 +285,3 @@ export const EventsView: React.FC = () => {
     </div>
   );
 };
-

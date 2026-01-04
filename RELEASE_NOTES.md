@@ -1,3 +1,21 @@
+## MonoFocus Planner — updates 1.3
+
+- **UI improvements**: Unified task management UI across all views (Week, Today, Done):
+  - Only "Edit" button visible by default, action buttons (Delete, Done/Undone) appear in expandable block on click
+  - Long task titles are truncated with ellipsis to prevent layout overflow
+  - Consistent button styling and layout (Delete left, Edit/Done right)
+- **Week view refinements**: 
+  - Removed "All → Today" button from current day header
+  - Removed "Today" option from mobile Move modal
+  - Current day highlighted in Move modal
+  - Improved spacing and layout
+- **Events refactoring**: 
+  - Events are now a separate entity (stored in `state.events`)
+  - Creating an event creates an independent task copy (not linked)
+  - Editing/deleting events does not affect the task copy
+  - Enables future auto-cleanup of past events without affecting completed tasks
+- **Navigation**: Swapped positions of "Done" and "Week" tabs
+
 ## MonoFocus Planner — updates 1.2
 
 - **Week view enhancement**: Added day-by-day task management with drag-and-drop between days and week bucket.

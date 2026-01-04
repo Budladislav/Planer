@@ -19,8 +19,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { view: 'settings', icon: Settings, label: 'Settings' },
     { view: 'inbox', icon: Inbox, label: 'Inbox' },
     { view: 'events', icon: Calendar, label: 'Events' },
-    { view: 'week', icon: List, label: 'Week' },
-    { view: 'done', icon: CheckSquare, label: 'Done' },
+    { view: 'done', icon: CheckSquare, label: 'Done' }, // swapped
+    { view: 'week', icon: List, label: 'Week' }, // swapped
     { view: 'today', icon: Target, label: 'Today' },
   ];
 

@@ -34,6 +34,7 @@ const SortableTaskItem: React.FC<{
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
+  const [showActions, setShowActions] = useState(false);
   const {
     attributes,
     listeners,
@@ -52,7 +53,11 @@ const SortableTaskItem: React.FC<{
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTitle.trim()) return;
-    onUpdate(task.id, { title: editTitle.trim(), frog: editFrog });
+    
+    onUpdate(task.id, { 
+      title: editTitle.trim(), 
+      frog: editFrog,
+    });
     setIsEditing(false);
   };
 
@@ -113,28 +118,27 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center justify-between p-4 rounded-lg transition-colors ${
+      className={`p-4 rounded-lg w-full max-w-full overflow-hidden transition-colors ${
         isFirst
           ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
           : 'bg-white border border-slate-200 hover:border-slate-300'
       }`}
+      onClick={() => setShowActions((prev) => !prev)}
     >
       <div
         {...attributes}
         {...listeners}
-        className="flex items-center gap-3 flex-1 cursor-grab active:cursor-grabbing touch-none"
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none"
       >
-        {task.frog && <span role="img" aria-label="frog">🐸</span>}
-        <div className="flex-1">
-          <span className="text-slate-700 font-medium">{task.title}</span>
+        {task.frog && <span role="img" aria-label="frog" className="flex-shrink-0">🐸</span>}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className={`text-slate-700 font-medium truncate ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+            {task.title}
+          </span>
           {task.timeSpent && task.timeSpent > 0 && (
-            <span className="text-xs text-slate-500 ml-2">
-              ({formatTime(task.timeSpent)})
-            </span>
+            <span className="text-xs text-slate-500 flex-shrink-0">({formatTime(task.timeSpent)})</span>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -142,36 +146,36 @@ const SortableTaskItem: React.FC<{
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
-          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all touch-auto"
+          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 flex-shrink-0 transition-colors"
           title="Edit task"
         >
-          <Edit2 className="w-4 h-4" />
+          Edit
         </button>
+      </div>
+
+      <div
+        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onComplete(task.id);
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all touch-auto"
-          title="Mark as done"
-        >
-          <Check className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() => {
             if (window.confirm('Delete this task permanently?')) {
               onDelete(task.id);
             }
           }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all touch-auto"
+          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
           title="Delete task"
         >
-          <Trash2 className="w-4 h-4" />
+          Delete
+        </button>
+        <button
+          onClick={() => onComplete(task.id)}
+          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+          title="Mark as done"
+        >
+          Done
         </button>
       </div>
     </div>

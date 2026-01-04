@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange } from '../../utils';
-import { ArrowDownCircle, Trash2, Check, ChevronLeft, ChevronRight, Edit2, Plus } from 'lucide-react';
+import { Trash2, Check, ChevronLeft, ChevronRight, Edit2, Plus } from 'lucide-react';
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -146,19 +146,6 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  const handleMoveAllDayToToday = (dayDate: string) => {
-    const tasksToMove = dayTasks[dayDate] || [];
-    tasksToMove.forEach(task => {
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id: task.id,
-          plan: { day: getTodayString(), week: null },
-        },
-      });
-    });
-  };
-
   const DayTaskItem: React.FC<{ task: typeof state.tasks[0] }> = ({ task }) => {
     const { dispatch } = useAppStore();
     const [isEditing, setIsEditing] = useState(false);
@@ -169,6 +156,7 @@ export const WeekView: React.FC = () => {
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!editTitle.trim()) return;
+      
       dispatch({
         type: 'UPDATE_TASK',
         payload: {
@@ -255,8 +243,8 @@ export const WeekView: React.FC = () => {
         </div>
 
         <div
-          className={`mt-3 flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0 overflow-hidden'
+          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+            showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -422,8 +410,8 @@ export const WeekView: React.FC = () => {
         </div>
 
         <div
-          className={`mt-3 flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0 overflow-hidden'
+          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+            showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -550,21 +538,7 @@ export const WeekView: React.FC = () => {
                       <span>{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
                       <span className="text-slate-400">{isExpanded ? '▾' : '▸'}</span>
                     </div>
-                  </button>
-                  {tasksCount > 0 && day.date === todayStr && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveAllDayToToday(day.date);
-                      }}
-                      className="ml-2 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors flex items-center gap-1"
-                      title="Move all tasks to today"
-                    >
-                      <ArrowDownCircle className="w-3 h-3" />
-                      All → Today
-                    </button>
-                  )}
+                </button>
                 </div>
                 {isExpanded && (
                   <div 
@@ -618,17 +592,15 @@ export const WeekView: React.FC = () => {
               >
                 Week bucket (no date)
               </button>
-              <button
-                onClick={() => moveTask(moveTaskId, getTodayString())}
-                className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
-              >
-                Today
-              </button>
               {weekDays.map((day) => (
                 <button
                   key={day.date}
                   onClick={() => moveTask(moveTaskId, day.date)}
-                  className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
+                  className={`p-3 border rounded-lg text-left ${
+                    day.date === todayStr
+                      ? 'border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50'
+                      : 'border-slate-200 hover:border-indigo-200'
+                  }`}
                 >
                   {day.weekday} {day.label}
                 </button>

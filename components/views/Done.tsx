@@ -81,40 +81,121 @@ export const DoneView: React.FC = () => {
   };
 
   const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
-    return (
-      <div className="group flex items-center p-3 bg-white border border-slate-200 rounded-lg hover:shadow-sm transition-all opacity-75">
-        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 border-2 border-green-500 text-white mr-3 flex items-center justify-center">
-          <Check className="w-4 h-4" />
-        </div>
+    const [showActions, setShowActions] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editTitle, setEditTitle] = useState(task.title);
+    const [editFrog, setEditFrog] = useState(task.frog);
 
-        <div className="flex-1 min-w-0">
-          <p className="text-slate-900 line-through text-slate-500 truncate">
-            {task.title}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            {task.frog && <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Frog 🐸</span>}
+    const handleSaveEdit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editTitle.trim()) return;
+      
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          id: task.id,
+          title: editTitle.trim(),
+          frog: editFrog,
+        },
+      });
+      setIsEditing(false);
+    };
+
+    const handleCancelEdit = () => {
+      setIsEditing(false);
+      setEditTitle(task.title);
+      setEditFrog(task.frog);
+    };
+
+    if (isEditing) {
+      return (
+        <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+            <input
+              type="text"
+              required
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-center">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={editFrog}
+                onChange={(e) => setEditFrog(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded"
+              />
+              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save
+            </button>
+          </div>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
+        onClick={() => setShowActions((prev) => !prev)}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {task.frog && <span className="flex-shrink-0">🐸</span>}
+            <span className={`text-sm truncate line-through text-slate-500`}>
+              {task.title}
+            </span>
             {task.timeSpent && task.timeSpent > 0 && (
-              <span className="text-xs text-slate-500">
-                {formatTime(task.timeSpent)}
+              <span className="text-xs text-slate-400 flex-shrink-0">
+                ({formatTime(task.timeSpent)})
               </span>
             )}
           </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="px-2 py-1 bg-slate-100 text-slate-600 font-semibold rounded hover:bg-slate-200 text-xs flex-shrink-0"
+            title="Edit"
+          >
+            Edit
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => handleUndo(task.id)}
-            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="Mark as todo"
-          >
-            <Check className="w-4 h-4 rotate-180" />
-          </button>
+        <div
+          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+            showActions ? 'opacity-100 max-h-40 mt-3' : 'opacity-0 max-h-0 overflow-hidden'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={() => handleDelete(task.id)}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
             title="Delete"
           >
-            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+          <button
+            onClick={() => handleUndo(task.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100"
+            title="Mark as todo"
+          >
+            Undone
           </button>
         </div>
       </div>
