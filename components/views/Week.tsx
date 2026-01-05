@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
-import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange } from '../../utils';
+import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
 import { Trash2, Check, ChevronLeft, ChevronRight, Edit2, Plus } from 'lucide-react';
 
 export const WeekView: React.FC = () => {
@@ -40,6 +40,18 @@ export const WeekView: React.FC = () => {
     return days;
   }, [currentWeek]);
 
+  // All tasks for current week (both assigned to days and in bucket)
+  const allWeekTasks = useMemo(() => {
+    const weekDates = weekDays.map(d => d.date);
+    return state.tasks.filter(t => 
+      (t.plan.week === currentWeek && !t.plan.day) || // Tasks in bucket
+      (t.plan.day && weekDates.includes(t.plan.day)) // Tasks assigned to days of this week
+    );
+  }, [state.tasks, currentWeek, weekDays]);
+
+  const todoWeekTasks = allWeekTasks.filter(t => t.status === 'todo');
+  const doneWeekTasks = allWeekTasks.filter(t => t.status === 'done');
+
   // Simple drag-and-drop state
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
@@ -59,10 +71,29 @@ export const WeekView: React.FC = () => {
   const dayTasks = useMemo(() => {
     const map: Record<string, typeof state.tasks> = {};
     weekDays.forEach((day) => {
-      map[day.date] = state.tasks.filter((t) => t.plan.day === day.date);
+      const tasks = state.tasks.filter((t) => t.plan.day === day.date);
+      // Apply saved order if available
+      const savedOrder = state.taskOrderByDay[day.date];
+      if (savedOrder && savedOrder.length > 0) {
+        const taskMap = new Map(tasks.map(t => [t.id, t]));
+        const orderedTasks: typeof tasks = [];
+        // Add tasks in saved order
+        savedOrder.forEach(id => {
+          const task = taskMap.get(id);
+          if (task) {
+            orderedTasks.push(task);
+            taskMap.delete(id);
+          }
+        });
+        // Add any remaining tasks (new ones not in saved order)
+        taskMap.forEach(task => orderedTasks.push(task));
+        map[day.date] = orderedTasks;
+      } else {
+        map[day.date] = tasks;
+      }
     });
     return map;
-  }, [state.tasks, weekDays]);
+  }, [state.tasks, weekDays, state.taskOrderByDay]);
 
   // Auto-expand days that have tasks, but only for today and future days
   const todayStr = getTodayString();
@@ -122,8 +153,18 @@ export const WeekView: React.FC = () => {
         plan: day ? { day, week: null } : { week: currentWeek, day: null },
       },
     });
+    // If moving to a day, update the order (add to end)
+    if (day) {
+      const currentOrder = state.taskOrderByDay[day] || [];
+      if (!currentOrder.includes(id)) {
+        dispatch({
+          type: 'UPDATE_TASK_ORDER',
+          payload: { day, order: [...currentOrder, id] },
+        });
+      }
+      setExpandedDays(prev => new Set(prev).add(day));
+    }
     setMoveTaskId(null);
-    if (day) setExpandedDays(prev => new Set(prev).add(day));
   };
 
   const handleQuickAdd = (e: React.FormEvent) => {
@@ -152,6 +193,7 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [showActions, setShowActions] = useState(false);
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -174,21 +216,36 @@ export const WeekView: React.FC = () => {
       setEditFrog(task.frog);
     };
 
+    // Auto-resize textarea
+    React.useEffect(() => {
+      if (isEditing && textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    }, [isEditing, editTitle]);
+
     if (isEditing) {
       return (
         <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-            <input
-              type="text"
+            <textarea
+              ref={textareaRef}
               required
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              onChange={(e) => {
+                setEditTitle(e.target.value);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+                }
+              }}
+              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+              rows={1}
               autoFocus
             />
           </div>
-          <div className="flex justify-center">
+          <div className="flex items-center justify-between gap-2">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -196,20 +253,20 @@ export const WeekView: React.FC = () => {
                 onChange={(e) => setEditFrog(e.target.checked)}
                 className="w-4 h-4 text-indigo-600 rounded"
               />
-              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+              <span className="text-lg">🐸</span>
             </label>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                Save
+              </button>
+            </div>
           </div>
         </form>
       );
@@ -217,16 +274,16 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
         onClick={() => setShowActions((prev) => !prev)}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {task.frog && <span className="flex-shrink-0">🐸</span>}
-            <span className={`text-sm truncate ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+        <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+          <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+            {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
+            <span className={`text-sm ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
           </div>
@@ -235,7 +292,7 @@ export const WeekView: React.FC = () => {
               e.stopPropagation();
               setMoveTaskId(task.id);
             }}
-            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
+            className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
             title="Move"
           >
             Move
@@ -289,6 +346,7 @@ export const WeekView: React.FC = () => {
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
     const [showActions, setShowActions] = useState(false);
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -313,17 +371,32 @@ export const WeekView: React.FC = () => {
       setEditWeek(task.plan.week || currentWeek);
     };
 
+    // Auto-resize textarea
+    React.useEffect(() => {
+      if (isEditing && textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    }, [isEditing, editTitle]);
+
     if (isEditing) {
       return (
         <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-            <input
-              type="text"
+            <textarea
+              ref={textareaRef}
               required
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              onChange={(e) => {
+                setEditTitle(e.target.value);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+                }
+              }}
+              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+              rows={1}
               autoFocus
             />
           </div>
@@ -358,7 +431,7 @@ export const WeekView: React.FC = () => {
               />
             </div>
           </div>
-          <div className="flex justify-center">
+          <div className="flex items-center justify-between gap-2">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -366,20 +439,20 @@ export const WeekView: React.FC = () => {
                 onChange={(e) => setEditFrog(e.target.checked)}
                 className="w-4 h-4 text-indigo-600 rounded"
               />
-              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+              <span className="text-lg">🐸</span>
             </label>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                Save
+              </button>
+            </div>
           </div>
         </form>
       );
@@ -387,22 +460,22 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
+        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
         onClick={() => setShowActions(prev => !prev)}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <span className={`font-medium truncate ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+        <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+          <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+            {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
+            <span className={`text-sm ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
-            {task.frog && <span className="flex-shrink-0">🐸</span>}
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setMoveTaskId(task.id); }}
-            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
+            className={`px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
             title="Move"
           >
             Move
@@ -458,7 +531,16 @@ export const WeekView: React.FC = () => {
       <div className="text-center mb-6">
         <h2 className="text-3xl font-bold text-slate-900">Weekly Plan</h2>
         <p className="text-slate-400 text-sm mt-1">
-          {weekTasks.length} {weekTasks.length === 1 ? 'task' : 'tasks'} planned
+          {todoWeekTasks.length} left • {doneWeekTasks.length} done
+          {(() => {
+            const totalTime = doneWeekTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
+            return totalTime > 0 ? (
+              <span className="text-indigo-600 font-medium">
+                {' • '}
+                {formatTime(totalTime)}
+              </span>
+            ) : null;
+          })()}
         </p>
       </div>
 
@@ -477,7 +559,7 @@ export const WeekView: React.FC = () => {
             setDragTaskId(null);
           }}
         >
-          <div className="text-sm font-semibold text-slate-600">Week tasks (no date)</div>
+          <div className="text-sm font-semibold text-slate-600 text-center">Week tasks (no date)</div>
           {weekTasks.length === 0 ? (
             <div className="text-sm text-slate-400 italic">
               No tasks in week bucket. Drag a task here from a specific day.
@@ -517,6 +599,14 @@ export const WeekView: React.FC = () => {
                       plan: { day: day.date, week: null },
                     },
                   });
+                  // Update order (add to end if not already in order)
+                  const currentOrder = state.taskOrderByDay[day.date] || [];
+                  if (!currentOrder.includes(dragTaskId)) {
+                    dispatch({
+                      type: 'UPDATE_TASK_ORDER',
+                      payload: { day: day.date, order: [...currentOrder, dragTaskId] },
+                    });
+                  }
                   setDragTaskId(null);
                   setExpandedDays(prev => new Set(prev).add(day.date));
                 }}
@@ -555,6 +645,14 @@ export const WeekView: React.FC = () => {
                           plan: { day: day.date, week: null },
                         },
                       });
+                      // Update order (add to end if not already in order)
+                      const currentOrder = state.taskOrderByDay[day.date] || [];
+                      if (!currentOrder.includes(dragTaskId)) {
+                        dispatch({
+                          type: 'UPDATE_TASK_ORDER',
+                          payload: { day: day.date, order: [...currentOrder, dragTaskId] },
+                        });
+                      }
                       setDragTaskId(null);
                     }}
                   >

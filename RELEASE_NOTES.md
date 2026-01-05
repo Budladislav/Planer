@@ -1,3 +1,32 @@
+## MonoFocus Planner — updates 1.4
+
+- **Task ordering persistence**: 
+  - Drag & drop order in Today view now persists across tab switches and page reloads
+  - Order synchronization between Today and Week views for the same day
+  - Order stored in `taskOrderByDay` state field
+- **Today view improvements**:
+  - Done button changed to checkmark icon, moved to visible position (right side)
+  - Edit button moved to expandable actions area
+  - Play button moved to left of input field in add form
+  - Long task titles expand with text wrapping when task is expanded
+- **Edit forms improvements**:
+  - Frog checkbox simplified: only checkbox and emoji (no text), positioned in same row with buttons
+  - Multi-line textarea with auto-resize for long text editing in all views
+- **Week view enhancements**:
+  - "Week tasks (no date)" header centered
+  - Task counter shows all week tasks (with and without day assignment): "X left • X done" + time spent
+  - Long task titles expand with text wrapping when task is expanded
+- **Events view major update**:
+  - Task-like behavior: collapsed by default with truncated text, expandable to show full text and actions
+  - Edit and Delete buttons in expandable area (matching task UI)
+  - Improved add form: round button with plus icon, date/time above, input on left
+  - Past events hidden in collapsible "Past events" section
+  - Two-way synchronization with tasks: event changes update task, task changes update event
+  - Deleting event deletes linked task, deleting task deletes linked event
+  - Status changes (done/undone) don't affect event synchronization
+- **Navigation**: Colored tab icons using app color palette (indigo, green, amber, purple, slate)
+- **Data migration**: Full backward compatibility with previous versions, new fields (`taskOrderByDay`, `eventId`) auto-migrated
+
 ## MonoFocus Planner — updates 1.3
 
 - **UI improvements**: Unified task management UI across all views (Week, Today, Done):

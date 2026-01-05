@@ -35,6 +35,7 @@ const SortableTaskItem: React.FC<{
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
   const [showActions, setShowActions] = useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const {
     attributes,
     listeners,
@@ -73,21 +74,36 @@ const SortableTaskItem: React.FC<{
     setEditFrog(task.frog);
   }, [task.title, task.frog]);
 
+  // Auto-resize textarea
+  React.useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [isEditing, editTitle]);
+
   if (isEditing) {
     return (
       <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             required
             value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+            onChange={(e) => {
+              setEditTitle(e.target.value);
+              if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+                textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+              }
+            }}
+            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            rows={1}
             autoFocus
           />
         </div>
-        <div className="flex justify-center">
+        <div className="flex items-center justify-between gap-2">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -95,20 +111,20 @@ const SortableTaskItem: React.FC<{
               onChange={(e) => setEditFrog(e.target.checked)}
               className="w-4 h-4 text-indigo-600 rounded"
             />
-            <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+            <span className="text-lg">🐸</span>
           </label>
-        </div>
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleCancelEdit}
-            className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-          >
-            Cancel
-          </button>
-          <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-            Save
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save
+            </button>
+          </div>
         </div>
       </form>
     );
@@ -118,7 +134,7 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-4 rounded-lg w-full max-w-full overflow-hidden transition-colors ${
+      className={`p-4 rounded-lg w-full max-w-full overflow-hidden transition-all ${
         isFirst
           ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
           : 'bg-white border border-slate-200 hover:border-slate-300'
@@ -128,11 +144,13 @@ const SortableTaskItem: React.FC<{
       <div
         {...attributes}
         {...listeners}
-        className="flex items-center gap-3 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none"
+        className={`flex gap-3 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none ${
+          showActions ? 'items-start' : 'items-center'
+        }`}
       >
-        {task.frog && <span role="img" aria-label="frog" className="flex-shrink-0">🐸</span>}
+        {task.frog && <span role="img" aria-label="frog" className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className={`text-slate-700 font-medium truncate ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+          <span className={`text-slate-700 font-medium ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
           </span>
           {task.timeSpent && task.timeSpent > 0 && (
@@ -142,14 +160,14 @@ const SortableTaskItem: React.FC<{
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsEditing(true);
+            onComplete(task.id);
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
-          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 flex-shrink-0 transition-colors"
-          title="Edit task"
+          className={`w-10 h-10 flex items-center justify-center bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
+          title="Mark as done"
         >
-          Edit
+          <Check className="w-5 h-5" />
         </button>
       </div>
 
@@ -171,11 +189,11 @@ const SortableTaskItem: React.FC<{
           Delete
         </button>
         <button
-          onClick={() => onComplete(task.id)}
-          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
-          title="Mark as done"
+          onClick={() => setIsEditing(true)}
+          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
+          title="Edit task"
         >
-          Done
+          Edit
         </button>
       </div>
     </div>
@@ -208,8 +226,17 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   // Store the position of the active task when it becomes active
   const [activeTaskPosition, setActiveTaskPosition] = useState<number | null>(null);
 
-  // Use local state for task order (can be persisted to store later)
+  // Get saved order from store, or initialize with sorted order (frogs first)
+  const savedOrder = state.taskOrderByDay[todayStr] || [];
   const [taskOrder, setTaskOrder] = useState<string[]>(() => {
+    // If we have saved order, use it (filtering out tasks that no longer exist)
+    if (savedOrder.length > 0) {
+      const currentIds = availableTasks.map(t => t.id);
+      const validOrder = savedOrder.filter(id => currentIds.includes(id));
+      // Add new tasks at the end
+      const newIds = currentIds.filter(id => !validOrder.includes(id));
+      return [...validOrder, ...newIds];
+    }
     // Initialize with sorted order (frogs first)
     return availableTasks.sort((a, b) => {
       if (a.frog && !b.frog) return -1;
@@ -227,6 +254,21 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   const timerStartTimeRef = useRef<number | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   
+  // Sync with saved order from store when it changes
+  useEffect(() => {
+    const savedOrder = state.taskOrderByDay[todayStr] || [];
+    if (savedOrder.length > 0) {
+      const currentIds = availableTasks.map(t => t.id);
+      const validOrder = savedOrder.filter(id => currentIds.includes(id));
+      const newIds = currentIds.filter(id => !validOrder.includes(id));
+      const newOrder = [...validOrder, ...newIds];
+      // Only update if order actually changed
+      if (JSON.stringify(newOrder) !== JSON.stringify(taskOrder)) {
+        setTaskOrder(newOrder);
+      }
+    }
+  }, [state.taskOrderByDay[todayStr], availableTasks.length]);
+
   // Update order when tasks change (only add new tasks, preserve position when task returns from active)
   useEffect(() => {
     const currentIds = availableTasks.map(t => t.id);
@@ -240,6 +282,8 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
         const newOrder = [...taskOrder];
         newOrder.splice(activeTaskPosition, 0, pausedTaskId);
         setTaskOrder(newOrder);
+        // Save to store
+        dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
         setActiveTaskPosition(null);
         prevActiveTaskIdRef.current = null;
         return;
@@ -255,7 +299,10 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
     const newIds = currentIds.filter(id => !taskOrder.includes(id));
     // Only update if there are actually new tasks
     if (newIds.length > 0) {
-      setTaskOrder([...existingOrder, ...newIds]);
+      const newOrder = [...existingOrder, ...newIds];
+      setTaskOrder(newOrder);
+      // Save to store
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     }
   }, [availableTasks.length, state.activeTaskId]);
 
@@ -296,7 +343,10 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
     const oldIndex = taskOrder.indexOf(activeId);
     const newIndex = taskOrder.indexOf(overId);
     if (oldIndex !== -1 && newIndex !== -1) {
-      setTaskOrder(arrayMove(taskOrder, oldIndex, newIndex));
+      const newOrder = arrayMove(taskOrder, oldIndex, newIndex);
+      setTaskOrder(newOrder);
+      // Save to store
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     }
   };
 
@@ -304,10 +354,11 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
     e.preventDefault();
     if (!quickAdd.trim()) return;
     
+    const newTaskId = generateId();
     dispatch({
       type: 'ADD_TASK',
       payload: {
-        id: generateId(),
+        id: newTaskId,
         title: quickAdd.trim(),
         status: 'todo',
         plan: { day: todayStr, week: null },
@@ -317,6 +368,10 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
         updatedAt: new Date().toISOString(),
       }
     });
+    // Add new task to the end of the order
+    const newOrder = [...taskOrder, newTaskId];
+    setTaskOrder(newOrder);
+    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     setQuickAdd('');
   };
 
@@ -399,20 +454,29 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
     if (position !== -1) {
       setActiveTaskPosition(position);
       // Remove from order temporarily
-      setTaskOrder(taskOrder.filter(taskId => taskId !== id));
+      const newOrder = taskOrder.filter(taskId => taskId !== id);
+      setTaskOrder(newOrder);
+      // Save to store
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     }
     dispatch({ type: 'SET_ACTIVE_TASK', payload: { id, startedAt: Date.now() } });
   };
 
   const handleDelete = (id: string) => {
     // Remove from task order if present
-    setTaskOrder(taskOrder.filter(taskId => taskId !== id));
+    const newOrder = taskOrder.filter(taskId => taskId !== id);
+    setTaskOrder(newOrder);
+    // Save to store
+    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     dispatch({ type: 'DELETE_TASK', payload: id });
   };
 
   const handleComplete = (id: string) => {
     // Remove from task order if present
-    setTaskOrder(taskOrder.filter(taskId => taskId !== id));
+    const newOrder = taskOrder.filter(taskId => taskId !== id);
+    setTaskOrder(newOrder);
+    // Save to store
+    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     // Always set plan.day to today when completing, so it appears in Done under today's date
     dispatch({ 
       type: 'UPDATE_TASK', 
@@ -444,7 +508,7 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
                   ? 'bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400'
                   : 'bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400'
               } ${isCompleting ? 'animate-ping' : ''}`}></div>
-              <div className={`relative bg-white/95 backdrop-blur-sm rounded-2xl p-12 shadow-2xl border border-white/50 transition-all duration-500 ${
+              <div className={`relative bg-white/95 backdrop-blur-sm rounded-2xl p-12 shadow-2xl border border-white/50 transition-all duration-500 overflow-hidden ${
                 isCompleting ? 'scale-110 rotate-3' : ''
               }`}>
                 <div className="flex items-center justify-center gap-3 mb-6">
@@ -460,7 +524,7 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
                     </span>
                   )}
                 </div>
-                <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center">
+                <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center break-words overflow-hidden max-w-full px-4">
                   {activeTask.title}
                 </h3>
                 <div className="text-center mb-12">
@@ -558,6 +622,15 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
           {/* Add Form - Fixed at bottom */}
           <form onSubmit={handleQuickAdd} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
             <div className="max-w-3xl mx-auto flex items-center gap-3">
+              {todayTasks.length > 0 && (
+                <button
+                  onClick={() => handleSetActive(todayTasks[0].id)}
+                  className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+                  title="Start Focus"
+                >
+                  <Play className="w-5 h-5 fill-current" />
+                </button>
+              )}
               <input 
                 type="text" 
                 value={quickAdd}
@@ -572,20 +645,20 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
               >
                 <Plus className="w-6 h-6" />
               </button>
-              {todayTasks.length > 0 && (
-                <button
-                  onClick={() => handleSetActive(todayTasks[0].id)}
-                  className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-                  title="Start Focus"
-                >
-                  <Play className="w-5 h-5 fill-current" />
-                </button>
-              )}
             </div>
           </form>
 
           {/* Add Form - Desktop */}
           <form onSubmit={handleQuickAdd} className="hidden lg:flex items-center gap-3">
+            {todayTasks.length > 0 && (
+              <button
+                onClick={() => handleSetActive(todayTasks[0].id)}
+                className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+                title="Start Focus"
+              >
+                <Play className="w-5 h-5 fill-current" />
+              </button>
+            )}
             <input 
               type="text" 
               value={quickAdd}
@@ -600,15 +673,6 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
             >
               <Plus className="w-6 h-6" />
             </button>
-            {todayTasks.length > 0 && (
-              <button
-                onClick={() => handleSetActive(todayTasks[0].id)}
-                className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-                title="Start Focus"
-              >
-                <Play className="w-5 h-5 fill-current" />
-              </button>
-            )}
           </form>
         </div>
       )}

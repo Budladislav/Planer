@@ -24,33 +24,63 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { view: 'today', icon: Target, label: 'Today' },
   ];
 
-  const NavItem = ({ view, icon: Icon, label }: { view: ViewState; icon: any; label: string }) => (
-    <button
-      onClick={() => onNavigate(view)}
-      className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-        currentView === view
-          ? 'bg-slate-200 text-slate-900'
-          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-      }`}
-    >
-      <Icon className="w-5 h-5 mr-3" />
-      <span className="flex-1 text-left">{label}</span>
-    </button>
-  );
+  const getIconColor = (view: ViewState, isActive: boolean) => {
+    if (isActive) {
+      switch (view) {
+        case 'today': return 'text-indigo-600';
+        case 'week': return 'text-indigo-500';
+        case 'events': return 'text-amber-600';
+        case 'done': return 'text-green-600';
+        case 'inbox': return 'text-purple-600';
+        case 'settings': return 'text-slate-600';
+        default: return 'text-slate-600';
+      }
+    } else {
+      switch (view) {
+        case 'today': return 'text-indigo-400';
+        case 'week': return 'text-indigo-400';
+        case 'events': return 'text-amber-500';
+        case 'done': return 'text-green-500';
+        case 'inbox': return 'text-purple-500';
+        case 'settings': return 'text-slate-400';
+        default: return 'text-slate-400';
+      }
+    }
+  };
 
-  const IconNavItem = ({ view, icon: Icon }: { view: ViewState; icon: any }) => (
-    <button
-      onClick={() => onNavigate(view)}
-      className={`flex flex-col items-center justify-center flex-1 aspect-square rounded-lg transition-colors ${
-        currentView === view
-          ? 'text-slate-900 bg-slate-100'
-          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-      }`}
-      title={navItems.find(item => item.view === view)?.label}
-    >
-      <Icon className="w-7 h-7" />
-    </button>
-  );
+  const NavItem = ({ view, icon: Icon, label }: { view: ViewState; icon: any; label: string }) => {
+    const isActive = currentView === view;
+    return (
+      <button
+        onClick={() => onNavigate(view)}
+        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+          isActive
+            ? 'bg-slate-200 text-slate-900'
+            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+        }`}
+      >
+        <Icon className={`w-5 h-5 mr-3 ${getIconColor(view, isActive)}`} />
+        <span className="flex-1 text-left">{label}</span>
+      </button>
+    );
+  };
+
+  const IconNavItem = ({ view, icon: Icon }: { view: ViewState; icon: any }) => {
+    const isActive = currentView === view;
+    return (
+      <button
+        onClick={() => onNavigate(view)}
+        className={`flex flex-col items-center justify-center flex-1 aspect-square rounded-lg transition-colors ${
+          isActive
+            ? 'text-slate-900 bg-slate-100'
+            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+        }`}
+        title={navItems.find(item => item.view === view)?.label}
+      >
+        <Icon className={`w-7 h-7 ${getIconColor(view, isActive)}`} />
+      </button>
+    );
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 lg:flex-row">

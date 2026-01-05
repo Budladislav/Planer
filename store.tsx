@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, useState } from 'react';
 import { AppState, Capture, Task, CalendarEvent, INITIAL_STATE, ViewState } from './types';
-import { generateId, getTodayString } from './utils';
+import { generateId, getTodayString, formatEventTitle, getWeekString } from './utils';
 
 // Migration function to normalize imported data
 const migrateAppState = (parsed: any): AppState => {
@@ -26,6 +26,7 @@ const migrateAppState = (parsed: any): AppState => {
             },
             frog: rest.frog === true,
             projectId: rest.projectId ?? null, // Can be 'event' string or null
+            eventId: rest.eventId ?? null, // Link to event
             createdAt: rest.createdAt || new Date().toISOString(),
             updatedAt: rest.updatedAt || new Date().toISOString(),
             timeSpent: rest.timeSpent, // Optional field
@@ -72,6 +73,7 @@ const migrateAppState = (parsed: any): AppState => {
     activeTaskId: parsed.activeTaskId ?? null,
     activeTaskStartedAt: parsed.activeTaskStartedAt ?? null,
     lastActiveView: migratedView,
+    taskOrderByDay: parsed.taskOrderByDay ?? {},
   };
 };
 
@@ -88,6 +90,7 @@ type Action =
   | { type: 'UPDATE_EVENT'; payload: Partial<CalendarEvent> & { id: string } }
   | { type: 'DELETE_EVENT'; payload: string }
   | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
+  | { type: 'UPDATE_TASK_ORDER'; payload: { day: string; order: string[] } }
   | { type: 'IMPORT_DATA'; payload: any }
   | { type: 'RESET_DATA' };
 
@@ -119,10 +122,58 @@ const appReducer = (state: AppState, action: Action): AppState => {
         tasks: [...state.tasks, action.payload],
       };
     case 'UPDATE_TASK':
-      return {
+      const updatedTask = state.tasks.find(t => t.id === action.payload.id);
+      const newState = {
         ...state,
         tasks: state.tasks.map((t) => (t.id === action.payload.id ? { ...t, ...action.payload, updatedAt: new Date().toISOString() } : t)),
       };
+      
+      // If task has eventId and was updated (but not status change), update the event
+      if (updatedTask?.eventId && action.payload.id) {
+        const event = state.events.find(e => e.id === updatedTask.eventId);
+        if (event) {
+          // Don't update event if only status changed (done/undone)
+          const payloadKeys = Object.keys(action.payload).filter(k => k !== 'id');
+          const statusOnlyChange = payloadKeys.length === 1 && action.payload.status !== undefined;
+          
+          if (!statusOnlyChange) {
+            // Extract plain title and time from task title (format: "HH:MM title")
+            const finalTask = newState.tasks.find(t => t.id === action.payload.id);
+            const taskTitle = finalTask?.title || updatedTask.title;
+            const titleMatch = taskTitle.match(/^(\d{2}:\d{2})\s+(.+)$/);
+            
+            if (titleMatch) {
+              const [, time, plainTitle] = titleMatch;
+              // Update event with new title, date, and time from task
+              newState.events = newState.events.map(e => {
+                if (e.id === updatedTask.eventId) {
+                  return {
+                    ...e,
+                    title: plainTitle,
+                    date: finalTask?.plan.day ?? e.date,
+                    time: time,
+                  };
+                }
+                return e;
+              });
+            } else {
+              // Task title doesn't match format, update only date
+              const finalTask = newState.tasks.find(t => t.id === action.payload.id);
+              newState.events = newState.events.map(e => {
+                if (e.id === updatedTask.eventId) {
+                  return {
+                    ...e,
+                    date: finalTask?.plan.day ?? e.date,
+                  };
+                }
+                return e;
+              });
+            }
+          }
+        }
+      }
+      
+      return newState;
     case 'DELETE_TASK':
       return {
         ...state,
@@ -135,20 +186,68 @@ const appReducer = (state: AppState, action: Action): AppState => {
         events: [...state.events, action.payload],
       };
     case 'UPDATE_EVENT':
-      return {
+      const updateEventState = {
         ...state,
         events: state.events.map((e) => (e.id === action.payload.id ? { ...e, ...action.payload } : e)),
       };
+      
+      // Find and update linked task
+      const linkedTask = state.tasks.find(t => t.eventId === action.payload.id);
+      if (linkedTask && action.payload.id) {
+        const updatedEvent = updateEventState.events.find(e => e.id === action.payload.id);
+        if (updatedEvent) {
+          const newTaskTitle = formatEventTitle(updatedEvent.time, updatedEvent.title);
+          updateEventState.tasks = updateEventState.tasks.map(t => {
+            if (t.id === linkedTask.id) {
+              return {
+                ...t,
+                title: newTaskTitle,
+                plan: { 
+                  day: updatedEvent.date, 
+                  week: getWeekString(updatedEvent.date) 
+                },
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return t;
+          });
+        }
+      }
+      
+      return updateEventState;
     case 'DELETE_EVENT':
-      return {
+      // Delete associated task if exists
+      const eventToDelete = state.events.find(e => e.id === action.payload);
+      const deleteEventState = {
         ...state,
         events: state.events.filter((e) => e.id !== action.payload),
       };
+      
+      // Find and delete task linked to this event
+      if (eventToDelete) {
+        const linkedTask = state.tasks.find(t => t.eventId === action.payload);
+        if (linkedTask) {
+          deleteEventState.tasks = deleteEventState.tasks.filter(t => t.id !== linkedTask.id);
+          if (deleteEventState.activeTaskId === linkedTask.id) {
+            deleteEventState.activeTaskId = null;
+          }
+        }
+      }
+      
+      return deleteEventState;
     case 'SET_ACTIVE_TASK':
       return {
         ...state,
         activeTaskId: action.payload.id,
         activeTaskStartedAt: action.payload.id ? (action.payload.startedAt ?? Date.now()) : null,
+      };
+    case 'UPDATE_TASK_ORDER':
+      return {
+        ...state,
+        taskOrderByDay: {
+          ...state.taskOrderByDay,
+          [action.payload.day]: action.payload.order,
+        },
       };
     case 'IMPORT_DATA':
         // Apply migration to imported data
