@@ -1,3 +1,9 @@
+## MonoFocus Planner — updates 1.5.7
+
+- **Week view edit reliability (mobile)**:
+  - Extracted week task cards into stable components (bucket + day tasks) matching Today/Done patterns to avoid remount/state loss on mobile tap
+  - Edit now mirrors Today/Done inline flow with consistent handlers; Delete/Done/Move unchanged
+
 ## MonoFocus Planner — updates 1.5.6
 
 - **Week view edit behavior unified with other tabs**:

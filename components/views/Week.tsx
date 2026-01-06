@@ -1,7 +1,430 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
+import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
-import { Trash2, Check, ChevronLeft, ChevronRight, Edit2, Plus } from 'lucide-react';
+import { Trash2, Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+
+type DayTaskItemProps = {
+  task: Task;
+  todayStr: string;
+  dispatch: ReturnType<typeof useAppStore>['dispatch'];
+  onMove: (id: string) => void;
+};
+
+const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editFrog, setEditFrog] = useState(task.frog);
+  const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTitle.trim()) return;
+    // Validate week format before saving (if provided)
+    let nextPlanWeek: string | null = task.plan.week ?? null;
+    if (editWeek) {
+      const [yearStr, weekStr] = editWeek.split('-W');
+      const weekNum = parseInt(weekStr || '', 10);
+      if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+        // Invalid week, don't save
+        return;
+      }
+      nextPlanWeek = editWeek;
+    }
+
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: task.id,
+        title: editTitle.trim(),
+        frog: editFrog,
+        plan: {
+          day: task.plan.day,
+          week: nextPlanWeek,
+        },
+      },
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditTitle(task.title);
+    setEditFrog(task.frog);
+    setEditWeek(task.plan.week || getWeekString(task.plan.day || todayStr));
+  };
+
+  const [yearPart, weekPart] = editWeek.split('-W');
+
+  // Auto-resize textarea
+  React.useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [isEditing, editTitle]);
+
+  if (isEditing) {
+    return (
+      <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3 text-sm">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+          <textarea
+            ref={textareaRef}
+            required
+            value={editTitle}
+            onChange={(e) => {
+              setEditTitle(e.target.value);
+              if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+                textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+              }
+            }}
+            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            rows={1}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1 mt-2">Week</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="2020"
+              max="2100"
+              value={yearPart || ''}
+              onChange={(e) => {
+                const nextYear = e.target.value;
+                const week = weekPart || '';
+                if (nextYear === '') {
+                  setEditWeek(`-W${week}`);
+                } else {
+                  setEditWeek(`${nextYear}-W${week}`);
+                }
+              }}
+              className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              placeholder="Year"
+            />
+            <span className="self-center text-slate-400">-W</span>
+            <input
+              type="number"
+              min="1"
+              max="52"
+              value={weekPart ? parseInt(weekPart, 10) : ''}
+              onChange={(e) => {
+                const year = yearPart || '';
+                const raw = e.target.value;
+                if (raw === '') {
+                  setEditWeek(`${year}-W`);
+                  return;
+                }
+                let num = parseInt(raw, 10);
+                if (isNaN(num)) {
+                  return;
+                }
+                if (num < 1) num = 1;
+                if (num > 52) num = 52;
+                const week = String(num).padStart(2, '0');
+                setEditWeek(`${year}-W${week}`);
+              }}
+              className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              placeholder="Week"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={editFrog}
+              onChange={(e) => setEditFrog(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 rounded"
+            />
+            <span className="text-lg">🐸</span>
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm">
+      <div className="flex justify-between gap-2 items-start">
+        <div className="flex gap-2 flex-1 min-w-0 items-start">
+          {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
+          <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            {task.title}
+          </span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(task.id);
+          }}
+          className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
+          title="Move"
+        >
+          Move
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between px-4 gap-3 mt-3">
+        <button
+          onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+          title="Delete"
+        >
+          Delete
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
+          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+          title="Edit"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => {
+            dispatch({
+              type: 'UPDATE_TASK',
+              payload: {
+                id: task.id,
+                status: 'done',
+                plan: { week: null, day: getTodayString() },
+              },
+            });
+          }}
+          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
+          title="Mark Done"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+};
+
+type BucketTaskItemProps = {
+  task: Task;
+  currentWeek: string;
+  dispatch: ReturnType<typeof useAppStore>['dispatch'];
+  onMove: (id: string) => void;
+};
+
+const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editFrog, setEditFrog] = useState(task.frog);
+  const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTitle.trim()) return;
+    // Validate week format before saving
+    const [yearStr, weekStr] = editWeek.split('-W');
+    const weekNum = parseInt(weekStr || '', 10);
+    if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+      // Invalid week, don't save
+      return;
+    }
+
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: task.id,
+        title: editTitle.trim(),
+        frog: editFrog,
+        plan: { week: editWeek, day: null },
+      },
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditTitle(task.title);
+    setEditFrog(task.frog);
+    setEditWeek(task.plan.week || currentWeek);
+  };
+
+  // Auto-resize textarea
+  React.useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [isEditing, editTitle]);
+
+  const [yearPart, weekPart] = editWeek.split('-W');
+
+  if (isEditing) {
+    return (
+      <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+          <textarea
+            ref={textareaRef}
+            required
+            value={editTitle}
+            onChange={(e) => {
+              setEditTitle(e.target.value);
+              if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+                textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+              }
+            }}
+            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            rows={1}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Week</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="2020"
+              max="2100"
+              value={yearPart || ''}
+              onChange={(e) => {
+                const nextYear = e.target.value;
+                const week = weekPart || '';
+                if (nextYear === '') {
+                  setEditWeek(`-W${week}`);
+                } else {
+                  setEditWeek(`${nextYear}-W${week}`);
+                }
+              }}
+              className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              placeholder="Year"
+            />
+            <span className="self-center text-slate-400">-W</span>
+            <input
+              type="number"
+              min="1"
+              max="52"
+              value={weekPart ? parseInt(weekPart, 10) : ''}
+              onChange={(e) => {
+                const year = yearPart || '';
+                const raw = e.target.value;
+                if (raw === '') {
+                  setEditWeek(`${year}-W`);
+                  return;
+                }
+                let num = parseInt(raw, 10);
+                if (isNaN(num)) {
+                  return;
+                }
+                if (num < 1) num = 1;
+                if (num > 52) num = 52;
+                const week = String(num).padStart(2, '0');
+                setEditWeek(`${year}-W${week}`);
+              }}
+              className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              placeholder="Week"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={editFrog}
+              onChange={(e) => setEditFrog(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 rounded"
+            />
+            <span className="text-lg">🐸</span>
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm">
+      <div className="flex justify-between gap-2 items-start">
+        <div className="flex gap-2 flex-1 min-w-0 items-start">
+          {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
+          <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            {task.title}
+          </span>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onMove(task.id); }}
+          className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
+          title="Move"
+        >
+          Move
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between px-4 gap-3 mt-3">
+        <button
+          onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+          title="Delete"
+        >
+          Delete
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
+          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+          title="Edit"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => {
+            dispatch({
+              type: 'UPDATE_TASK',
+              payload: {
+                id: task.id,
+                status: 'done',
+                plan: { week: null, day: getTodayString() }, // Move to today when completed
+              },
+            });
+          }}
+          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
+          title="Mark Done"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -416,210 +839,7 @@ export const WeekView: React.FC = () => {
     );
   };
 
-  const TaskItem: React.FC<{ task: typeof weekTasks[0] }> = ({ task }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editTitle, setEditTitle] = useState(task.title);
-    const [editFrog, setEditFrog] = useState(task.frog);
-    const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
-    const [editClicked, setEditClicked] = useState(false);
-    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-    const handleSaveEdit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editTitle.trim()) return;
-      // Validate week format before saving
-      const [yearStr, weekStr] = editWeek.split('-W');
-      const weekNum = parseInt(weekStr || '', 10);
-      if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-        // Invalid week, don't save
-        return;
-      }
-
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id: task.id,
-          title: editTitle.trim(),
-          frog: editFrog,
-          plan: { week: editWeek, day: null },
-        },
-      });
-      setIsEditing(false);
-    };
-
-    const handleCancelEdit = () => {
-      setIsEditing(false);
-      setEditTitle(task.title);
-      setEditFrog(task.frog);
-      setEditWeek(task.plan.week || currentWeek);
-    };
-
-    // Auto-resize textarea
-    React.useEffect(() => {
-      if (isEditing && textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      }
-    }, [isEditing, editTitle]);
-
-    const [yearPart, weekPart] = editWeek.split('-W');
-
-    if (isEditing) {
-      return (
-        <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-            <textarea
-              ref={textareaRef}
-              required
-              value={editTitle}
-              onChange={(e) => {
-                setEditTitle(e.target.value);
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = 'auto';
-                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-                }
-              }}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
-              rows={1}
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Week</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min="2020"
-                max="2100"
-                value={yearPart || ''}
-                onChange={(e) => {
-                  const nextYear = e.target.value;
-                  const week = weekPart || '';
-                  if (nextYear === '') {
-                    setEditWeek(`-W${week}`);
-                  } else {
-                    setEditWeek(`${nextYear}-W${week}`);
-                  }
-                }}
-                className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-                placeholder="Year"
-              />
-              <span className="self-center text-slate-400">-W</span>
-              <input
-                type="number"
-                min="1"
-                max="52"
-                value={weekPart ? parseInt(weekPart, 10) : ''}
-                onChange={(e) => {
-                  const year = yearPart || '';
-                  const raw = e.target.value;
-                  if (raw === '') {
-                    setEditWeek(`${year}-W`);
-                    return;
-                  }
-                  let num = parseInt(raw, 10);
-                  if (isNaN(num)) {
-                    return;
-                  }
-                  if (num < 1) num = 1;
-                  if (num > 52) num = 52;
-                  const week = String(num).padStart(2, '0');
-                  setEditWeek(`${year}-W${week}`);
-                }}
-                className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-                placeholder="Week"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={editFrog}
-                onChange={(e) => setEditFrog(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded"
-              />
-              <span className="text-lg">🐸</span>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                Save
-              </button>
-            </div>
-          </div>
-        </form>
-      );
-    }
-
-    return (
-      <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      >
-        <div className="flex justify-between gap-2 items-start">
-          <div className="flex gap-2 flex-1 min-w-0 items-start">
-            {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
-            <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-              {task.title}
-            </span>
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMoveTaskId(task.id); }}
-            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
-            title="Move"
-          >
-            Move
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between px-4 gap-3 mt-3">
-          <button
-            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
-            title="Delete"
-          >
-            Delete
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditClicked(true);
-              setIsEditing(true);
-            }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded hover:bg-slate-200 ${
-              editClicked ? 'bg-yellow-200 text-slate-900' : 'bg-slate-100 text-slate-600'
-            }`}
-            title="Edit"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              dispatch({
-                type: 'UPDATE_TASK',
-                payload: {
-                  id: task.id,
-                  status: 'done',
-                  plan: { week: null, day: getTodayString() }, // Move to today when completed
-                },
-              });
-            }}
-            className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
-            title="Mark Done"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  };
+  // (old TaskItem definition removed in favor of top-level BucketTaskItem)
 
   const weekDateRange = getWeekDateRange(currentWeek);
 
@@ -653,7 +873,13 @@ export const WeekView: React.FC = () => {
           ) : (
             <div className="grid gap-3">
               {weekTasks.map(task => (
-                <TaskItem key={task.id} task={task} />
+                <BucketTaskItem
+                  key={task.id}
+                  task={task}
+                  currentWeek={currentWeek}
+                  dispatch={dispatch}
+                  onMove={(id) => setMoveTaskId(id)}
+                />
               ))}
             </div>
           )}
@@ -695,7 +921,13 @@ export const WeekView: React.FC = () => {
                       </div>
                     )}
                     {tasks.map((t) => (
-                      <DayTaskItem key={t.id} task={t} />
+                      <DayTaskItem
+                        key={t.id}
+                        task={t}
+                        todayStr={todayStr}
+                        dispatch={dispatch}
+                        onMove={(id) => setMoveTaskId(id)}
+                      />
                     ))}
                   </div>
               </div>
