@@ -1,3 +1,17 @@
+## MonoFocus Planner — updates 2.2
+
+- **Week View — dnd-сортировка в бакете и днях**:
+  - Добавлена drag & drop сортировка задач в бакете недели (desktop и mobile)
+  - Добавлена drag & drop сортировка задач внутри каждого дня недели
+  - Порядок задач сохраняется в `taskOrderByWeekBucket[week]` для бакета
+  - Порядок задач в днях синхронизируется с Today через `taskOrderByDay[day]`
+  - Для текущего дня Today является источником правды для порядка
+  - Для будущих дней Week может устанавливать порядок
+  - Созданы компоненты `SortableBucketTaskItem` и `SortableDayTaskItem` для обёртки существующих компонентов
+  - Используется @dnd-kit с TouchSensor для мобильных устройств (delay: 250ms, tolerance: 8px)
+  - Логика переноса задач между днями/бакетом не изменена (Move-модалка сохранена)
+  - Порядок сохраняется после перезагрузки страницы
+
 ## MonoFocus Planner — updates 2.0
 
 - **Inbox — major improvements**:

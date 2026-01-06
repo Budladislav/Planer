@@ -4,6 +4,24 @@ import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type DayTaskItemProps = {
   task: Task;
@@ -11,9 +29,11 @@ type DayTaskItemProps = {
   dispatch: ReturnType<typeof useAppStore>['dispatch'];
   onMove: (id: string) => void;
   onDeleteConfirm: (id: string) => void;
+  dragListeners?: any;
+  isDragging?: boolean;
 };
 
-const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove, onDeleteConfirm }) => {
+const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -166,10 +186,35 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   return (
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      onClick={() => setShowActions(prev => !prev)}
+      onClick={(e) => {
+        // Don't toggle actions if dragging or if click is on drag handle
+        if (!isDragging && !dragListeners) {
+          setShowActions(prev => !prev);
+        }
+      }}
     >
       <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
-        <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+        <div 
+          className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
+          {...(dragListeners || {})}
+          onTouchStart={(e) => {
+            if (dragListeners) {
+              e.stopPropagation();
+            }
+          }}
+          onTouchMove={(e) => {
+            if (dragListeners) {
+              e.stopPropagation();
+            }
+          }}
+          style={{ 
+            touchAction: dragListeners ? 'none' : 'auto',
+            cursor: dragListeners ? (isDragging ? 'grabbing' : 'grab') : 'default',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none'
+          }}
+        >
           {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
             className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
@@ -182,7 +227,11 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         <button
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onMove(task.id);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
           }}
           className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
             showActions ? 'mt-0' : ''
@@ -241,14 +290,41 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   );
 };
 
+// Sortable wrapper for DayTaskItem
+const SortableDayTaskItem: React.FC<DayTaskItemProps> = (props) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <DayTaskItem {...props} dragListeners={listeners} isDragging={isDragging} />
+    </div>
+  );
+};
+
 type BucketTaskItemProps = {
   task: Task;
   currentWeek: string;
   dispatch: ReturnType<typeof useAppStore>['dispatch'];
   onMove: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
+  dragListeners?: any;
+  isDragging?: boolean;
 };
 
-const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove, onDeleteConfirm }) => {
+const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -394,10 +470,35 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   return (
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      onClick={() => setShowActions(prev => !prev)}
+      onClick={(e) => {
+        // Don't toggle actions if dragging or if click is on drag handle
+        if (!isDragging && !dragListeners) {
+          setShowActions(prev => !prev);
+        }
+      }}
     >
       <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
-        <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+        <div 
+          className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
+          {...(dragListeners || {})}
+          onTouchStart={(e) => {
+            if (dragListeners) {
+              e.stopPropagation();
+            }
+          }}
+          onTouchMove={(e) => {
+            if (dragListeners) {
+              e.stopPropagation();
+            }
+          }}
+          style={{ 
+            touchAction: dragListeners ? 'none' : 'auto',
+            cursor: dragListeners ? (isDragging ? 'grabbing' : 'grab') : 'default',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none'
+          }}
+        >
           {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
             className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
@@ -408,7 +509,14 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           </span>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); onMove(task.id); }}
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            e.preventDefault();
+            onMove(task.id); 
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
           className={`px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
             showActions ? 'mt-0' : ''
           }`}
@@ -465,6 +573,30 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   );
 };
 
+// Sortable wrapper for BucketTaskItem
+const SortableBucketTaskItem: React.FC<BucketTaskItemProps> = (props) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <BucketTaskItem {...props} dragListeners={listeners} isDragging={isDragging} />
+    </div>
+  );
+};
+
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
@@ -475,9 +607,36 @@ export const WeekView: React.FC = () => {
   });
 
   // Only show TODO tasks in week bucket (completed tasks live in Done view)
-  const weekTasks = state.tasks.filter(
-    t => t.plan.week === currentWeek && !t.plan.day && t.status === 'todo'
-  ); // Tasks in bucket, not assigned to day yet
+  // Apply saved order for week bucket (desktop only)
+  const weekTasks = useMemo(() => {
+    const weekTasksRaw = state.tasks.filter(
+      t => t.plan.week === currentWeek && !t.plan.day && t.status === 'todo'
+    );
+    
+    const savedOrder = state.taskOrderByWeekBucket[currentWeek];
+    if (!savedOrder || savedOrder.length === 0) {
+      return weekTasksRaw;
+    }
+    // Create a map for quick lookup
+    const taskMap = new Map(weekTasksRaw.map(t => [t.id, t]));
+    // Build ordered array, preserving saved order and appending any new tasks
+    const ordered: Task[] = [];
+    const usedIds = new Set<string>();
+    for (const id of savedOrder) {
+      const task = taskMap.get(id);
+      if (task) {
+        ordered.push(task);
+        usedIds.add(id);
+      }
+    }
+    // Append any tasks not in saved order
+    for (const task of weekTasksRaw) {
+      if (!usedIds.has(task.id)) {
+        ordered.push(task);
+      }
+    }
+    return ordered;
+  }, [state.tasks, state.taskOrderByWeekBucket, currentWeek]);
 
   const todayStr = getTodayString();
   const thisWeek = getWeekString();
@@ -568,6 +727,57 @@ export const WeekView: React.FC = () => {
     setIsTouch(!!(mq?.matches || hasTouchPoints || hasTouchEvent));
   }, []);
 
+  // DnD sensors for desktop and mobile
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for week bucket
+  const handleBucketDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = weekTasks.findIndex(t => t.id === active.id);
+    const newIndex = weekTasks.findIndex(t => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(weekTasks, oldIndex, newIndex).map(t => t.id);
+    dispatch({
+      type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+      payload: { week: currentWeek, order: newOrder },
+    });
+  };
+
+  // Handle drag end for day tasks
+  const handleDayDragEnd = (day: string) => (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const tasks = dayTasks[day] || [];
+    const oldIndex = tasks.findIndex(t => t.id === active.id);
+    const newIndex = tasks.findIndex(t => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(tasks, oldIndex, newIndex).map(t => t.id);
+    dispatch({
+      type: 'UPDATE_TASK_ORDER',
+      payload: { day, order: newOrder },
+    });
+  };
+
   // Tasks grouped by day for current week
   // Show only TODO tasks assigned to each day (plan.day === day.date)
   const dayTasks = useMemo(() => {
@@ -643,6 +853,15 @@ export const WeekView: React.FC = () => {
           payload: { day, order: [...currentOrder, id] },
         });
       }
+      // Remove from week bucket order if present
+      const bucketOrder = state.taskOrderByWeekBucket[currentWeek] || [];
+      if (bucketOrder.includes(id)) {
+        const newBucketOrder = bucketOrder.filter(taskId => taskId !== id);
+        dispatch({
+          type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+          payload: { week: currentWeek, order: newBucketOrder },
+        });
+      }
     }
     setMoveTaskId(null);
   };
@@ -650,10 +869,11 @@ export const WeekView: React.FC = () => {
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (quickAdd.trim()) {
+      const newTaskId = generateId();
       dispatch({
         type: 'ADD_TASK',
         payload: {
-          id: generateId(),
+          id: newTaskId,
           title: quickAdd.trim(),
           status: 'todo',
           plan: { week: currentWeek, day: null },
@@ -662,6 +882,12 @@ export const WeekView: React.FC = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }
+      });
+      // Add to end of week bucket order
+      const currentOrder = state.taskOrderByWeekBucket[currentWeek] || [];
+      dispatch({
+        type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+        payload: { week: currentWeek, order: [...currentOrder, newTaskId] },
       });
       setQuickAdd('');
     }
@@ -715,6 +941,18 @@ export const WeekView: React.FC = () => {
         });
       }
     });
+    // Remove from week bucket order if present
+    const weekKeys = Object.keys(state.taskOrderByWeekBucket);
+    weekKeys.forEach(week => {
+      const order = state.taskOrderByWeekBucket[week] || [];
+      if (order.includes(id)) {
+        const newOrder = order.filter(taskId => taskId !== id);
+        dispatch({
+          type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+          payload: { week, order: newOrder },
+        });
+      }
+    });
     dispatch({ type: 'DELETE_TASK', payload: id });
   };
 
@@ -748,18 +986,29 @@ export const WeekView: React.FC = () => {
               No tasks in week bucket. Drag a task here from a specific day.
             </div>
           ) : (
-            <div className="grid gap-3">
-              {weekTasks.map(task => (
-                <BucketTaskItem
-                  key={task.id}
-                  task={task}
-                  currentWeek={currentWeek}
-                  dispatch={dispatch}
-                  onMove={(id) => setMoveTaskId(id)}
-                  onDeleteConfirm={handleDeleteConfirm}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleBucketDragEnd}
+            >
+              <SortableContext
+                items={weekTasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="grid gap-3">
+                  {weekTasks.map(task => (
+                    <SortableBucketTaskItem
+                      key={task.id}
+                      task={task}
+                      currentWeek={currentWeek}
+                      dispatch={dispatch}
+                      onMove={(id) => setMoveTaskId(id)}
+                      onDeleteConfirm={handleDeleteConfirm}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
           {isTouch && weekTasks.length > 0 && (
             <div className="text-xs text-slate-400">
@@ -805,16 +1054,29 @@ export const WeekView: React.FC = () => {
                         Drag a task here from week list or another day
                       </div>
                     )}
-                    {tasks.map((t) => (
-                      <DayTaskItem
-                        key={t.id}
-                        task={t}
-                        todayStr={todayStr}
-                        dispatch={dispatch}
-                        onMove={(id) => setMoveTaskId(id)}
-                        onDeleteConfirm={handleDeleteConfirm}
-                      />
-                    ))}
+                    {tasksCount > 0 && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDayDragEnd(day.date)}
+                      >
+                        <SortableContext
+                          items={tasks.map(t => t.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {tasks.map((t) => (
+                            <SortableDayTaskItem
+                              key={t.id}
+                              task={t}
+                              todayStr={todayStr}
+                              dispatch={dispatch}
+                              onMove={(id) => setMoveTaskId(id)}
+                              onDeleteConfirm={handleDeleteConfirm}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    )}
                   </div>
               </div>
             );

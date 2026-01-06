@@ -39,6 +39,7 @@ export interface AppState {
   activeTaskStartedAt: number | null; // timestamp ms when active task started
   lastActiveView: ViewState;
   taskOrderByDay: Record<string, string[]>; // Maps day (YYYY-MM-DD) to ordered task IDs
+  taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
 }
 
 export const INITIAL_STATE: AppState = {
@@ -49,4 +50,5 @@ export const INITIAL_STATE: AppState = {
   activeTaskStartedAt: null,
   lastActiveView: 'today',
   taskOrderByDay: {},
+  taskOrderByWeekBucket: {},
 };

@@ -84,6 +84,7 @@ const migrateAppState = (parsed: any): AppState => {
     activeTaskStartedAt: parsed.activeTaskStartedAt ?? null,
     lastActiveView: migratedView,
     taskOrderByDay: parsed.taskOrderByDay ?? {},
+    taskOrderByWeekBucket: parsed.taskOrderByWeekBucket ?? {},
   };
 };
 
@@ -103,6 +104,7 @@ type Action =
   | { type: 'DELETE_EVENT'; payload: string }
   | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
   | { type: 'UPDATE_TASK_ORDER'; payload: { day: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_WEEK_BUCKET'; payload: { week: string; order: string[] } }
   | { type: 'IMPORT_DATA'; payload: any }
   | { type: 'RESET_DATA' };
 
@@ -271,6 +273,14 @@ const appReducer = (state: AppState, action: Action): AppState => {
         taskOrderByDay: {
           ...state.taskOrderByDay,
           [action.payload.day]: action.payload.order,
+        },
+      };
+    case 'UPDATE_TASK_ORDER_WEEK_BUCKET':
+      return {
+        ...state,
+        taskOrderByWeekBucket: {
+          ...state.taskOrderByWeekBucket,
+          [action.payload.week]: action.payload.order,
         },
       };
     case 'IMPORT_DATA':
