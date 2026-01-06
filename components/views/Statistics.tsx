@@ -1,14 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../../store';
-import { getTodayStats, getWeekStats, getMonthStats, getYearStats, getAllTimeStats, Stats } from '../../utils/statistics';
+import { getTodayStats, getWeekStats, getMonthStats, getYearStats, getAllTimeStats, Stats, getDailyStatsForPeriod, getCurrentWeekDailyStats, getCurrentMonthWeeklyStats, getCurrentYearMonthlyStats, getAllTimeYearlyStats } from '../../utils/statistics';
 import { formatTime } from '../../utils';
 import { BarChart3, TrendingUp, Clock, CheckCircle, Circle } from 'lucide-react';
+import { BarChart, BarChartData } from '../charts/BarChart';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'year' | 'all';
+type ChartType = 'tasks' | 'time';
 
 export const StatisticsView: React.FC = () => {
   const { state } = useAppStore();
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
+  const [chartType, setChartType] = useState<ChartType>('tasks');
 
   const stats: Stats = useMemo(() => {
     switch (periodFilter) {
@@ -26,6 +29,67 @@ export const StatisticsView: React.FC = () => {
         return getTodayStats(state.tasks);
     }
   }, [state.tasks, periodFilter]);
+
+  // Chart data based on period and type
+  const chartData: BarChartData[] = useMemo(() => {
+    let data;
+    const getValue = (item: { completedTasks: number; totalTimeSpent: number }) => 
+      chartType === 'tasks' ? item.completedTasks : Math.round(item.totalTimeSpent / 60); // Convert to minutes
+    
+    switch (periodFilter) {
+      case 'today':
+        // For today, show last 7 days for context
+        data = getDailyStatsForPeriod(state.tasks, 7);
+        return data.map(d => ({
+          label: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }),
+          value: getValue(d),
+          color: '#10b981',
+        }));
+      
+      case 'week':
+        // Current week: Mon-Sun of current week
+        data = getCurrentWeekDailyStats(state.tasks);
+        return data.map(d => ({
+          label: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }),
+          value: getValue(d),
+          color: '#6366f1',
+        }));
+      
+      case 'month':
+        // Current month: show by weeks
+        data = getCurrentMonthWeeklyStats(state.tasks);
+        return data.map((d, i) => ({
+          label: `W${i + 1}`,
+          value: getValue(d),
+          color: '#8b5cf6',
+        }));
+      
+      case 'year':
+        // Current year: by months
+        data = getCurrentYearMonthlyStats(state.tasks);
+        return data.map(d => {
+          const month = d.date.split('-')[1];
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return {
+            label: monthNames[parseInt(month, 10) - 1],
+            value: getValue(d),
+            color: '#ec4899',
+          };
+        });
+      
+      case 'all':
+        // All time: by years
+        data = getAllTimeYearlyStats(state.tasks);
+        return data.map(d => ({
+          label: d.date,
+          value: getValue(d),
+          color: '#f59e0b',
+        }));
+      
+      default:
+        return [];
+    }
+  }, [state.tasks, periodFilter, chartType]);
 
   const completionRate = stats.totalTasks > 0 
     ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
@@ -74,16 +138,16 @@ export const StatisticsView: React.FC = () => {
             <button
               key={period}
               onClick={() => setPeriodFilter(period)}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg border whitespace-nowrap transition-colors ${
+              className={`px-3 py-2 text-sm font-semibold rounded-lg border whitespace-nowrap transition-colors ${
                 periodFilter === period
                   ? 'bg-indigo-600 text-white border-indigo-600'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
               }`}
             >
               {period === 'today' ? 'Today' :
-               period === 'week' ? 'This Week' :
-               period === 'month' ? 'This Month' :
-               period === 'year' ? 'This Year' :
+               period === 'week' ? 'Week' :
+               period === 'month' ? 'Month' :
+               period === 'year' ? 'Year' :
                'All Time'}
             </button>
           ))}
@@ -158,6 +222,46 @@ export const StatisticsView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Chart */}
+      {chartData.length > 0 && (
+        <div className="mt-4 p-3 bg-white border border-slate-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-600" />
+              {chartType === 'tasks' ? 'Completed Tasks' : 'Time Spent'}
+            </h3>
+            <div className="flex gap-1 text-xs">
+              <button
+                onClick={() => setChartType('tasks')}
+                className={`px-2 py-1 rounded transition-colors ${
+                  chartType === 'tasks'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Tasks
+              </button>
+              <button
+                onClick={() => setChartType('time')}
+                className={`px-2 py-1 rounded transition-colors ${
+                  chartType === 'time'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Time
+              </button>
+            </div>
+          </div>
+          <BarChart 
+            data={chartData} 
+            height={150} 
+            showValues={true}
+            valueFormatter={chartType === 'time' ? (v) => `${v}m` : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 };
