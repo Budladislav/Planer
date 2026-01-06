@@ -207,8 +207,8 @@ export const EventsView: React.FC = () => {
   }, [editingId, editTitle]);
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this event? (The task copy will remain)')) {
-      // Delete only the event, not the task
+    if (window.confirm('Delete this event? (The corresponding task will also be deleted)')) {
+      // Delete event and linked task
       dispatch({ type: 'DELETE_EVENT', payload: id });
     }
   };

@@ -1,3 +1,14 @@
+## MonoFocus Planner — updates 1.7
+
+- **PWA (Progressive Web App) implementation**:
+  - Added `manifest.json` with app metadata, icons, and theme colors
+  - Implemented Service Worker for offline functionality and static asset caching
+  - Configured `display: standalone` for native app-like experience without browser UI
+  - Automatic manifest path fixing for production builds (dev uses `/`, production uses `/Planer/`)
+  - PNG icons (192x192 and 512x512) for better compatibility across devices
+  - App can now be installed on Android Chrome and launched from home screen
+  - Data still stored in localStorage; app works offline with cached static assets
+
 ## MonoFocus Planner — updates 1.6
 
 - **Code refactoring and cleanup**:
