@@ -93,12 +93,24 @@ export const WeekView: React.FC = () => {
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
   const [isTouch, setIsTouch] = useState(false);
 
+  // Надёжное определение touch-устройств:
+  // - pointer: coarse
+  // - или наличие touch-экранa (maxTouchPoints / ontouchstart)
   useEffect(() => {
-    const mq = window.matchMedia('(pointer: coarse)');
-    const update = () => setIsTouch(mq.matches);
+    const computeIsTouch = () => {
+      const mq = window.matchMedia('(pointer: coarse)');
+      const hasTouchPoints = (navigator as any).maxTouchPoints > 0;
+      const hasTouchEvent = 'ontouchstart' in window;
+      return mq.matches || hasTouchPoints || hasTouchEvent;
+    };
+
+    const update = () => {
+      setIsTouch(computeIsTouch());
+    };
+
     update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   // Tasks grouped by day for current week

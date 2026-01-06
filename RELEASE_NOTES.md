@@ -1,3 +1,9 @@
+## MonoFocus Planner — updates 1.5.3
+
+- **Week view mobile tap fix**:
+  - Improved touch device detection (pointer, maxTouchPoints, touch events) to reliably disable native drag&drop on real phones
+  - Task and day headers in Week now expand/collapse correctly on Android Chrome as in other tabs
+
 ## MonoFocus Planner — updates 1.5.2
 
 - **Week view auto-expand fix**:
