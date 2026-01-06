@@ -1,3 +1,9 @@
+## MonoFocus Planner — updates 1.5.2
+
+- **Week view auto-expand fix**:
+  - Auto-expand of days with tasks now runs only once when the week is loaded
+  - After initial expansion, the user has full control over collapsing/expanding days; the effect no longer touches `expandedDays`
+
 ## MonoFocus Planner — updates 1.5.1
 
 - **Week view hotfix**:
