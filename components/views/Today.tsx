@@ -188,12 +188,25 @@ const SortableTaskItem: React.FC<{
         >
           Delete
         </button>
+        <div className="flex items-center gap-2 flex-1 justify-center">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
+            title="Edit task"
+          >
+            Edit
+          </button>
+        </div>
         <button
-          onClick={() => setIsEditing(true)}
-          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
-          title="Edit task"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetActive(task.id);
+          }}
+          className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
+          title="Start focus"
         >
-          Edit
+          <Play className="w-3.5 h-3.5 fill-current" />
+          Focus
         </button>
       </div>
     </div>
@@ -362,7 +375,8 @@ export const TodayView: React.FC = () => {
             plan: { day: todayStr, week: null }
           } 
         });
-      dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
+        // При завершении задачи она переходит в Done
+        dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
         setIsCompleting(false);
       }, 600);
     }
@@ -380,13 +394,13 @@ export const TodayView: React.FC = () => {
         } 
       });
     }
+    // Просто останавливаем фокус - задача остаётся на своём месте в порядке
     dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
   };
 
   const handleSetActive = (id: string) => {
-    // Remove task from order while it is active (so it's not shown in list)
-    const newOrder = orderedIds.filter(taskId => taskId !== id);
-    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
+    // Просто запускаем фокус для задачи по её id
+    // Не удаляем из порядка - экран фокуса всё равно перекрывает весь UI
     dispatch({ type: 'SET_ACTIVE_TASK', payload: { id, startedAt: Date.now() } });
   };
 
@@ -546,15 +560,6 @@ export const TodayView: React.FC = () => {
           {/* Add Form - Fixed at bottom */}
           <form onSubmit={handleQuickAdd} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
             <div className="max-w-3xl mx-auto flex items-center gap-3">
-              {todayTasks.length > 0 && (
-                <button
-                  onClick={() => handleSetActive(todayTasks[0].id)}
-                  className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-                  title="Start Focus"
-                >
-                  <Play className="w-5 h-5 fill-current" />
-                </button>
-              )}
               <input 
                 type="text" 
                 value={quickAdd}
@@ -574,15 +579,6 @@ export const TodayView: React.FC = () => {
 
           {/* Add Form - Desktop */}
           <form onSubmit={handleQuickAdd} className="hidden lg:flex items-center gap-3">
-            {todayTasks.length > 0 && (
-              <button
-                onClick={() => handleSetActive(todayTasks[0].id)}
-                className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-                title="Start Focus"
-              >
-                <Play className="w-5 h-5 fill-current" />
-              </button>
-            )}
             <input 
               type="text" 
               value={quickAdd}

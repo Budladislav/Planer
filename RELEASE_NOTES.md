@@ -1,3 +1,14 @@
+## MonoFocus Planner — updates 1.8
+
+- **Focus mode improvements**:
+  - Removed focus start button from task add forms (mobile and desktop)
+  - Added "Focus" button to expanded task view (right side, next to Edit button)
+  - Edit button moved to center position in action buttons row
+  - Focus can now be started for any task, not just the first one in the list
+  - Focus mode works by task ID, not by position in list
+  - Simplified logic: task remains in its position when focused (no removal/restoration needed since focus screen overlays entire UI)
+  - After pausing focus, task stays in its original position in the list
+
 ## MonoFocus Planner — updates 1.7
 
 - **PWA (Progressive Web App) implementation**:
