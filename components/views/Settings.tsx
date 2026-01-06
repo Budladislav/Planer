@@ -72,8 +72,10 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
+      </div>
 
       <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
          <div className="p-6 flex items-center justify-between">
@@ -116,8 +118,8 @@ export const SettingsView: React.FC = () => {
          </div>
       </div>
       
-      <div className="text-center text-xs text-slate-400 mt-8">
-         MonoFocus v1.0 • Data stored locally in browser
+      <div className="text-center text-xs text-slate-400 mt-6">
+         MonoFocus v1.5 • Data stored locally in browser
       </div>
     </div>
   );

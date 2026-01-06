@@ -1,3 +1,34 @@
+## MonoFocus Planner — updates 1.5
+
+- **Today & Week ordering fixes**:
+  - Task order in Today is now stored only in `taskOrderByDay` (no per-task `order` field), eliminating reload glitches
+  - Week view uses the same saved order for each day, so Today and Week always show tasks in identical order
+  - Drag & drop / add / delete / complete operations all keep `taskOrderByDay` in sync
+- **Carry-over tasks behavior**:
+  - Unfinished tasks from past days are migrated to today's date on app load
+  - Their week value is recalculated with `getWeekString(today)`, so Week view always shows them under the correct day/week
+- **Week view cleanup**:
+  - Completed tasks are no longer shown in Week; all done items live only in Done
+  - Navigation to past weeks is disabled; you can only see the current and future weeks
+  - In the current week, past days are hidden; their remaining TODO tasks automatically move into the week bucket (no date)
+  - Week/day edit forms now validate week numbers strictly (1–52) without auto-inserting `0`, and allow direct year/week editing for bucket and day tasks
+- **Done view logic**:
+  - "Undone" is only available for tasks completed today; older completed tasks can be edited or deleted, but not reverted to TODO
+  - Day groups are more compact and visually consistent with other lists
+- **Text wrapping & layout**:
+  - Long titles (including words без пробелов) no longer break layout; they wrap inside cards in Today, Week, Done, Events, Inbox
+  - All task/event cards share unified padding (`p-3`), font sizes (`text-sm` for content, `text-xs` for meta), and button styles
+- **Events & Inbox refinements**:
+  - Past events block uses tighter spacing while keeping collapse/expand behavior
+  - Event cards visually match task cards across the app
+  - Inbox processing cards use the same compact card and text sizes
+- **Settings & layout**:
+  - Settings title centered; footer now shows explicit version label and storage info
+  - Overall paddings reduced: smaller gutters from screen edges, tighter gaps between sections, so more content fits on screen
+- **Backups & compatibility**:
+  - Export format remains full `state` JSON; import still goes through `migrateAppState`
+  - Older backups (до 1.5) are auto-mигрированы: отсутствующие поля (`taskOrderByDay`, `eventId` и пр.) добавляются с безопасными значениями, carry-over логика применяется после миграции
+
 ## MonoFocus Planner — updates 1.4
 
 - **Task ordering persistence**: 

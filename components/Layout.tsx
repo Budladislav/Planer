@@ -106,7 +106,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 max-w-5xl mx-auto w-full pb-24 lg:pb-8">
+        <main className="flex-1 overflow-y-auto px-3 pt-3 pb-20 lg:px-6 lg:pt-4 lg:pb-6 max-w-4xl mx-auto w-full">
           {children}
         </main>
 

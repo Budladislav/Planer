@@ -84,7 +84,7 @@ const SortableTaskItem: React.FC<{
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
+      <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
           <textarea
@@ -134,7 +134,7 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-4 rounded-lg w-full max-w-full overflow-hidden transition-all ${
+      className={`p-3 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
         isFirst
           ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
           : 'bg-white border border-slate-200 hover:border-slate-300'
@@ -150,7 +150,7 @@ const SortableTaskItem: React.FC<{
       >
         {task.frog && <span role="img" aria-label="frog" className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className={`text-slate-700 font-medium ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+          <span className={`text-sm text-slate-700 font-medium ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
           </span>
           {task.timeSpent && task.timeSpent > 0 && (
@@ -222,31 +222,21 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   
   // Tasks for today that are todo and NOT the active task
   const availableTasks = todoTasks.filter(t => t.id !== state.activeTaskId);
-  
-  // Store the position of the active task when it becomes active
-  const [activeTaskPosition, setActiveTaskPosition] = useState<number | null>(null);
 
-  // Get saved order from store, or initialize with sorted order (frogs first)
+  // Order for today, stored in global state (persists across reloads)
   const savedOrder = state.taskOrderByDay[todayStr] || [];
-  const [taskOrder, setTaskOrder] = useState<string[]>(() => {
-    // If we have saved order, use it (filtering out tasks that no longer exist)
-    if (savedOrder.length > 0) {
-      const currentIds = availableTasks.map(t => t.id);
-      const validOrder = savedOrder.filter(id => currentIds.includes(id));
-      // Add new tasks at the end
-      const newIds = currentIds.filter(id => !validOrder.includes(id));
-      return [...validOrder, ...newIds];
-    }
-    // Initialize with sorted order (frogs first)
-    return availableTasks.sort((a, b) => {
-      if (a.frog && !b.frog) return -1;
-      if (!a.frog && b.frog) return 1;
-      return 0;
-    }).map(t => t.id);
-  });
+  const availableIds = availableTasks.map(t => t.id);
 
-  // Track previous activeTaskId to detect when task is paused
-  const prevActiveTaskIdRef = useRef<string | null>(state.activeTaskId);
+  // Derive current order of task IDs from saved order + current tasks
+  let orderedIds: string[];
+  if (savedOrder.length > 0) {
+    const validSaved = savedOrder.filter(id => availableIds.includes(id));
+    const missing = availableIds.filter(id => !validSaved.includes(id));
+    orderedIds = [...validSaved, ...missing];
+  } else {
+    // Fallback: preserve current order of tasks as-is
+    orderedIds = [...availableIds];
+  }
   
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -254,60 +244,8 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   const timerStartTimeRef = useRef<number | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   
-  // Sync with saved order from store when it changes
-  useEffect(() => {
-    const savedOrder = state.taskOrderByDay[todayStr] || [];
-    if (savedOrder.length > 0) {
-      const currentIds = availableTasks.map(t => t.id);
-      const validOrder = savedOrder.filter(id => currentIds.includes(id));
-      const newIds = currentIds.filter(id => !validOrder.includes(id));
-      const newOrder = [...validOrder, ...newIds];
-      // Only update if order actually changed
-      if (JSON.stringify(newOrder) !== JSON.stringify(taskOrder)) {
-        setTaskOrder(newOrder);
-      }
-    }
-  }, [state.taskOrderByDay[todayStr], availableTasks.length]);
-
-  // Update order when tasks change (only add new tasks, preserve position when task returns from active)
-  useEffect(() => {
-    const currentIds = availableTasks.map(t => t.id);
-    
-    // Check if we just paused (activeTaskId went from something to null)
-    if (prevActiveTaskIdRef.current !== null && state.activeTaskId === null && activeTaskPosition !== null) {
-      // Find the task that was just paused (it should be in availableTasks but not in taskOrder)
-      const pausedTaskId = currentIds.find(id => !taskOrder.includes(id));
-      if (pausedTaskId !== undefined) {
-        // Restore it to its previous position
-        const newOrder = [...taskOrder];
-        newOrder.splice(activeTaskPosition, 0, pausedTaskId);
-        setTaskOrder(newOrder);
-        // Save to store
-        dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-        setActiveTaskPosition(null);
-        prevActiveTaskIdRef.current = null;
-        return;
-      }
-    }
-    
-    // Update ref
-    prevActiveTaskIdRef.current = state.activeTaskId;
-    
-    // Keep existing order for tasks that are still available
-    const existingOrder = taskOrder.filter(id => currentIds.includes(id));
-    // Add new tasks at the end (only truly new tasks, not returning from active)
-    const newIds = currentIds.filter(id => !taskOrder.includes(id));
-    // Only update if there are actually new tasks
-    if (newIds.length > 0) {
-      const newOrder = [...existingOrder, ...newIds];
-      setTaskOrder(newOrder);
-      // Save to store
-      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    }
-  }, [availableTasks.length, state.activeTaskId]);
-
   // Get ordered tasks
-  const orderedTasks = taskOrder
+  const orderedTasks = orderedIds
     .map(id => availableTasks.find(t => t.id === id))
     .filter(Boolean) as Task[];
 
@@ -339,13 +277,11 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Reordering within list
-    const oldIndex = taskOrder.indexOf(activeId);
-    const newIndex = taskOrder.indexOf(overId);
+    // Reordering within list based on current ordered IDs
+    const oldIndex = orderedIds.indexOf(activeId);
+    const newIndex = orderedIds.indexOf(overId);
     if (oldIndex !== -1 && newIndex !== -1) {
-      const newOrder = arrayMove(taskOrder, oldIndex, newIndex);
-      setTaskOrder(newOrder);
-      // Save to store
+      const newOrder = arrayMove(orderedIds, oldIndex, newIndex);
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     }
   };
@@ -368,9 +304,8 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
         updatedAt: new Date().toISOString(),
       }
     });
-    // Add new task to the end of the order
-    const newOrder = [...taskOrder, newTaskId];
-    setTaskOrder(newOrder);
+    // Add new task to the end of the order (based on current orderedIds)
+    const newOrder = [...orderedIds, newTaskId];
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     setQuickAdd('');
   };
@@ -449,33 +384,22 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
   };
 
   const handleSetActive = (id: string) => {
-    // Save the position of the task before making it active
-    const position = taskOrder.indexOf(id);
-    if (position !== -1) {
-      setActiveTaskPosition(position);
-      // Remove from order temporarily
-      const newOrder = taskOrder.filter(taskId => taskId !== id);
-      setTaskOrder(newOrder);
-      // Save to store
-      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    }
+    // Remove task from order while it is active (so it's not shown in list)
+    const newOrder = orderedIds.filter(taskId => taskId !== id);
+    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     dispatch({ type: 'SET_ACTIVE_TASK', payload: { id, startedAt: Date.now() } });
   };
 
   const handleDelete = (id: string) => {
     // Remove from task order if present
-    const newOrder = taskOrder.filter(taskId => taskId !== id);
-    setTaskOrder(newOrder);
-    // Save to store
+    const newOrder = orderedIds.filter(taskId => taskId !== id);
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     dispatch({ type: 'DELETE_TASK', payload: id });
   };
 
   const handleComplete = (id: string) => {
     // Remove from task order if present
-    const newOrder = taskOrder.filter(taskId => taskId !== id);
-    setTaskOrder(newOrder);
-    // Save to store
+    const newOrder = orderedIds.filter(taskId => taskId !== id);
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     // Always set plan.day to today when completing, so it appears in Done under today's date
     dispatch({ 
@@ -565,7 +489,7 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
         // No Active Task View - Combined Today + Focus layout
         <div className="max-w-3xl mx-auto">
           {/* Today Section - Header */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-3">
             <h2 className="text-3xl font-bold text-slate-900">Today</h2>
             <p className="text-slate-500">{formatDateReadable(todayStr)}</p>
             <p className="text-slate-400 text-sm mt-1">
@@ -583,7 +507,7 @@ export const TodayView: React.FC<{ onNavigate: (v: any) => void }> = ({ onNaviga
           </div>
 
           {/* Tasks List - with bottom padding for fixed form */}
-          <div className="pb-24 lg:pb-4 min-h-[60vh] flex flex-col">
+          <div className="pb-20 lg:pb-4 min-h-[60vh] flex flex-col">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}

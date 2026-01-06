@@ -84,7 +84,7 @@ export const InboxView: React.FC = () => {
 
     if (processingId !== item.id) {
       return (
-        <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+        <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm text-sm">
           <span className="font-medium text-slate-800">{item.text}</span>
           <div className="flex gap-2">
             <button 
@@ -202,13 +202,13 @@ export const InboxView: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-3">
         <h2 className="text-3xl font-bold text-slate-900">Inbox</h2>
         <p className="text-slate-500">Capture everything. Process later.</p>
       </div>
 
       {/* Content - with bottom padding for fixed form */}
-      <div className="pb-24 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
+      <div className="pb-20 lg:pb-4 space-y-3 min-h-[60vh] flex flex-col">
         {newCaptures.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">

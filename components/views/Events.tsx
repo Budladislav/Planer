@@ -18,26 +18,26 @@ const EventItem: React.FC<{
 
   return (
     <div
-      className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-all overflow-hidden"
+      className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-sm transition-all overflow-hidden text-sm"
     >
       <div 
         className={`cursor-pointer ${showActions ? 'space-y-2' : ''}`}
         onClick={() => setShowActions(prev => !prev)}
       >
         <div className={`flex items-center flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
-          <span className="text-base text-slate-900">{formatDateShort(event.date)}</span>
+          <span className="text-sm text-slate-900">{formatDateShort(event.date)}</span>
           <span className="text-slate-400">,</span>
-          <span className="text-base text-slate-900 ml-1">{event.time}</span>
+          <span className="text-sm text-slate-900 ml-1">{event.time}</span>
           <span className="text-slate-400">,</span>
           {!showActions && (
-            <span className="text-base text-slate-900 ml-1 truncate">
+            <span className="text-sm text-slate-900 ml-1 truncate">
               {event.title}
             </span>
           )}
         </div>
         {showActions && (
           <div className="w-full">
-            <span className="text-base text-slate-900 break-words block">
+            <span className="text-sm text-slate-900 break-words block">
               {event.title}
             </span>
           </div>
@@ -216,13 +216,13 @@ export const EventsView: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-3">
         <h2 className="text-3xl font-bold text-slate-900">Events</h2>
         <p className="text-slate-500">Events create a task copy in the corresponding day</p>
       </div>
 
       {/* Events List - with bottom padding for fixed form */}
-      <div className="pb-48 lg:pb-8 space-y-2 min-h-[60vh] flex flex-col">
+      <div className="pb-32 lg:pb-6 space-y-2 min-h-[60vh] flex flex-col">
         {currentEvents.length === 0 && pastEvents.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">
@@ -322,7 +322,7 @@ export const EventsView: React.FC = () => {
                   </div>
                 </button>
                 {showPastEvents && (
-                  <div className="px-4 pb-4 space-y-2">
+                  <div className="px-2 pb-3 space-y-1">
                     {pastEvents.map((event) => (
                       <React.Fragment key={event.id}>
                         {editingId === event.id ? (

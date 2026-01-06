@@ -16,7 +16,7 @@ const migrateAppState = (parsed: any): AppState => {
           if (!t || typeof t !== 'object') return null;
           const { difficulty, ...rest } = t;
           // Ensure required fields exist with defaults
-          return {
+          const task: Task = {
             id: rest.id || generateId(),
             title: rest.title || '',
             status: rest.status === 'done' ? 'done' : 'todo',
@@ -31,6 +31,16 @@ const migrateAppState = (parsed: any): AppState => {
             updatedAt: rest.updatedAt || new Date().toISOString(),
             timeSpent: rest.timeSpent, // Optional field
           };
+
+          // Normalize carry-over tasks: move unfinished tasks from past days to today
+          const todayStr = getTodayString();
+          if (task.status === 'todo' && task.plan.day && task.plan.day < todayStr) {
+            task.plan.day = todayStr;
+            // Keep week consistent with the new date (important for linked events)
+            task.plan.week = getWeekString(todayStr);
+          }
+
+          return task;
         })
         .filter((t: Task | null): t is Task => t !== null)
     : [];

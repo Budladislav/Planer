@@ -8,7 +8,13 @@ export const WeekView: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
   const [quickAdd, setQuickAdd] = useState('');
 
-  const weekTasks = state.tasks.filter(t => t.plan.week === currentWeek && !t.plan.day); // Tasks in bucket, not assigned to day yet
+  // Only show TODO tasks in week bucket (completed tasks live in Done view)
+  const weekTasks = state.tasks.filter(
+    t => t.plan.week === currentWeek && !t.plan.day && t.status === 'todo'
+  ); // Tasks in bucket, not assigned to day yet
+
+  const todayStr = getTodayString();
+  const thisWeek = getWeekString();
 
   // Calculate dates for Mon-Sun of current week using UTC to avoid TZ drift
   const weekDays = useMemo(() => {
@@ -52,6 +58,35 @@ export const WeekView: React.FC = () => {
   const todoWeekTasks = allWeekTasks.filter(t => t.status === 'todo');
   const doneWeekTasks = allWeekTasks.filter(t => t.status === 'done');
 
+  // When a day in the current week moves into the past, move its remaining TODO tasks to week bucket
+  useEffect(() => {
+    // Only apply for the current calendar week
+    if (currentWeek !== thisWeek) return;
+    weekDays.forEach(day => {
+      if (day.date < todayStr) {
+        const staleTasks = state.tasks.filter(
+          t => t.status === 'todo' && t.plan.day === day.date
+        );
+        staleTasks.forEach(task => {
+          dispatch({
+            type: 'UPDATE_TASK',
+            payload: {
+              id: task.id,
+              plan: { week: currentWeek, day: null },
+            },
+          });
+        });
+        // Clear any saved order for this past day
+        if (state.taskOrderByDay[day.date]) {
+          dispatch({
+            type: 'UPDATE_TASK_ORDER',
+            payload: { day: day.date, order: [] },
+          });
+        }
+      }
+    });
+  }, [currentWeek, thisWeek, todayStr, weekDays, state.tasks, state.taskOrderByDay, dispatch]);
+
   // Simple drag-and-drop state
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
@@ -67,11 +102,13 @@ export const WeekView: React.FC = () => {
   }, []);
 
   // Tasks grouped by day for current week
-  // Show tasks assigned to each day (plan.day === day.date)
+  // Show only TODO tasks assigned to each day (plan.day === day.date)
   const dayTasks = useMemo(() => {
     const map: Record<string, typeof state.tasks> = {};
     weekDays.forEach((day) => {
-      const tasks = state.tasks.filter((t) => t.plan.day === day.date);
+      const tasks = state.tasks.filter(
+        (t) => t.plan.day === day.date && t.status === 'todo'
+      );
       // Apply saved order if available
       const savedOrder = state.taskOrderByDay[day.date];
       if (savedOrder && savedOrder.length > 0) {
@@ -96,7 +133,6 @@ export const WeekView: React.FC = () => {
   }, [state.tasks, weekDays, state.taskOrderByDay]);
 
   // Auto-expand days that have tasks, but only for today and future days
-  const todayStr = getTodayString();
   useEffect(() => {
     const next = new Set(expandedDays);
     weekDays.forEach((day) => {
@@ -123,16 +159,21 @@ export const WeekView: React.FC = () => {
     setExpandedDays(next);
   };
   
-  // Helper to change week
+  // Helper to change week (disallow navigating to past weeks)
   const changeWeek = (delta: number) => {
-     const [yearStr, weekStr] = currentWeek.split('-W');
-     let year = parseInt(yearStr);
-     let week = parseInt(weekStr) + delta;
-     
-     if (week > 52) { year++; week = 1; }
-     if (week < 1) { year--; week = 52; }
-     
-     setCurrentWeek(`${year}-W${week.toString().padStart(2, '0')}`);
+    const [yearStr, weekStr] = currentWeek.split('-W');
+    let year = parseInt(yearStr, 10);
+    let week = parseInt(weekStr, 10) + delta;
+
+    if (week > 52) { year++; week = 1; }
+    if (week < 1) { year--; week = 52; }
+
+    const nextWeekStr = `${year}-W${week.toString().padStart(2, '0')}`;
+    if (nextWeekStr < thisWeek) {
+      setCurrentWeek(thisWeek);
+    } else {
+      setCurrentWeek(nextWeekStr);
+    }
   };
 
   const moveToWeekBucket = (id: string) => {
@@ -192,12 +233,24 @@ export const WeekView: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
+    const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
     const [showActions, setShowActions] = useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!editTitle.trim()) return;
+      // Validate week format before saving (if provided)
+      let nextPlanWeek: string | null = task.plan.week ?? null;
+      if (editWeek) {
+        const [yearStr, weekStr] = editWeek.split('-W');
+        const weekNum = parseInt(weekStr || '', 10);
+        if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+          // Invalid week, don't save
+          return;
+        }
+        nextPlanWeek = editWeek;
+      }
       
       dispatch({
         type: 'UPDATE_TASK',
@@ -205,6 +258,10 @@ export const WeekView: React.FC = () => {
           id: task.id,
           title: editTitle.trim(),
           frog: editFrog,
+          plan: {
+            day: task.plan.day,
+            week: nextPlanWeek,
+          },
         },
       });
       setIsEditing(false);
@@ -214,7 +271,10 @@ export const WeekView: React.FC = () => {
       setIsEditing(false);
       setEditTitle(task.title);
       setEditFrog(task.frog);
+      setEditWeek(task.plan.week || getWeekString(task.plan.day || todayStr));
     };
+
+    const [yearPart, weekPart] = editWeek.split('-W');
 
     // Auto-resize textarea
     React.useEffect(() => {
@@ -226,7 +286,7 @@ export const WeekView: React.FC = () => {
 
     if (isEditing) {
       return (
-        <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3">
+        <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3 text-sm">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
             <textarea
@@ -244,6 +304,53 @@ export const WeekView: React.FC = () => {
               rows={1}
               autoFocus
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1 mt-2">Week</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="2020"
+                max="2100"
+                value={yearPart || ''}
+                onChange={(e) => {
+                  const nextYear = e.target.value;
+                  const week = weekPart || '';
+                  if (nextYear === '') {
+                    setEditWeek(`-W${week}`);
+                  } else {
+                    setEditWeek(`${nextYear}-W${week}`);
+                  }
+                }}
+                className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+                placeholder="Year"
+              />
+              <span className="self-center text-slate-400">-W</span>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={weekPart ? parseInt(weekPart, 10) : ''}
+                onChange={(e) => {
+                  const year = yearPart || '';
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    setEditWeek(`${year}-W`);
+                    return;
+                  }
+                  let num = parseInt(raw, 10);
+                  if (isNaN(num)) {
+                    return;
+                  }
+                  if (num < 1) num = 1;
+                  if (num > 52) num = 52;
+                  const week = String(num).padStart(2, '0');
+                  setEditWeek(`${year}-W${week}`);
+                }}
+                className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+                placeholder="Week"
+              />
+            </div>
           </div>
           <div className="flex items-center justify-between gap-2">
             <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -274,7 +381,7 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all"
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
@@ -283,7 +390,7 @@ export const WeekView: React.FC = () => {
         <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
           <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
             {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
-            <span className={`text-sm ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            <span className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
           </div>
@@ -351,6 +458,13 @@ export const WeekView: React.FC = () => {
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!editTitle.trim()) return;
+      // Validate week format before saving
+      const [yearStr, weekStr] = editWeek.split('-W');
+      const weekNum = parseInt(weekStr || '', 10);
+      if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+        // Invalid week, don't save
+        return;
+      }
 
       dispatch({
         type: 'UPDATE_TASK',
@@ -379,9 +493,11 @@ export const WeekView: React.FC = () => {
       }
     }, [isEditing, editTitle]);
 
+    const [yearPart, weekPart] = editWeek.split('-W');
+
     if (isEditing) {
       return (
-        <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
+        <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
             <textarea
@@ -407,10 +523,15 @@ export const WeekView: React.FC = () => {
                 type="number"
                 min="2020"
                 max="2100"
-                value={editWeek.split('-W')[0]}
+                value={yearPart || ''}
                 onChange={(e) => {
-                  const week = editWeek.split('-W')[1];
-                  setEditWeek(`${e.target.value}-W${week}`);
+                  const nextYear = e.target.value;
+                  const week = weekPart || '';
+                  if (nextYear === '') {
+                    setEditWeek(`-W${week}`);
+                  } else {
+                    setEditWeek(`${nextYear}-W${week}`);
+                  }
                 }}
                 className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
                 placeholder="Year"
@@ -420,10 +541,21 @@ export const WeekView: React.FC = () => {
                 type="number"
                 min="1"
                 max="52"
-                value={parseInt(editWeek.split('-W')[1])}
+                value={weekPart ? parseInt(weekPart, 10) : ''}
                 onChange={(e) => {
-                  const year = editWeek.split('-W')[0];
-                  const week = e.target.value.padStart(2, '0');
+                  const year = yearPart || '';
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    setEditWeek(`${year}-W`);
+                    return;
+                  }
+                  let num = parseInt(raw, 10);
+                  if (isNaN(num)) {
+                    return;
+                  }
+                  if (num < 1) num = 1;
+                  if (num > 52) num = 52;
+                  const week = String(num).padStart(2, '0');
                   setEditWeek(`${year}-W${week}`);
                 }}
                 className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
@@ -460,7 +592,7 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all"
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
         draggable={!isTouch}
         onDragStart={() => !isTouch && setDragTaskId(task.id)}
         onDragEnd={() => !isTouch && setDragTaskId(null)}
@@ -469,7 +601,7 @@ export const WeekView: React.FC = () => {
         <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
           <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
             {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
-            <span className={`text-sm ${showActions ? 'break-words' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            <span className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
           </div>
@@ -528,7 +660,7 @@ export const WeekView: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-3">
         <h2 className="text-3xl font-bold text-slate-900">Weekly Plan</h2>
         <p className="text-slate-400 text-sm mt-1">
           {todoWeekTasks.length} left • {doneWeekTasks.length} done
@@ -545,11 +677,11 @@ export const WeekView: React.FC = () => {
       </div>
 
       {/* Content - with bottom padding for fixed forms */}
-      <div className="pb-48 lg:pb-24 min-h-[60vh] flex flex-col">
+      <div className="pb-32 lg:pb-16 min-h-[60vh] flex flex-col">
         <div
-          className={`flex-1 space-y-3 rounded-lg border-2 border-dashed ${
+          className={`flex-1 space-y-2 rounded-lg border border-dashed ${
             dragTaskId ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
-          } p-3`}
+          } p-2`}
           onDragOver={(e) => !isTouch && e.preventDefault()}
           onDrop={(e) => {
             if (isTouch) return;
@@ -578,8 +710,12 @@ export const WeekView: React.FC = () => {
           )}
         </div>
         {/* Days list with tasks */}
-        <div className="mt-6 space-y-3">
+        <div className="mt-3 space-y-2">
           {weekDays.map((day) => {
+            // In the current week, hide days that are already in the past
+            if (currentWeek === thisWeek && day.date < todayStr) {
+              return null;
+            }
             const tasks = dayTasks[day.date] || [];
             const tasksCount = tasks.length;
             const isActive = dragTaskId !== null;

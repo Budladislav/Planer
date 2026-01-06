@@ -86,6 +86,10 @@ export const DoneView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
 
+    // Only allow "Undone" for tasks completed today
+    const completedDate = task.plan.day || task.updatedAt.split('T')[0];
+    const canUndo = completedDate === todayStr;
+
     const handleSaveEdit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!editTitle.trim()) return;
@@ -109,7 +113,7 @@ export const DoneView: React.FC = () => {
 
     if (isEditing) {
       return (
-        <form onSubmit={handleSaveEdit} className="p-4 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-4">
+        <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
             <input
@@ -156,7 +160,7 @@ export const DoneView: React.FC = () => {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {task.frog && <span className="flex-shrink-0">🐸</span>}
-            <span className={`text-sm truncate line-through text-slate-500`}>
+            <span className="text-sm break-all line-through text-slate-500">
               {task.title}
             </span>
             {task.timeSpent && task.timeSpent > 0 && (
@@ -190,13 +194,15 @@ export const DoneView: React.FC = () => {
           >
             Delete
           </button>
-          <button
-            onClick={() => handleUndo(task.id)}
-            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100"
-            title="Mark as todo"
-          >
-            Undone
-          </button>
+          {canUndo && (
+            <button
+              onClick={() => handleUndo(task.id)}
+              className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100"
+              title="Mark as todo"
+            >
+              Undone
+            </button>
+          )}
         </div>
       </div>
     );
@@ -205,7 +211,7 @@ export const DoneView: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-3">
         <h2 className="text-3xl font-bold text-slate-900">Done</h2>
         <p className="text-slate-500">
           Completed tasks: {doneTasks.length}
@@ -213,7 +219,7 @@ export const DoneView: React.FC = () => {
       </div>
 
       {/* Tasks List - with bottom padding for fixed form */}
-      <div className="pb-24 lg:pb-4 space-y-6 min-h-[60vh] flex flex-col">
+      <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {doneTasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">
@@ -234,7 +240,7 @@ export const DoneView: React.FC = () => {
                   <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => toggleDate(date)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3 flex-1">
                         {isExpanded ? (
@@ -264,7 +270,7 @@ export const DoneView: React.FC = () => {
                       </div>
                     </button>
                     {isExpanded && (
-                      <div className="px-4 pb-4 space-y-2 bg-slate-50/50">
+                      <div className="px-3 pb-3 space-y-2 bg-slate-50/50">
                         {tasks.map(task => (
                           <TaskItem key={task.id} task={task} />
                         ))}
