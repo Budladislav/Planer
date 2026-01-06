@@ -16,6 +16,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
   const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
+  const [showActions, setShowActions] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -161,11 +162,18 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   }
 
   return (
-    <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm">
-      <div className="flex justify-between gap-2 items-start">
-        <div className="flex gap-2 flex-1 min-w-0 items-start">
-          {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
-          <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+    <div
+      className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      onClick={() => setShowActions(prev => !prev)}
+    >
+      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+        <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+          {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
+          <span
+            className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
+              task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'
+            }`}
+          >
             {task.title}
           </span>
         </div>
@@ -174,16 +182,26 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             e.stopPropagation();
             onMove(task.id);
           }}
-          className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
+          className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
+            showActions ? 'mt-0' : ''
+          }`}
           title="Move"
         >
           Move
         </button>
       </div>
 
-      <div className="flex items-center justify-between px-4 gap-3 mt-3">
+      <div
+        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
-          onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch({ type: 'DELETE_TASK', payload: task.id });
+          }}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
           title="Delete"
         >
@@ -200,7 +218,8 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           Edit
         </button>
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             dispatch({
               type: 'UPDATE_TASK',
               payload: {
@@ -232,6 +251,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
   const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
+  const [showActions, setShowActions] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -370,24 +390,38 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   }
 
   return (
-    <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm">
-      <div className="flex justify-between gap-2 items-start">
-        <div className="flex gap-2 flex-1 min-w-0 items-start">
-          {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
-          <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+    <div
+      className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      onClick={() => setShowActions(prev => !prev)}
+    >
+      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+        <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
+          {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
+          <span
+            className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
+              task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'
+            }`}
+          >
             {task.title}
           </span>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onMove(task.id); }}
-          className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
+          className={`px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
+            showActions ? 'mt-0' : ''
+          }`}
           title="Move"
         >
           Move
         </button>
       </div>
 
-      <div className="flex items-center justify-between px-4 gap-3 mt-3">
+      <div
+        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
+          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
@@ -621,225 +655,6 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  const DayTaskItem: React.FC<{ task: typeof state.tasks[0] }> = ({ task }) => {
-    const { dispatch } = useAppStore();
-    const [isEditing, setIsEditing] = useState(false);
-    const [editTitle, setEditTitle] = useState(task.title);
-    const [editFrog, setEditFrog] = useState(task.frog);
-    const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
-    // debug: подсветка нажатия Edit, чтобы проверить срабатывание onClick на мобильных
-    const [editClicked, setEditClicked] = useState(false);
-    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-    const handleSaveEdit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editTitle.trim()) return;
-      // Validate week format before saving (if provided)
-      let nextPlanWeek: string | null = task.plan.week ?? null;
-      if (editWeek) {
-        const [yearStr, weekStr] = editWeek.split('-W');
-        const weekNum = parseInt(weekStr || '', 10);
-        if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-          // Invalid week, don't save
-          return;
-        }
-        nextPlanWeek = editWeek;
-      }
-      
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id: task.id,
-          title: editTitle.trim(),
-          frog: editFrog,
-          plan: {
-            day: task.plan.day,
-            week: nextPlanWeek,
-          },
-        },
-      });
-      setIsEditing(false);
-    };
-
-    const handleCancelEdit = () => {
-      setIsEditing(false);
-      setEditTitle(task.title);
-      setEditFrog(task.frog);
-      setEditWeek(task.plan.week || getWeekString(task.plan.day || todayStr));
-    };
-
-    const [yearPart, weekPart] = editWeek.split('-W');
-
-    // Auto-resize textarea
-    React.useEffect(() => {
-      if (isEditing && textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      }
-    }, [isEditing, editTitle]);
-
-    if (isEditing) {
-      return (
-        <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3 text-sm">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-            <textarea
-              ref={textareaRef}
-              required
-              value={editTitle}
-              onChange={(e) => {
-                setEditTitle(e.target.value);
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = 'auto';
-                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-                }
-              }}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
-              rows={1}
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1 mt-2">Week</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min="2020"
-                max="2100"
-                value={yearPart || ''}
-                onChange={(e) => {
-                  const nextYear = e.target.value;
-                  const week = weekPart || '';
-                  if (nextYear === '') {
-                    setEditWeek(`-W${week}`);
-                  } else {
-                    setEditWeek(`${nextYear}-W${week}`);
-                  }
-                }}
-                className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-                placeholder="Year"
-              />
-              <span className="self-center text-slate-400">-W</span>
-              <input
-                type="number"
-                min="1"
-                max="52"
-                value={weekPart ? parseInt(weekPart, 10) : ''}
-                onChange={(e) => {
-                  const year = yearPart || '';
-                  const raw = e.target.value;
-                  if (raw === '') {
-                    setEditWeek(`${year}-W`);
-                    return;
-                  }
-                  let num = parseInt(raw, 10);
-                  if (isNaN(num)) {
-                    return;
-                  }
-                  if (num < 1) num = 1;
-                  if (num > 52) num = 52;
-                  const week = String(num).padStart(2, '0');
-                  setEditWeek(`${year}-W${week}`);
-                }}
-                className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-                placeholder="Week"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={editFrog}
-                onChange={(e) => setEditFrog(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded"
-              />
-              <span className="text-lg">🐸</span>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                Save
-              </button>
-            </div>
-          </div>
-        </form>
-      );
-    }
-
-    return (
-      <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      >
-        <div className="flex justify-between gap-2 items-start">
-          <div className="flex gap-2 flex-1 min-w-0 items-start">
-            {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
-            <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-              {task.title}
-            </span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMoveTaskId(task.id);
-            }}
-            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
-            title="Move"
-          >
-            Move
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between px-4 gap-3 mt-3">
-          <button
-            onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
-            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
-            title="Delete"
-          >
-            Delete
-          </button>
-          <button
-            onClick={(e) => {
-              // Явно останавливаем всплытие и помечаем клик
-              e.stopPropagation();
-              setEditClicked(true);
-              setIsEditing(true);
-            }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded hover:bg-slate-200 ${
-              editClicked ? 'bg-yellow-200 text-slate-900' : 'bg-slate-100 text-slate-600'
-            }`}
-            title="Edit"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              dispatch({
-                type: 'UPDATE_TASK',
-                payload: {
-                  id: task.id,
-                  status: 'done',
-                  plan: { week: null, day: getTodayString() },
-                },
-              });
-            }}
-            className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
-            title="Mark Done"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  // (old TaskItem definition removed in favor of top-level BucketTaskItem)
 
   const weekDateRange = getWeekDateRange(currentWeek);
 

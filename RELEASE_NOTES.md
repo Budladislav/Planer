@@ -1,3 +1,11 @@
+## MonoFocus Planner — updates 1.5.8
+
+- **Week view task collapse/expand restored**:
+  - Tasks in Week view (both bucket and days) now collapse by default, showing only title and Move button
+  - Tap on task card expands it to show full text and action buttons (Delete, Edit, Done)
+  - Fixed duplicate DayTaskItem component issue that prevented collapse/expand from working in day sections
+  - All action buttons now properly stop event propagation to prevent conflicts
+
 ## MonoFocus Planner — updates 1.5.7
 
 - **Week view edit reliability (mobile)**:
