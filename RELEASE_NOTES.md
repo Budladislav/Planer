@@ -1,3 +1,10 @@
+## MonoFocus Planner — updates 1.5.5
+
+- **Week view mobile layout simplification**:
+  - Removed expand/collapse behavior for days and tasks in Week view; all day sections are always expanded
+  - Task cards in Week now always show full text and all action buttons (Delete, Edit, Done, Move) without extra taps
+  - Drag & drop remains disabled; moving tasks between days and bucket is done only via the explicit `Move` button and modal
+
 ## MonoFocus Planner — updates 1.5.4
 
 - **Week view mobile tap fix — v2**:

@@ -87,8 +87,7 @@ export const WeekView: React.FC = () => {
     });
   }, [currentWeek, thisWeek, todayStr, weekDays, state.tasks, state.taskOrderByDay, dispatch]);
 
-  // UI state
-  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  // UI state (days всегда раскрыты, без сворачивания)
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
 
   // Простая эвристика для touch, используется только для отображения подсказок/модалки Move
@@ -131,29 +130,6 @@ export const WeekView: React.FC = () => {
     return map;
   }, [state.tasks, weekDays, state.taskOrderByDay]);
 
-  // Auto-expand days that have tasks only once when неделя меняется.
-  // После первой инициализации пользователь полностью контролирует
-  // сворачивание/разворачивание (эффект больше не вмешивается).
-  useEffect(() => {
-    const initial = new Set<string>();
-    weekDays.forEach((day) => {
-      if (day.date >= todayStr && (dayTasks[day.date]?.length || 0) > 0) {
-        initial.add(day.date);
-      }
-    });
-    setExpandedDays(initial);
-  }, [currentWeek, weekDays, dayTasks, todayStr]);
-
-  const toggleDay = (date: string) => {
-    const next = new Set(expandedDays);
-    if (next.has(date)) {
-      next.delete(date);
-    } else {
-      next.add(date);
-    }
-    setExpandedDays(next);
-  };
-  
   // Helper to change week (disallow navigating to past weeks)
   const changeWeek = (delta: number) => {
     const [yearStr, weekStr] = currentWeek.split('-W');
@@ -198,7 +174,6 @@ export const WeekView: React.FC = () => {
           payload: { day, order: [...currentOrder, id] },
         });
       }
-      setExpandedDays(prev => new Set(prev).add(day));
     }
     setMoveTaskId(null);
   };
@@ -229,7 +204,6 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
-    const [showActions, setShowActions] = useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
@@ -376,13 +350,12 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
-        onClick={() => setShowActions((prev) => !prev)}
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       >
-        <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
-          <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
-            {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
-            <span className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+        <div className="flex justify-between gap-2 items-start">
+          <div className="flex gap-2 flex-1 min-w-0 items-start">
+            {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
+            <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
           </div>
@@ -391,19 +364,14 @@ export const WeekView: React.FC = () => {
               e.stopPropagation();
               setMoveTaskId(task.id);
             }}
-            className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
+            className="px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0"
             title="Move"
           >
             Move
           </button>
         </div>
 
-        <div
-          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex items-center justify-between px-4 gap-3 mt-3">
           <button
             onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
             className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
@@ -444,7 +412,6 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
-    const [showActions, setShowActions] = useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
@@ -584,31 +551,25 @@ export const WeekView: React.FC = () => {
 
     return (
       <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
-        onClick={() => setShowActions(prev => !prev)}
+        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       >
-        <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
-          <div className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}>
-            {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
-            <span className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+        <div className="flex justify-between gap-2 items-start">
+          <div className="flex gap-2 flex-1 min-w-0 items-start">
+            {task.frog && <span className="flex-shrink-0 mt-0.5">🐸</span>}
+            <span className={`text-sm break-all ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {task.title}
             </span>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setMoveTaskId(task.id); }}
-            className={`px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
+            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0"
             title="Move"
           >
             Move
           </button>
         </div>
 
-        <div
-          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex items-center justify-between px-4 gap-3 mt-3">
           <button
             onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
             className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
@@ -695,30 +656,23 @@ export const WeekView: React.FC = () => {
             }
             const tasks = dayTasks[day.date] || [];
             const tasksCount = tasks.length;
-            const isExpanded = expandedDays.has(day.date);
             return (
               <div
                 key={day.date}
                 className="rounded-lg border border-slate-200 transition-colors bg-white"
               >
                 <div className="flex items-center justify-between px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleDay(day.date)}
-                    className="flex-1 flex items-center justify-between text-left"
-                  >
+                  <div className="flex-1 flex items-center justify-between text-left">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-800">{day.weekday}</span>
                       <span className="text-xs text-slate-500">{day.label}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span>{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
-                      <span className="text-slate-400">{isExpanded ? '▾' : '▸'}</span>
                     </div>
-                </button>
+                  </div>
                 </div>
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2">
+                <div className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2">
                     {tasksCount === 0 && (
                       <div className="text-sm text-slate-400 italic">
                         Drag a task here from week list or another day
@@ -728,7 +682,6 @@ export const WeekView: React.FC = () => {
                       <DayTaskItem key={t.id} task={t} />
                     ))}
                   </div>
-                )}
               </div>
             );
           })}
