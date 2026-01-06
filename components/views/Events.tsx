@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { CalendarEvent } from '../../types';
 import { getTodayString, generateId, formatDateShort, getWeekString, formatEventTitle } from '../../utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
 const EventItem: React.FC<{ 
   event: CalendarEvent;

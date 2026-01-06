@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { generateId, formatDateReadable, getTodayString, formatTime } from '../../utils';
-import { Check, Trash2, Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { generateId, getTodayString, formatTime } from '../../utils';
+import { Trash2, Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();

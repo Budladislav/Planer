@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../store';
 import { ViewState } from '../types';
 import { 
-  Target, Calendar, List, Inbox, Settings, CheckCircle, CheckSquare
+  Target, Calendar, List, Inbox, Settings, CheckSquare
 } from 'lucide-react';
 
 interface LayoutProps {

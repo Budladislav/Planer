@@ -1,3 +1,16 @@
+## MonoFocus Planner — updates 1.6
+
+- **Code refactoring and cleanup**:
+  - Renamed `Focus.tsx` to `Today.tsx` for better structure clarity (focus mode is part of Today view, not vice versa)
+  - Removed unused imports across all components (Target, X, Edit2, Check, CheckCircle, formatDateReadable)
+  - Removed unused `onNavigate` parameter from TodayView component
+  - All imports and references updated to reflect the new file structure
+- **Development workflow improvements**:
+  - Updated TODO.md with detailed implementation prompts for each feature
+  - Added step-by-step development guidelines to minimize bugs and conflicts
+  - Added pre-commit checklist to ensure code quality
+  - Structured prompts for safe, incremental feature implementation
+
 ## MonoFocus Planner — updates 1.5.8
 
 - **Week view task collapse/expand restored**:

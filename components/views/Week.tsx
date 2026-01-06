@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
-import { Trash2, Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 type DayTaskItemProps = {
   task: Task;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppProvider, useAppStore } from './store';
 import { Layout } from './components/Layout';
-import { TodayView } from './components/views/Focus';
+import { TodayView } from './components/views/Today';
 import { InboxView } from './components/views/Inbox';
 import { WeekView } from './components/views/Week';
 import { EventsView } from './components/views/Events';
@@ -19,13 +19,13 @@ const Main: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'today': return <TodayView onNavigate={handleNavigate} />;
+      case 'today': return <TodayView />;
       case 'inbox': return <InboxView />;
       case 'week': return <WeekView />;
       case 'events': return <EventsView />;
       case 'done': return <DoneView />;
       case 'settings': return <SettingsView />;
-      default: return <TodayView onNavigate={handleNavigate} />;
+      default: return <TodayView />;
     }
   };
 
