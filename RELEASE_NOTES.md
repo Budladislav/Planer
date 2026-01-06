@@ -1,3 +1,11 @@
+## MonoFocus Planner — updates 1.9.5
+
+- **Inbox delete fix**:
+  - Fixed delete functionality in Inbox view
+  - Changed from archiving to permanent deletion of captures
+  - Added `DELETE_CAPTURE` action to store
+  - Updated confirmation modal text and styling to match delete action (danger variant)
+
 ## MonoFocus Planner — updates 1.9
 
 - **Quick add tasks to week days**:

@@ -93,6 +93,7 @@ type Action =
   | { type: 'SET_VIEW'; payload: ViewState }
   | { type: 'ADD_CAPTURE'; payload: string }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
+  | { type: 'DELETE_CAPTURE'; payload: string }
   | { type: 'ADD_TASK'; payload: Task }
   | { type: 'UPDATE_TASK'; payload: Partial<Task> & { id: string } }
   | { type: 'DELETE_TASK'; payload: string }
@@ -125,6 +126,11 @@ const appReducer = (state: AppState, action: Action): AppState => {
         captures: state.captures.map((c) =>
           c.id === action.payload.id ? { ...c, status: action.payload.status } : c
         ),
+      };
+    case 'DELETE_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.filter((c) => c.id !== action.payload),
       };
     case 'ADD_TASK':
       return {

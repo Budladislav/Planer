@@ -3,6 +3,7 @@ import { useAppStore } from '../../store';
 import { CalendarEvent } from '../../types';
 import { getTodayString, generateId, formatDateShort, getWeekString, formatEventTitle } from '../../utils';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ConfirmModal } from '../Modal';
 
 const EventItem: React.FC<{ 
   event: CalendarEvent;
@@ -70,6 +71,10 @@ const EventItem: React.FC<{
 
 export const EventsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; eventId: string | null }>({
+    isOpen: false,
+    eventId: null,
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -207,13 +212,18 @@ export const EventsView: React.FC = () => {
   }, [editingId, editTitle]);
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this event? (The corresponding task will also be deleted)')) {
-      // Delete event and linked task
-      dispatch({ type: 'DELETE_EVENT', payload: id });
+    setDeleteConfirm({ isOpen: true, eventId: id });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.eventId) {
+      dispatch({ type: 'DELETE_EVENT', payload: deleteConfirm.eventId });
+      setDeleteConfirm({ isOpen: false, eventId: null });
     }
   };
 
   return (
+    <>
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="text-center mb-3">
@@ -476,5 +486,16 @@ export const EventsView: React.FC = () => {
         </div>
       </form>
     </div>
+
+    <ConfirmModal
+      isOpen={deleteConfirm.isOpen}
+      onClose={() => setDeleteConfirm({ isOpen: false, eventId: null })}
+      onConfirm={handleDeleteConfirm}
+      title="Delete Event"
+      message="Delete this event? (The corresponding task will also be deleted)"
+      variant="danger"
+      confirmText="Delete"
+    />
+    </>
   );
 };

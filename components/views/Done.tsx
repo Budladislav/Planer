@@ -3,9 +3,14 @@ import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { generateId, getTodayString, formatTime } from '../../utils';
 import { Trash2, Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { ConfirmModal } from '../Modal';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
+    isOpen: false,
+    taskId: null,
+  });
   const [quickAdd, setQuickAdd] = useState('');
   const todayStr = getTodayString();
   
@@ -54,8 +59,13 @@ export const DoneView: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this task permanently?')) {
-      dispatch({ type: 'DELETE_TASK', payload: id });
+    setDeleteConfirm({ isOpen: true, taskId: id });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.taskId) {
+      dispatch({ type: 'DELETE_TASK', payload: deleteConfirm.taskId });
+      setDeleteConfirm({ isOpen: false, taskId: null });
     }
   };
 
@@ -209,6 +219,7 @@ export const DoneView: React.FC = () => {
   };
 
   return (
+    <>
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="text-center mb-3">
@@ -321,6 +332,17 @@ export const DoneView: React.FC = () => {
         </button>
       </form>
     </div>
+
+    <ConfirmModal
+      isOpen={deleteConfirm.isOpen}
+      onClose={() => setDeleteConfirm({ isOpen: false, taskId: null })}
+      onConfirm={handleDeleteConfirm}
+      title="Delete Task"
+      message="Delete this task permanently?"
+      variant="danger"
+      confirmText="Delete"
+    />
+    </>
   );
 };
 

@@ -3,15 +3,17 @@ import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ConfirmModal } from '../Modal';
 
 type DayTaskItemProps = {
   task: Task;
   todayStr: string;
   dispatch: ReturnType<typeof useAppStore>['dispatch'];
   onMove: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
 };
 
-const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove }) => {
+const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove, onDeleteConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -200,7 +202,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         <button
           onClick={(e) => {
             e.stopPropagation();
-            dispatch({ type: 'DELETE_TASK', payload: task.id });
+            onDeleteConfirm(task.id);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
           title="Delete"
@@ -246,7 +248,7 @@ type BucketTaskItemProps = {
   onMove: (id: string) => void;
 };
 
-const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove }) => {
+const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove, onDeleteConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -423,7 +425,10 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={() => dispatch({ type: 'DELETE_TASK', payload: task.id })}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteConfirm(task.id);
+          }}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
           title="Delete"
         >
@@ -464,6 +469,10 @@ export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
   const [quickAdd, setQuickAdd] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
+    isOpen: false,
+    taskId: null,
+  });
 
   // Only show TODO tasks in week bucket (completed tasks live in Done view)
   const weekTasks = state.tasks.filter(
@@ -689,6 +698,25 @@ export const WeekView: React.FC = () => {
     setQuickAddDay(null);
   };
 
+  const handleDeleteConfirm = (id: string) => {
+    setDeleteConfirm({ isOpen: true, taskId: id });
+  };
+
+  const handleDelete = (id: string) => {
+    // Remove from task order if present in any day
+    const dayKeys = Object.keys(state.taskOrderByDay);
+    dayKeys.forEach(day => {
+      const order = state.taskOrderByDay[day] || [];
+      if (order.includes(id)) {
+        const newOrder = order.filter(taskId => taskId !== id);
+        dispatch({
+          type: 'UPDATE_TASK_ORDER',
+          payload: { day, order: newOrder },
+        });
+      }
+    });
+    dispatch({ type: 'DELETE_TASK', payload: id });
+  };
 
   const weekDateRange = getWeekDateRange(currentWeek);
 
@@ -728,6 +756,7 @@ export const WeekView: React.FC = () => {
                   currentWeek={currentWeek}
                   dispatch={dispatch}
                   onMove={(id) => setMoveTaskId(id)}
+                  onDeleteConfirm={handleDeleteConfirm}
                 />
               ))}
             </div>
@@ -783,6 +812,7 @@ export const WeekView: React.FC = () => {
                         todayStr={todayStr}
                         dispatch={dispatch}
                         onMove={(id) => setMoveTaskId(id)}
+                        onDeleteConfirm={handleDeleteConfirm}
                       />
                     ))}
                   </div>
@@ -906,6 +936,21 @@ export const WeekView: React.FC = () => {
           </div>
         );
       })()}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, taskId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.taskId) {
+            handleDelete(deleteConfirm.taskId);
+            setDeleteConfirm({ isOpen: false, taskId: null });
+          }
+        }}
+        title="Delete Task"
+        message="Delete this task permanently?"
+        variant="danger"
+        confirmText="Delete"
+      />
 
       {/* Week Selector - Fixed at bottom (mobile) */}
       <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">

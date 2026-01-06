@@ -3,11 +3,16 @@ import { useAppStore } from '../../store';
 import { Capture } from '../../types';
 import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange } from '../../utils';
 import { Trash2, X, Inbox, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ConfirmModal } from '../Modal';
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [captureInput, setCaptureInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; captureId: string | null }>({
+    isOpen: false,
+    captureId: null,
+  });
 
   // Filter new captures
   const newCaptures = state.captures.filter(c => c.status === 'new');
@@ -94,7 +99,7 @@ export const InboxView: React.FC = () => {
               Process
             </button>
             <button 
-               onClick={() => dispatch({ type: 'PROCESS_CAPTURE', payload: { id: item.id, status: 'archived' } })}
+               onClick={() => setDeleteConfirm({ isOpen: true, captureId: item.id })}
                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
             >
               <Trash2 className="w-4 h-4" />
@@ -260,6 +265,21 @@ export const InboxView: React.FC = () => {
           <Plus className="w-6 h-6" />
         </button>
       </form>
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, captureId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.captureId) {
+            dispatch({ type: 'DELETE_CAPTURE', payload: deleteConfirm.captureId });
+            setDeleteConfirm({ isOpen: false, captureId: null });
+          }
+        }}
+        title="Delete Capture"
+        message="Delete this capture permanently?"
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
   );
 };

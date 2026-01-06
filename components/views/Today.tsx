@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Check, Pause, Play, Plus, Trash2 } from 'lucide-react';
 import { getTodayString, generateId, formatDateReadable, formatTime } from '../../utils';
+import { ConfirmModal } from '../Modal';
 import {
   DndContext,
   closestCenter,
@@ -29,8 +30,9 @@ const SortableTaskItem: React.FC<{
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
+  onDeleteConfirm: (id: string) => void;
   isFirst?: boolean;
-}> = ({ task, onSetActive, onDelete, onComplete, onUpdate, isFirst = false }) => {
+}> = ({ task, onSetActive, onDelete, onComplete, onUpdate, onDeleteConfirm, isFirst = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -178,11 +180,7 @@ const SortableTaskItem: React.FC<{
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={() => {
-            if (window.confirm('Delete this task permanently?')) {
-              onDelete(task.id);
-            }
-          }}
+          onClick={() => onDeleteConfirm(task.id)}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
           title="Delete task"
         >
@@ -218,6 +216,10 @@ export const TodayView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [quickAdd, setQuickAdd] = useState('');
   const todayStr = getTodayString();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
+    isOpen: false,
+    taskId: null,
+  });
 
   const activeTask = state.tasks.find(t => t.id === state.activeTaskId);
   
@@ -404,6 +406,10 @@ export const TodayView: React.FC = () => {
     dispatch({ type: 'SET_ACTIVE_TASK', payload: { id, startedAt: Date.now() } });
   };
 
+  const handleDeleteConfirm = (id: string) => {
+    setDeleteConfirm({ isOpen: true, taskId: id });
+  };
+
   const handleDelete = (id: string) => {
     // Remove from task order if present
     const newOrder = orderedIds.filter(taskId => taskId !== id);
@@ -546,6 +552,7 @@ export const TodayView: React.FC = () => {
                           onDelete={handleDelete}
                           onComplete={handleComplete}
                           onUpdate={handleUpdate}
+                          onDeleteConfirm={handleDeleteConfirm}
                           isFirst={index === 0}
                         />
                         ))}
@@ -596,6 +603,21 @@ export const TodayView: React.FC = () => {
           </form>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, taskId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.taskId) {
+            handleDelete(deleteConfirm.taskId);
+            setDeleteConfirm({ isOpen: false, taskId: null });
+          }
+        }}
+        title="Delete Task"
+        message="Delete this task permanently?"
+        variant="danger"
+        confirmText="Delete"
+      />
     </>
   );
 };
