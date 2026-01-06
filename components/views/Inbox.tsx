@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
 import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange } from '../../utils';
-import { Trash2, X, Inbox, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 
 export const InboxView: React.FC = () => {
@@ -28,10 +28,24 @@ export const InboxView: React.FC = () => {
   // --- Processing Component ---
   const ProcessItem: React.FC<{ item: Capture }> = ({ item }) => {
     // Form States
-    const [taskTitle, setTaskTitle] = useState(item.text);
+    const [captureText, setCaptureText] = useState(item.text);
     const [taskType, setTaskType] = useState<'today' | 'week'>('today');
     const [isFrog, setIsFrog] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState(getWeekString());
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Sync captureText with item.text when item changes
+    useEffect(() => {
+      setCaptureText(item.text);
+    }, [item.text]);
+
+    // Auto-resize textarea
+    useEffect(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    }, [captureText]);
 
     const getWeekOffset = (weekStr: string): number => {
       const currentWeek = getWeekString();
@@ -41,9 +55,12 @@ export const InboxView: React.FC = () => {
       if (targetYear === currentYear) {
         return targetWeekNum - currentWeekNum;
       } else if (targetYear > currentYear) {
-        return (52 - currentWeekNum) + targetWeekNum;
+        // Future year: weeks from current week to end of year + weeks in target year
+        // For range 0-4, this should work correctly
+        return (52 - currentWeekNum + 1) + targetWeekNum;
       } else {
-        return -((currentWeekNum - 1) + (52 - targetWeekNum));
+        // Past year: negative offset
+        return -(currentWeekNum - 1 + (52 - targetWeekNum + 1));
       }
     };
 
@@ -57,25 +74,45 @@ export const InboxView: React.FC = () => {
       
       const newWeek = `${year}-W${week.toString().padStart(2, '0')}`;
       const offset = getWeekOffset(newWeek);
-      if (offset >= 0 && offset <= 4) {
+      // Allow any future week (offset >= 0), no upper limit
+      if (offset >= 0) {
         setSelectedWeek(newWeek);
       }
     };
 
+    const handleSaveAndClose = () => {
+      if (captureText.trim() && captureText.trim() !== item.text) {
+        const trimmedText = captureText.trim();
+        dispatch({ type: 'UPDATE_CAPTURE', payload: { id: item.id, text: trimmedText } });
+      }
+      setProcessingId(null);
+    };
+
     const handleConvertToTask = () => {
-      if (!taskTitle.trim()) return;
+      if (!captureText.trim()) return;
       
       const today = getTodayString();
+      
+      // Determine plan.day and plan.week
+      let planDay: string | null = null;
+      let planWeek: string | null = null;
+      
+      if (taskType === 'today') {
+        planDay = today;
+        planWeek = getWeekString(today); // Set week for consistency with Week View
+      } else {
+        planWeek = selectedWeek;
+      }
       
       dispatch({
         type: 'ADD_TASK',
         payload: {
           id: generateId(),
-          title: taskTitle.trim(),
+          title: captureText.trim(),
           status: 'todo',
           plan: {
-            day: taskType === 'today' ? today : null,
-            week: taskType === 'week' ? selectedWeek : null,
+            day: planDay,
+            week: planWeek,
           },
           frog: isFrog,
           projectId: null,
@@ -89,18 +126,20 @@ export const InboxView: React.FC = () => {
 
     if (processingId !== item.id) {
       return (
-        <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm text-sm">
-          <span className="font-medium text-slate-800">{item.text}</span>
-          <div className="flex gap-2">
+        <div 
+          className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm text-sm cursor-pointer hover:bg-slate-50 transition-colors"
+          onClick={() => setProcessingId(item.id)}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-slate-700 font-medium flex-1 min-w-0 truncate">
+              {item.text}
+            </span>
             <button 
-              onClick={() => setProcessingId(item.id)}
-              className="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 font-medium rounded hover:bg-indigo-100 transition-colors"
-            >
-              Process
-            </button>
-            <button 
-               onClick={() => setDeleteConfirm({ isOpen: true, captureId: item.id })}
-               className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+               onClick={(e) => {
+                 e.stopPropagation();
+                 setDeleteConfirm({ isOpen: true, captureId: item.id });
+               }}
+               className="p-1.5 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -112,29 +151,47 @@ export const InboxView: React.FC = () => {
     const weekDateRange = getWeekDateRange(selectedWeek);
 
     return (
-      <div className="p-6 bg-white border-2 border-indigo-100 rounded-xl shadow-md space-y-4">
-        <div className="flex justify-between items-start">
-           <h3 className="text-lg font-bold text-slate-900">Process capture</h3>
-           <button onClick={() => setProcessingId(null)}><X className="w-5 h-5 text-slate-400" /></button>
+      <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm space-y-3 text-sm">
+        <div className="flex justify-center items-center relative">
+           <h3 className="text-sm font-bold text-slate-900">Process capture</h3>
+           <button 
+             onClick={handleSaveAndClose}
+             className="absolute right-0 w-8 h-8 flex items-center justify-center text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+             title="Save and close (Ctrl+Enter)"
+           >
+             <Check className="w-5 h-5" />
+           </button>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-            <input
-              type="text"
-              value={taskTitle}
-              onChange={(e) => setTaskTitle(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-              placeholder="Task title"
-              autoFocus
+            <textarea
+              ref={textareaRef}
+              value={captureText}
+              onChange={(e) => {
+                setCaptureText(e.target.value);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  handleSaveAndClose();
+                }
+              }}
+              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none text-sm resize-none min-h-[2.5rem] max-h-[12rem] overflow-y-auto"
+              placeholder="Title..."
+              rows={1}
             />
           </div>
 
           <div className="flex gap-2">
             <button 
               onClick={() => setTaskType('today')} 
-              className={`flex-1 py-2 text-sm font-medium rounded border ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded border ${
                 taskType === 'today' 
                   ? 'bg-indigo-600 text-white border-indigo-600' 
                   : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
@@ -144,7 +201,7 @@ export const InboxView: React.FC = () => {
             </button>
             <button 
               onClick={() => setTaskType('week')} 
-              className={`flex-1 py-2 text-sm font-medium rounded border ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded border ${
                 taskType === 'week' 
                   ? 'bg-indigo-600 text-white border-indigo-600' 
                   : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
@@ -161,22 +218,21 @@ export const InboxView: React.FC = () => {
                 className="p-1 hover:bg-slate-100 rounded transition-colors"
                 disabled={selectedWeek === getWeekString()}
               >
-                <ChevronLeft className={`w-4 h-4 ${selectedWeek === getWeekString() ? 'text-slate-300' : 'text-slate-600'}`} />
+                <ChevronLeft className={`w-3.5 h-3.5 ${selectedWeek === getWeekString() ? 'text-slate-300' : 'text-slate-600'}`} />
               </button>
               <div className="flex-1 text-center px-4">
-                <div className="font-mono font-medium text-slate-700 text-sm">
+                <div className="font-mono font-medium text-slate-700 text-xs">
                   {getWeekRange(selectedWeek)}
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-slate-500 mt-0.5">
                   {weekDateRange.start} - {weekDateRange.end}
                 </div>
               </div>
               <button 
                 onClick={() => changeWeek(1)} 
                 className="p-1 hover:bg-slate-100 rounded transition-colors"
-                disabled={getWeekOffset(selectedWeek) >= 4}
               >
-                <ChevronRight className={`w-4 h-4 ${getWeekOffset(selectedWeek) >= 4 ? 'text-slate-300' : 'text-slate-600'}`} />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
               </button>
             </div>
           )}
@@ -195,7 +251,7 @@ export const InboxView: React.FC = () => {
 
           <button 
             onClick={handleConvertToTask} 
-            className="w-full py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700"
+            className="w-full py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded hover:bg-indigo-700"
           >
             Confirm Task
           </button>

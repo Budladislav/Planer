@@ -199,7 +199,7 @@ export const SettingsView: React.FC = () => {
       </div>
       
       <div className="text-center text-xs text-slate-400 mt-6">
-         MonoFocus v1.9.5 • Data stored locally in browser
+         MonoFocus v2.0 • Data stored locally in browser
       </div>
 
       <Modal

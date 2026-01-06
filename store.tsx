@@ -92,6 +92,7 @@ type Action =
   | { type: 'INIT_STATE'; payload: AppState }
   | { type: 'SET_VIEW'; payload: ViewState }
   | { type: 'ADD_CAPTURE'; payload: string }
+  | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
   | { type: 'DELETE_CAPTURE'; payload: string }
   | { type: 'ADD_TASK'; payload: Task }
@@ -119,6 +120,13 @@ const appReducer = (state: AppState, action: Action): AppState => {
           { id: generateId(), text: action.payload, createdAt: new Date().toISOString(), status: 'new' },
           ...state.captures,
         ],
+      };
+    case 'UPDATE_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.map((c) =>
+          c.id === action.payload.id ? { ...c, text: action.payload.text } : c
+        ),
       };
     case 'PROCESS_CAPTURE':
       return {

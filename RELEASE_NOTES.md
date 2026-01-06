@@ -1,3 +1,21 @@
+## MonoFocus Planner — updates 2.0
+
+- **Inbox — major improvements**:
+  - Visual unification: unified styling with other tabs (text-sm, text-xs, p-3, border, rounded-lg, shadow-sm)
+  - Text truncation: long capture text is truncated with ellipsis in collapsed view
+  - Click to expand: clicking on capture card opens edit form (removed separate "Process" button)
+  - Inline editing: added ability to edit capture text directly in process form
+  - Auto-expanding textarea: textarea automatically expands for long text
+  - Save button: added checkmark button in top-right corner to save and close edit form
+  - Keyboard shortcut: Ctrl+Enter (Cmd+Enter on Mac) to save capture text
+  - Improved UX: cleaner interface with fewer buttons, more intuitive interaction
+- **Inbox — Week synchronization**:
+  - Fixed synchronization between Inbox and Week View
+  - Tasks created with "today" now also set `plan.week` for consistency
+  - Improved week selection logic for better accuracy
+  - Removed 4-week limit: can now select any future week (no upper limit)
+  - Better handling of week offsets across year boundaries
+
 ## MonoFocus Planner — updates 1.9.5
 
 - **Inbox delete fix**:
