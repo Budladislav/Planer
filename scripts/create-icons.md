@@ -30,3 +30,4 @@ inkscape public/icon-512.svg --export-filename=public/icon-512.png --export-widt
 После создания PNG файлов, они автоматически будут использоваться в manifest.json.
 
 
+

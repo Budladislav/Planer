@@ -34,6 +34,18 @@ type DayTaskItemProps = {
 };
 
 const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
+  const [wasDragging, setWasDragging] = useState(false);
+  
+  // Track if we just finished dragging to prevent onClick
+  useEffect(() => {
+    if (isDragging) {
+      setWasDragging(true);
+    } else if (wasDragging) {
+      // Reset after a short delay to allow onClick to work again
+      const timer = setTimeout(() => setWasDragging(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isDragging, wasDragging]);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editFrog, setEditFrog] = useState(task.frog);
@@ -187,8 +199,8 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={(e) => {
-        // Don't toggle actions if dragging or if click is on drag handle
-        if (!isDragging && !dragListeners) {
+        // Don't toggle actions if currently dragging or just finished dragging
+        if (!isDragging && !wasDragging) {
           setShowActions(prev => !prev);
         }
       }}
@@ -217,9 +229,12 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         >
           {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
-            className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
-              task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'
-            }`}
+            className={`block text-sm flex-1 min-w-0 ${
+              showActions
+                ? 'break-words whitespace-normal'
+                : 'truncate whitespace-nowrap overflow-hidden'
+            } ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+            title={task.title}
           >
             {task.title}
           </span>
@@ -330,7 +345,19 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   const [editFrog, setEditFrog] = useState(task.frog);
   const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
   const [showActions, setShowActions] = useState(false);
+  const [wasDragging, setWasDragging] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  
+  // Track if we just finished dragging to prevent onClick
+  useEffect(() => {
+    if (isDragging) {
+      setWasDragging(true);
+    } else if (wasDragging) {
+      // Reset after a short delay to allow onClick to work again
+      const timer = setTimeout(() => setWasDragging(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isDragging, wasDragging]);
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -471,13 +498,13 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={(e) => {
-        // Don't toggle actions if dragging or if click is on drag handle
-        if (!isDragging && !dragListeners) {
+        // Don't toggle actions if currently dragging or just finished dragging
+        if (!isDragging && !wasDragging) {
           setShowActions(prev => !prev);
         }
       }}
     >
-      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'} min-w-0`}>
         <div 
           className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
           {...(dragListeners || {})}
@@ -496,14 +523,21 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             cursor: dragListeners ? (isDragging ? 'grabbing' : 'grab') : 'default',
             userSelect: 'none',
             WebkitUserSelect: 'none',
-            WebkitTouchCallout: 'none'
+            WebkitTouchCallout: 'none',
+            minWidth: 0,
           }}
         >
           {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
-            className={`text-sm ${showActions ? 'break-all' : 'truncate'} ${
-              task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'
-            }`}
+            className={`block text-sm flex-1 min-w-0 max-w-full ${
+              showActions
+                ? 'break-words whitespace-normal'
+                : 'truncate whitespace-nowrap overflow-hidden'
+            } ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+            style={{
+              wordBreak: showActions ? 'break-word' : 'normal',
+              overflowWrap: showActions ? 'break-word' : 'normal',
+            }}
           >
             {task.title}
           </span>
@@ -588,10 +622,13 @@ const SortableBucketTaskItem: React.FC<BucketTaskItemProps> = (props) => {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} className="w-full max-w-full min-w-0 overflow-hidden">
       <BucketTaskItem {...props} dragListeners={listeners} isDragging={isDragging} />
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { Download, Upload, Trash2 } from 'lucide-react';
+import { Download, Upload, Trash2, BarChart3 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 
 export const SettingsView: React.FC = () => {
@@ -187,6 +187,19 @@ export const SettingsView: React.FC = () => {
             </div>
          </div>
 
+         <div className="p-6 flex items-center justify-between">
+            <div>
+               <h3 className="font-semibold text-slate-800">Statistics</h3>
+               <p className="text-sm text-slate-500">View your productivity dashboard.</p>
+            </div>
+            <button 
+               onClick={() => dispatch({ type: 'SET_VIEW', payload: 'statistics' })}
+               className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50"
+            >
+               <BarChart3 className="w-4 h-4" /> Open Dashboard
+            </button>
+         </div>
+
          <div className="p-6 flex items-center justify-between bg-red-50">
             <div>
                <h3 className="font-semibold text-red-900">Danger Zone</h3>
@@ -199,7 +212,7 @@ export const SettingsView: React.FC = () => {
       </div>
       
       <div className="text-center text-xs text-slate-400 mt-6">
-         MonoFocus v2.2 • Data stored locally in browser
+         MonoFocus v2.5 • Data stored locally in browser
       </div>
 
       <Modal

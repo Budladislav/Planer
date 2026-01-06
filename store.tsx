@@ -4,7 +4,7 @@ import { generateId, getTodayString, formatEventTitle, getWeekString } from './u
 
 // Migration function to normalize imported data
 const migrateAppState = (parsed: any): AppState => {
-  const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done'];
+  const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done', 'statistics'];
   const migratedView =
     parsed.lastActiveView === 'focus' ? 'today' :
     allowedViews.includes(parsed.lastActiveView) ? parsed.lastActiveView : 'today';

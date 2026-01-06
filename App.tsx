@@ -7,6 +7,7 @@ import { WeekView } from './components/views/Week';
 import { EventsView } from './components/views/Events';
 import { DoneView } from './components/views/Done';
 import { SettingsView } from './components/views/Settings';
+import { StatisticsView } from './components/views/Statistics';
 import { ViewState } from './types';
 
 const Main: React.FC = () => {
@@ -25,6 +26,7 @@ const Main: React.FC = () => {
       case 'events': return <EventsView />;
       case 'done': return <DoneView />;
       case 'settings': return <SettingsView />;
+      case 'statistics': return <StatisticsView />;
       default: return <TodayView />;
     }
   };
