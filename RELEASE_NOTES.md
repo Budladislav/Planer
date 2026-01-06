@@ -1,3 +1,10 @@
+## MonoFocus Planner — updates 1.5.6
+
+- **Week view edit behavior unified with other tabs**:
+  - Refactored week task cards (bucket and days) to use the same inline edit pattern as Today/Done (isEditing + inline form instead of card)
+  - Edit now swaps the card for a compact edit form (Title + Week + Frog + Save/Cancel) without any extra expand/collapse logic
+  - Delete/Done/Move buttons kept intact but use the same button patterns as other views, reducing chances of mobile-specific click issues
+
 ## MonoFocus Planner — updates 1.5.5
 
 - **Week view mobile layout simplification**:

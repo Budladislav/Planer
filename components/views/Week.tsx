@@ -204,6 +204,8 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
+    // debug: подсветка нажатия Edit, чтобы проверить срабатывание onClick на мобильных
+    const [editClicked, setEditClicked] = useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
@@ -380,8 +382,15 @@ export const WeekView: React.FC = () => {
             Delete
           </button>
           <button
-            onClick={() => setIsEditing(true)}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+            onClick={(e) => {
+              // Явно останавливаем всплытие и помечаем клик
+              e.stopPropagation();
+              setEditClicked(true);
+              setIsEditing(true);
+            }}
+            className={`px-3 py-1.5 text-xs font-semibold rounded hover:bg-slate-200 ${
+              editClicked ? 'bg-yellow-200 text-slate-900' : 'bg-slate-100 text-slate-600'
+            }`}
             title="Edit"
           >
             Edit
@@ -412,6 +421,7 @@ export const WeekView: React.FC = () => {
     const [editTitle, setEditTitle] = useState(task.title);
     const [editFrog, setEditFrog] = useState(task.frog);
     const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
+    const [editClicked, setEditClicked] = useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleSaveEdit = (e: React.FormEvent) => {
@@ -578,8 +588,14 @@ export const WeekView: React.FC = () => {
             Delete
           </button>
           <button
-            onClick={() => setIsEditing(true)}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditClicked(true);
+              setIsEditing(true);
+            }}
+            className={`px-3 py-1.5 text-xs font-semibold rounded hover:bg-slate-200 ${
+              editClicked ? 'bg-yellow-200 text-slate-900' : 'bg-slate-100 text-slate-600'
+            }`}
             title="Edit"
           >
             Edit
