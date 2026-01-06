@@ -1,7 +1,7 @@
 // Service Worker для MonoFocus Planner
 // Версия кэша - обновлять при изменении статики
-const CACHE_NAME = 'monofocus-v1.6';
-const STATIC_CACHE = 'monofocus-static-v1.6';
+const CACHE_NAME = 'monofocus-v1.9';
+const STATIC_CACHE = 'monofocus-static-v1.9';
 
 // Файлы для кэширования (статичные ресурсы)
 // Пути должны соответствовать base path из vite.config.ts
@@ -60,17 +60,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Стратегия: Cache First для статики, Network First для данных
+  // Стратегия: Network First для JS/CSS (чтобы всегда получать свежие версии), Cache First для остальной статики
   if (request.method === 'GET') {
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        // Если есть в кэше - возвращаем из кэша
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        // Иначе запрашиваем из сети
-        return fetch(request)
+    const isJS = request.url.includes('.js') || request.destination === 'script';
+    const isCSS = request.url.includes('.css') || request.destination === 'style';
+    
+    if (isJS || isCSS) {
+      // Network First для JS/CSS - всегда проверяем сеть сначала
+      event.respondWith(
+        fetch(request)
           .then((response) => {
             // Кэшируем только успешные ответы
             if (response.status === 200) {
@@ -82,13 +80,40 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // Если сеть недоступна и нет в кэше - возвращаем базовую страницу
-            if (request.destination === 'document') {
-              return caches.match(BASE_PATH + 'index.html');
-            }
-          });
-      })
-    );
+            // Если сеть недоступна - используем кэш
+            return caches.match(request);
+          })
+      );
+    } else {
+      // Cache First для остальной статики (HTML, изображения и т.д.)
+      event.respondWith(
+        caches.match(request).then((cachedResponse) => {
+          // Если есть в кэше - возвращаем из кэша
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          // Иначе запрашиваем из сети
+          return fetch(request)
+            .then((response) => {
+              // Кэшируем только успешные ответы
+              if (response.status === 200) {
+                const responseToCache = response.clone();
+                caches.open(STATIC_CACHE).then((cache) => {
+                  cache.put(request, responseToCache);
+                });
+              }
+              return response;
+            })
+            .catch(() => {
+              // Если сеть недоступна и нет в кэше - возвращаем базовую страницу
+              if (request.destination === 'document') {
+                return caches.match(BASE_PATH + 'index.html');
+              }
+            });
+        })
+      );
+    }
   }
 });
 

@@ -13,13 +13,22 @@ export const SettingsView: React.FC = () => {
     const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
     const filename = `monofocus_backup_${dateStr}_${timeStr}.json`;
     
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+    // Use Blob instead of data: URL - works better on mobile browsers
+    const jsonString = JSON.stringify(state, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
     const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("href", url);
     downloadAnchorNode.setAttribute("download", filename);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(downloadAnchorNode);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +128,7 @@ export const SettingsView: React.FC = () => {
       </div>
       
       <div className="text-center text-xs text-slate-400 mt-6">
-         MonoFocus v1.8 • Data stored locally in browser
+         MonoFocus v1.9 • Data stored locally in browser
       </div>
     </div>
   );

@@ -546,6 +546,9 @@ export const WeekView: React.FC = () => {
 
   // UI state (days всегда раскрыты, без сворачивания)
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
+  const [quickAddDay, setQuickAddDay] = useState<string | null>(null); // день для быстрого добавления задачи
+  const [quickAddTitle, setQuickAddTitle] = useState(''); // заголовок для быстрого добавления
+  const [quickAddFrog, setQuickAddFrog] = useState(false); // лягушка для быстрого добавления
 
   // Простая эвристика для touch, используется только для отображения подсказок/модалки Move
   const [isTouch, setIsTouch] = useState(false);
@@ -655,6 +658,37 @@ export const WeekView: React.FC = () => {
     }
   };
 
+  const handleQuickAddToDay = (day: string, title: string, frog: boolean) => {
+    if (!title.trim()) return;
+    
+    const newTaskId = generateId();
+    const dayWeek = getWeekString(day);
+    
+    // Создаём задачу для конкретного дня
+    dispatch({
+      type: 'ADD_TASK',
+      payload: {
+        id: newTaskId,
+        title: title.trim(),
+        status: 'todo',
+        plan: { day, week: dayWeek },
+        frog,
+        projectId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    });
+    
+    // Добавляем задачу в конец порядка дня
+    const currentOrder = state.taskOrderByDay[day] || [];
+    dispatch({
+      type: 'UPDATE_TASK_ORDER',
+      payload: { day, order: [...currentOrder, newTaskId] },
+    });
+    
+    setQuickAddDay(null);
+  };
+
 
   const weekDateRange = getWeekDateRange(currentWeek);
 
@@ -724,8 +758,15 @@ export const WeekView: React.FC = () => {
                       <span className="font-semibold text-slate-800">{day.weekday}</span>
                       <span className="text-xs text-slate-500">{day.label}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <span>{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setQuickAddDay(day.date)}
+                        className="w-6 h-6 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 rounded transition-colors flex-shrink-0"
+                        title="Add task to this day"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                      <span className="text-sm text-slate-500">{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
                     </div>
                   </div>
                 </div>
@@ -786,6 +827,85 @@ export const WeekView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Quick Add to Day Modal */}
+      {quickAddDay && (() => {
+        const selectedDay = weekDays.find(d => d.date === quickAddDay);
+        
+        return (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => {
+            setQuickAddDay(null);
+            setQuickAddTitle('');
+            setQuickAddFrog(false);
+          }}>
+            <div
+              className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="font-semibold text-slate-800">
+                  Add task to {selectedDay?.weekday} {selectedDay?.label}
+                </div>
+                <button onClick={() => {
+                  setQuickAddDay(null);
+                  setQuickAddTitle('');
+                  setQuickAddFrog(false);
+                }} className="text-slate-400 hover:text-slate-600 text-sm">Close</button>
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleQuickAddToDay(quickAddDay, quickAddTitle, quickAddFrog);
+                setQuickAddTitle('');
+                setQuickAddFrog(false);
+                setQuickAddDay(null);
+              }} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={quickAddTitle}
+                    onChange={(e) => setQuickAddTitle(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+                    autoFocus
+                    placeholder="Task title..."
+                  />
+                </div>
+                <div className="flex justify-center">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={quickAddFrog}
+                      onChange={(e) => setQuickAddFrog(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                    <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickAddDay(null);
+                      setQuickAddTitle('');
+                      setQuickAddFrog(false);
+                    }}
+                    className="flex-1 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Add
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Week Selector - Fixed at bottom (mobile) */}
       <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">

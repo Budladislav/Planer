@@ -1,3 +1,21 @@
+## MonoFocus Planner — updates 1.9
+
+- **Quick add tasks to week days**:
+  - Added "+" button to each day block in Week view (centered between day name and task count)
+  - Clicking "+" opens a modal to create a task for that specific day
+  - Modal includes title input (required) and frog checkbox
+  - New tasks are automatically added to the end of the day's task order
+  - Works on both mobile and desktop
+- **Export fix for mobile browsers**:
+  - Fixed export functionality on mobile devices (PWA and browser)
+  - Changed from `data:` URL to `Blob` + `URL.createObjectURL()` for better mobile compatibility
+  - Export now works reliably on Android Chrome and other mobile browsers
+- **Service Worker update fixes**:
+  - Updated Service Worker cache version to v1.8 (was stuck on v1.6)
+  - Changed caching strategy for JS/CSS files to "Network First" to ensure fresh updates
+  - Added automatic page reload when new Service Worker is detected
+  - Fixed issue where app updates weren't reaching mobile devices after version 1.7
+
 ## MonoFocus Planner — updates 1.8
 
 - **Focus mode improvements**:
