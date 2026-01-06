@@ -87,30 +87,17 @@ export const WeekView: React.FC = () => {
     });
   }, [currentWeek, thisWeek, todayStr, weekDays, state.tasks, state.taskOrderByDay, dispatch]);
 
-  // Simple drag-and-drop state
-  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  // UI state
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
+
+  // Простая эвристика для touch, используется только для отображения подсказок/модалки Move
   const [isTouch, setIsTouch] = useState(false);
-
-  // Надёжное определение touch-устройств:
-  // - pointer: coarse
-  // - или наличие touch-экранa (maxTouchPoints / ontouchstart)
   useEffect(() => {
-    const computeIsTouch = () => {
-      const mq = window.matchMedia('(pointer: coarse)');
-      const hasTouchPoints = (navigator as any).maxTouchPoints > 0;
-      const hasTouchEvent = 'ontouchstart' in window;
-      return mq.matches || hasTouchPoints || hasTouchEvent;
-    };
-
-    const update = () => {
-      setIsTouch(computeIsTouch());
-    };
-
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    const mq = window.matchMedia?.('(pointer: coarse)');
+    const hasTouchPoints = (navigator as any)?.maxTouchPoints > 0;
+    const hasTouchEvent = typeof window !== 'undefined' && 'ontouchstart' in window;
+    setIsTouch(!!(mq?.matches || hasTouchPoints || hasTouchEvent));
   }, []);
 
   // Tasks grouped by day for current week
@@ -390,9 +377,6 @@ export const WeekView: React.FC = () => {
     return (
       <div
         className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
-        draggable={!isTouch}
-        onDragStart={() => !isTouch && setDragTaskId(task.id)}
-        onDragEnd={() => !isTouch && setDragTaskId(null)}
         onClick={() => setShowActions((prev) => !prev)}
       >
         <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
@@ -601,9 +585,6 @@ export const WeekView: React.FC = () => {
     return (
       <div
         className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden transition-all text-sm"
-        draggable={!isTouch}
-        onDragStart={() => !isTouch && setDragTaskId(task.id)}
-        onDragEnd={() => !isTouch && setDragTaskId(null)}
         onClick={() => setShowActions(prev => !prev)}
       >
         <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
@@ -686,19 +667,7 @@ export const WeekView: React.FC = () => {
 
       {/* Content - with bottom padding for fixed forms */}
       <div className="pb-32 lg:pb-16 min-h-[60vh] flex flex-col">
-        <div
-          className={`flex-1 space-y-2 rounded-lg border border-dashed ${
-            dragTaskId ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
-          } p-2`}
-          onDragOver={(e) => !isTouch && e.preventDefault()}
-          onDrop={(e) => {
-            if (isTouch) return;
-            e.preventDefault();
-            if (!dragTaskId) return;
-            moveToWeekBucket(dragTaskId);
-            setDragTaskId(null);
-          }}
-        >
+        <div className="flex-1 space-y-2 rounded-lg border border-slate-200 border-dashed p-2">
           <div className="text-sm font-semibold text-slate-600 text-center">Week tasks (no date)</div>
           {weekTasks.length === 0 ? (
             <div className="text-sm text-slate-400 italic">
@@ -726,37 +695,11 @@ export const WeekView: React.FC = () => {
             }
             const tasks = dayTasks[day.date] || [];
             const tasksCount = tasks.length;
-            const isActive = dragTaskId !== null;
             const isExpanded = expandedDays.has(day.date);
             return (
               <div
                 key={day.date}
-                onDragOver={(e) => !isTouch && e.preventDefault()}
-                onDrop={(e) => {
-                  if (isTouch) return;
-                  e.preventDefault();
-                  if (!dragTaskId) return;
-                  dispatch({
-                    type: 'UPDATE_TASK',
-                    payload: {
-                      id: dragTaskId,
-                      plan: { day: day.date, week: null },
-                    },
-                  });
-                  // Update order (add to end if not already in order)
-                  const currentOrder = state.taskOrderByDay[day.date] || [];
-                  if (!currentOrder.includes(dragTaskId)) {
-                    dispatch({
-                      type: 'UPDATE_TASK_ORDER',
-                      payload: { day: day.date, order: [...currentOrder, dragTaskId] },
-                    });
-                  }
-                  setDragTaskId(null);
-                  setExpandedDays(prev => new Set(prev).add(day.date));
-                }}
-                className={`rounded-lg border transition-colors bg-white ${
-                  isActive ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'
-                }`}
+                className="rounded-lg border border-slate-200 transition-colors bg-white"
               >
                 <div className="flex items-center justify-between px-4 py-3">
                   <button
@@ -775,31 +718,7 @@ export const WeekView: React.FC = () => {
                 </button>
                 </div>
                 {isExpanded && (
-                  <div 
-                    className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2"
-                    onDragOver={(e) => !isTouch && e.preventDefault()}
-                    onDrop={(e) => {
-                      if (isTouch) return;
-                      e.preventDefault();
-                      if (!dragTaskId) return;
-                      dispatch({
-                        type: 'UPDATE_TASK',
-                        payload: {
-                          id: dragTaskId,
-                          plan: { day: day.date, week: null },
-                        },
-                      });
-                      // Update order (add to end if not already in order)
-                      const currentOrder = state.taskOrderByDay[day.date] || [];
-                      if (!currentOrder.includes(dragTaskId)) {
-                        dispatch({
-                          type: 'UPDATE_TASK_ORDER',
-                          payload: { day: day.date, order: [...currentOrder, dragTaskId] },
-                        });
-                      }
-                      setDragTaskId(null);
-                    }}
-                  >
+                  <div className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2">
                     {tasksCount === 0 && (
                       <div className="text-sm text-slate-400 italic">
                         Drag a task here from week list or another day

@@ -1,3 +1,10 @@
+## MonoFocus Planner — updates 1.5.4
+
+- **Week view mobile tap fix — v2**:
+  - Completely removed native HTML5 drag&drop from Week view tasks and day containers to avoid conflicts with touch events on real devices
+  - Task cards and day headers now rely only on standard `onClick` behavior, so expand/collapse of tasks and days works on Android Chrome as in other tabs
+  - Moving tasks between days and week bucket on mobile is done explicitly via the `Move` button and modal (no implicit drag on touch)
+
 ## MonoFocus Planner — updates 1.5.3
 
 - **Week view mobile tap fix**:
