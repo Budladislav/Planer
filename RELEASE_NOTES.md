@@ -1,3 +1,9 @@
+## MonoFocus Planner — updates 1.5.1
+
+- **Week view hotfix**:
+  - Fixed issue on mobile where tapping a day header briefly collapsed and then immediately re-expanded the day
+  - Auto-expand logic no longer overrides user's manual collapse/expand choice; it only expands today/future days that have tasks and were never expanded before
+
 ## MonoFocus Planner — updates 1.5
 
 - **Today & Week ordering fixes**:

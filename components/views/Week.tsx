@@ -132,22 +132,19 @@ export const WeekView: React.FC = () => {
     return map;
   }, [state.tasks, weekDays, state.taskOrderByDay]);
 
-  // Auto-expand days that have tasks, but only for today and future days
+  // Auto-expand days that have tasks for today и будущие дни.
+  // Больше НЕ переоткрываем день, если пользователь его свернул вручную.
   useEffect(() => {
     const next = new Set(expandedDays);
     weekDays.forEach((day) => {
-      // Only auto-expand if day is today or in the future, and has tasks
-      if (day.date >= todayStr && (dayTasks[day.date]?.length || 0) > 0) {
+      if (day.date >= todayStr && (dayTasks[day.date]?.length || 0) > 0 && !next.has(day.date)) {
         next.add(day.date);
-      } else if (day.date < todayStr) {
-        // Collapse past days
-        next.delete(day.date);
       }
     });
     if (next.size !== expandedDays.size) {
       setExpandedDays(next);
     }
-  }, [weekDays, dayTasks, todayStr]);
+  }, [weekDays, dayTasks, todayStr, expandedDays]);
 
   const toggleDay = (date: string) => {
     const next = new Set(expandedDays);
