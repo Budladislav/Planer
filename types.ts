@@ -1,4 +1,4 @@
-export type ViewState = 'today' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'statistics';
+export type ViewState = 'today' | 'week' | 'inbox' | 'events' | 'settings' | 'done';
 
 export interface Capture {
   id: string;
