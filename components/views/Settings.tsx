@@ -6,6 +6,7 @@ import changelogMarkdown from '../../CHANGELOG_MONOFOCUS.md?raw';
 import packageJson from '../../package.json';
 import { parseReleaseHistory } from '../../release-history';
 import { getDateString } from '../../utils';
+import { WorkShiftSettingsPanel } from '../settings/WorkShiftSettings';
 
 const RELEASES = parseReleaseHistory(changelogMarkdown);
 
@@ -190,6 +191,8 @@ export const SettingsView: React.FC = () => {
            </div>
            <ChevronRight className="h-5 w-5 text-slate-400" />
          </button>
+
+         <WorkShiftSettingsPanel />
 
          <div className="p-6 flex items-center justify-between">
             <div>

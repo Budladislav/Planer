@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../store';
 import { ViewState } from '../types';
 import { 
-  Target, Calendar, List, Settings, type LucideIcon,
+  Target, Calendar, CalendarDays, List, Settings, type LucideIcon,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -17,6 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
   const navItems: Array<{ view: ViewState; icon: LucideIcon; label: string }> = [
     { view: 'events', icon: Calendar, label: 'Events' },
+    { view: 'month', icon: CalendarDays, label: 'Month Plan' },
     { view: 'week', icon: List, label: 'Weekly Plan' },
     { view: 'today', icon: Target, label: 'Today' },
   ];
@@ -26,6 +27,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       switch (view) {
         case 'today': return 'text-indigo-600';
         case 'week': return 'text-indigo-500';
+        case 'month': return 'text-violet-600';
         case 'events': return 'text-amber-600';
         case 'settings': return 'text-slate-600';
         default: return 'text-slate-600';
@@ -34,6 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       switch (view) {
         case 'today': return 'text-indigo-400';
         case 'week': return 'text-indigo-400';
+        case 'month': return 'text-violet-500';
         case 'events': return 'text-amber-500';
         case 'settings': return 'text-slate-400';
         default: return 'text-slate-400';

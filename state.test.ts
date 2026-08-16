@@ -117,3 +117,26 @@ describe('appReducer task completion', () => {
     expect(reopened.tasks[0].completedAt).toBeNull();
   });
 });
+
+describe('appReducer task planning', () => {
+  it('removes stale ordering references when a task changes containers', () => {
+    const task = makeTask();
+    const state: AppState = {
+      ...withTask(task),
+      taskOrderByDay: { '2026-08-16': [task.id] },
+      taskOrderByWeekBucket: { '2026-W33': [task.id] },
+      taskOrderByMonthBucket: { '2026-08': [task.id] },
+      taskOrderByMonthWeek: { '2026-08|2026-W33': [task.id] },
+    };
+
+    const moved = appReducer(state, {
+      type: 'UPDATE_TASK',
+      payload: { id: task.id, plan: { month: '2026-08', week: '2026-W34', day: null } },
+    });
+
+    expect(moved.taskOrderByDay['2026-08-16']).toEqual([]);
+    expect(moved.taskOrderByWeekBucket['2026-W33']).toEqual([]);
+    expect(moved.taskOrderByMonthBucket['2026-08']).toEqual([]);
+    expect(moved.taskOrderByMonthWeek['2026-08|2026-W33']).toEqual([]);
+  });
+});

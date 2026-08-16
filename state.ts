@@ -220,6 +220,12 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       const tasks = state.tasks.map(task => task.id === action.payload.id
         ? { ...task, ...action.payload, completedAt, updatedAt: now }
         : task);
+      const updatedTask = tasks.find(task => task.id === action.payload.id);
+      const planChanged = updatedTask
+        ? updatedTask.plan.day !== previousTask.plan.day
+          || updatedTask.plan.week !== previousTask.plan.week
+          || updatedTask.plan.month !== previousTask.plan.month
+        : false;
       let events = state.events;
 
       if (previousTask.eventId && (action.payload.title !== undefined || action.payload.plan !== undefined)) {
@@ -242,6 +248,18 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         tasks,
         events,
+        taskOrderByDay: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByDay, action.payload.id)
+          : state.taskOrderByDay,
+        taskOrderByWeekBucket: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByWeekBucket, action.payload.id)
+          : state.taskOrderByWeekBucket,
+        taskOrderByMonthBucket: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByMonthBucket, action.payload.id)
+          : state.taskOrderByMonthBucket,
+        taskOrderByMonthWeek: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload.id)
+          : state.taskOrderByMonthWeek,
         activeTaskId: action.payload.status === 'done' && state.activeTaskId === action.payload.id
           ? null
           : state.activeTaskId,

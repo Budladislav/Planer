@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { TodayView } from './components/views/Today';
 import { InboxView } from './components/views/Inbox';
 import { WeekView } from './components/views/Week';
+import { MonthView } from './components/views/Month';
 import { EventsView } from './components/views/Events';
 import { DoneView } from './components/views/Done';
 import { SettingsView } from './components/views/Settings';
@@ -22,6 +23,7 @@ const Main: React.FC = () => {
       case 'today': return <TodayView />;
       case 'inbox': return <InboxView />;
       case 'week': return <WeekView />;
+      case 'month': return <MonthView />;
       case 'events': return <EventsView />;
       case 'done': return <DoneView />;
       case 'settings': return <SettingsView />;
