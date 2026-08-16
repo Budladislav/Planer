@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
-import { Check, Pause, Play, Plus, Trash2 } from 'lucide-react';
+import { Check, Pause, Play, Plus } from 'lucide-react';
 import { getTodayString, generateId, formatDateReadable, formatTime } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import {
@@ -27,15 +27,13 @@ import { Task } from '../../types';
 const SortableTaskItem: React.FC<{ 
   task: Task; 
   onSetActive: (id: string) => void;
-  onDelete: (id: string) => void;
   onComplete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
   isFirst?: boolean;
-}> = ({ task, onSetActive, onDelete, onComplete, onUpdate, onDeleteConfirm, isFirst = false }) => {
+}> = ({ task, onSetActive, onComplete, onUpdate, onDeleteConfirm, isFirst = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [editFrog, setEditFrog] = useState(task.frog);
   const [showActions, setShowActions] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const {
@@ -58,8 +56,7 @@ const SortableTaskItem: React.FC<{
     if (!editTitle.trim()) return;
     
     onUpdate(task.id, { 
-      title: editTitle.trim(), 
-      frog: editFrog,
+      title: editTitle.trim(),
     });
     setIsEditing(false);
   };
@@ -67,14 +64,12 @@ const SortableTaskItem: React.FC<{
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditTitle(task.title);
-    setEditFrog(task.frog);
   };
 
   // Update edit state when task changes
   React.useEffect(() => {
     setEditTitle(task.title);
-    setEditFrog(task.frog);
-  }, [task.title, task.frog]);
+  }, [task.title]);
 
   // Auto-resize textarea
   React.useEffect(() => {
@@ -105,17 +100,7 @@ const SortableTaskItem: React.FC<{
             autoFocus
           />
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={editFrog}
-              onChange={(e) => setEditFrog(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded"
-            />
-            <span className="text-lg">🐸</span>
-          </label>
-          <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleCancelEdit}
@@ -126,7 +111,6 @@ const SortableTaskItem: React.FC<{
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
               Save
             </button>
-          </div>
         </div>
       </form>
     );
@@ -150,7 +134,6 @@ const SortableTaskItem: React.FC<{
           showActions ? 'items-start' : 'items-center'
         }`}
       >
-        {task.frog && <span role="img" aria-label="frog" className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className={`text-sm text-slate-700 font-medium ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
@@ -313,10 +296,11 @@ export const TodayView: React.FC = () => {
         title: quickAdd.trim(),
         status: 'todo',
         plan: { day: todayStr, week: null },
-        frog: false,
         projectId: null,
+        eventId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        completedAt: null,
       }
     });
     // Add new task to the end of the order (based on current orderedIds)
@@ -440,41 +424,18 @@ export const TodayView: React.FC = () => {
     <>
       {activeTask ? (
         // Active Task View - Centered with background
-        <div className={`fixed inset-0 flex items-center justify-center p-4 transition-all duration-500 ${
-          activeTask.frog 
-            ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50' 
-            : 'bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50'
-        } ${isCompleting ? 'scale-110 opacity-0' : ''}`}>
+        <div className={`fixed inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 transition-all duration-500 ${isCompleting ? 'scale-110 opacity-0' : ''}`}>
           <div className="max-w-3xl w-full">
             <div className="relative group">
-              <div className={`absolute -inset-1 rounded-2xl opacity-60 blur-xl transition duration-1000 group-hover:opacity-80 ${
-                activeTask.frog
-                  ? 'bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400'
-                  : 'bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400'
-              } ${isCompleting ? 'animate-ping' : ''}`}></div>
+              <div className={`absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 opacity-60 blur-xl transition duration-1000 group-hover:opacity-80 ${isCompleting ? 'animate-ping' : ''}`}></div>
               <div className={`relative bg-white/95 backdrop-blur-sm rounded-2xl p-12 shadow-2xl border border-white/50 transition-all duration-500 overflow-hidden ${
                 isCompleting ? 'scale-110 rotate-3' : ''
               }`}>
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  {activeTask.frog && (
-                    <span 
-                      className={`text-5xl transition-all duration-300 ${
-                        isCompleting ? 'animate-spin scale-150' : 'animate-bounce'
-                      }`} 
-                      role="img" 
-                      aria-label="frog"
-                    >
-                      🐸
-                    </span>
-                  )}
-                </div>
                 <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center break-words overflow-hidden max-w-full px-4">
                   {activeTask.title}
                 </h3>
                 <div className="text-center mb-12">
-                  <div className={`text-4xl md:text-6xl font-mono font-bold transition-colors ${
-                    activeTask.frog ? 'text-green-600' : 'text-indigo-600'
-                  } ${isCompleting ? 'text-green-500' : ''}`}>
+                  <div className={`text-4xl md:text-6xl font-mono font-bold text-indigo-600 transition-colors ${isCompleting ? 'text-green-500' : ''}`}>
                     {formatTime(timerSeconds)}
                   </div>
                 </div>
@@ -483,11 +444,7 @@ export const TodayView: React.FC = () => {
                   <button
                     onClick={handleDone}
                     disabled={isCompleting}
-                    className={`flex items-center gap-2 px-10 py-4 rounded-xl transition-all font-medium text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 ${
-                      activeTask.frog
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
-                    } ${isCompleting ? 'animate-pulse scale-110' : ''}`}
+                    className={`flex items-center gap-2 px-10 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 ${isCompleting ? 'animate-pulse scale-110' : ''}`}
                   >
                     <Check className={`w-6 h-6 ${isCompleting ? 'animate-spin' : ''}`} />
                     Mark Done
@@ -549,7 +506,6 @@ export const TodayView: React.FC = () => {
                           key={task.id} 
                           task={task} 
                           onSetActive={handleSetActive}
-                          onDelete={handleDelete}
                           onComplete={handleComplete}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}

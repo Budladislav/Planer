@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime } from '../../utils';
+import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import {
@@ -48,7 +48,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   }, [isDragging, wasDragging]);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [editFrog, setEditFrog] = useState(task.frog);
   const [editWeek, setEditWeek] = useState<string>(() => task.plan.week || getWeekString(task.plan.day || todayStr));
   const [showActions, setShowActions] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -56,28 +55,20 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTitle.trim()) return;
-    // Validate week format before saving (if provided)
-    let nextPlanWeek: string | null = task.plan.week ?? null;
-    if (editWeek) {
-      const [yearStr, weekStr] = editWeek.split('-W');
-      const weekNum = parseInt(weekStr || '', 10);
-      if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-        // Invalid week, don't save
-        return;
-      }
-      nextPlanWeek = editWeek;
-    }
+    if (!isValidWeekString(editWeek)) return;
+    const originalWeek = task.plan.day
+      ? getWeekString(task.plan.day)
+      : task.plan.week ?? getWeekString(todayStr);
+    const weekChanged = editWeek !== originalWeek;
 
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id: task.id,
         title: editTitle.trim(),
-        frog: editFrog,
-        plan: {
-          day: task.plan.day,
-          week: nextPlanWeek,
-        },
+        plan: weekChanged
+          ? { day: null, week: editWeek }
+          : { day: task.plan.day, week: editWeek },
       },
     });
     setIsEditing(false);
@@ -86,7 +77,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditTitle(task.title);
-    setEditFrog(task.frog);
     setEditWeek(task.plan.week || getWeekString(task.plan.day || todayStr));
   };
 
@@ -145,7 +135,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <input
               type="number"
               min="1"
-              max="52"
+              max="53"
               value={weekPart ? parseInt(weekPart, 10) : ''}
               onChange={(e) => {
                 const year = yearPart || '';
@@ -159,7 +149,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                   return;
                 }
                 if (num < 1) num = 1;
-                if (num > 52) num = 52;
+                if (num > 53) num = 53;
                 const week = String(num).padStart(2, '0');
                 setEditWeek(`${year}-W${week}`);
               }}
@@ -168,17 +158,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             />
           </div>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={editFrog}
-              onChange={(e) => setEditFrog(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded"
-            />
-            <span className="text-lg">🐸</span>
-          </label>
-          <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleCancelEdit}
@@ -189,7 +169,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
               Save
             </button>
-          </div>
         </div>
       </form>
     );
@@ -198,7 +177,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   return (
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      onClick={(e) => {
+      onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
           setShowActions(prev => !prev);
@@ -227,7 +206,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
-          {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
             className={`block text-sm flex-1 min-w-0 ${
               showActions
@@ -342,7 +320,6 @@ type BucketTaskItemProps = {
 const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [editFrog, setEditFrog] = useState(task.frog);
   const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
   const [showActions, setShowActions] = useState(false);
   const [wasDragging, setWasDragging] = useState(false);
@@ -362,20 +339,13 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTitle.trim()) return;
-    // Validate week format before saving
-    const [yearStr, weekStr] = editWeek.split('-W');
-    const weekNum = parseInt(weekStr || '', 10);
-    if (!yearStr || !weekStr || isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-      // Invalid week, don't save
-      return;
-    }
+    if (!isValidWeekString(editWeek)) return;
 
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id: task.id,
         title: editTitle.trim(),
-        frog: editFrog,
         plan: { week: editWeek, day: null },
       },
     });
@@ -385,7 +355,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditTitle(task.title);
-    setEditFrog(task.frog);
     setEditWeek(task.plan.week || currentWeek);
   };
 
@@ -444,7 +413,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <input
               type="number"
               min="1"
-              max="52"
+              max="53"
               value={weekPart ? parseInt(weekPart, 10) : ''}
               onChange={(e) => {
                 const year = yearPart || '';
@@ -458,7 +427,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                   return;
                 }
                 if (num < 1) num = 1;
-                if (num > 52) num = 52;
+                if (num > 53) num = 53;
                 const week = String(num).padStart(2, '0');
                 setEditWeek(`${year}-W${week}`);
               }}
@@ -467,17 +436,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             />
           </div>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={editFrog}
-              onChange={(e) => setEditFrog(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded"
-            />
-            <span className="text-lg">🐸</span>
-          </label>
-          <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleCancelEdit}
@@ -488,7 +447,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
               Save
             </button>
-          </div>
         </div>
       </form>
     );
@@ -497,7 +455,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   return (
     <div
       className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
-      onClick={(e) => {
+      onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
           setShowActions(prev => !prev);
@@ -527,7 +485,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
-          {task.frog && <span className={`flex-shrink-0 ${showActions ? 'mt-0.5' : ''}`}>🐸</span>}
           <span
             className={`block text-sm flex-1 min-w-0 max-w-full ${
               showActions
@@ -753,7 +710,6 @@ export const WeekView: React.FC = () => {
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
   const [quickAddDay, setQuickAddDay] = useState<string | null>(null); // день для быстрого добавления задачи
   const [quickAddTitle, setQuickAddTitle] = useState(''); // заголовок для быстрого добавления
-  const [quickAddFrog, setQuickAddFrog] = useState(false); // лягушка для быстрого добавления
 
   // Простая эвристика для touch, используется только для отображения подсказок/модалки Move
   const [isTouch, setIsTouch] = useState(false);
@@ -818,7 +774,7 @@ export const WeekView: React.FC = () => {
   // Tasks grouped by day for current week
   // Show only TODO tasks assigned to each day (plan.day === day.date)
   const dayTasks = useMemo(() => {
-    const map: Record<string, typeof state.tasks> = {};
+    const map: Record<string, Task[]> = {};
     weekDays.forEach((day) => {
       const tasks = state.tasks.filter(
         (t) => t.plan.day === day.date && t.status === 'todo'
@@ -863,16 +819,6 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  const moveToWeekBucket = (id: string) => {
-    dispatch({
-      type: 'UPDATE_TASK',
-      payload: {
-        id,
-        plan: { week: currentWeek, day: null },
-      },
-    });
-  };
-
   const moveTask = (id: string, day: string | null) => {
     dispatch({
       type: 'UPDATE_TASK',
@@ -914,10 +860,11 @@ export const WeekView: React.FC = () => {
           title: quickAdd.trim(),
           status: 'todo',
           plan: { week: currentWeek, day: null },
-          frog: false,
           projectId: null,
+          eventId: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          completedAt: null,
         }
       });
       // Add to end of week bucket order
@@ -930,7 +877,7 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  const handleQuickAddToDay = (day: string, title: string, frog: boolean) => {
+  const handleQuickAddToDay = (day: string, title: string) => {
     if (!title.trim()) return;
     
     const newTaskId = generateId();
@@ -944,10 +891,11 @@ export const WeekView: React.FC = () => {
         title: title.trim(),
         status: 'todo',
         plan: { day, week: dayWeek },
-        frog,
         projectId: null,
+        eventId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        completedAt: null,
       }
     });
     
@@ -1165,7 +1113,6 @@ export const WeekView: React.FC = () => {
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => {
             setQuickAddDay(null);
             setQuickAddTitle('');
-            setQuickAddFrog(false);
           }}>
             <div
               className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
@@ -1178,14 +1125,12 @@ export const WeekView: React.FC = () => {
                 <button onClick={() => {
                   setQuickAddDay(null);
                   setQuickAddTitle('');
-                  setQuickAddFrog(false);
                 }} className="text-slate-400 hover:text-slate-600 text-sm">Close</button>
               </div>
               <form onSubmit={(e) => {
                 e.preventDefault();
-                handleQuickAddToDay(quickAddDay, quickAddTitle, quickAddFrog);
+                handleQuickAddToDay(quickAddDay, quickAddTitle);
                 setQuickAddTitle('');
-                setQuickAddFrog(false);
                 setQuickAddDay(null);
               }} className="space-y-3">
                 <div>
@@ -1200,24 +1145,12 @@ export const WeekView: React.FC = () => {
                     placeholder="Task title..."
                   />
                 </div>
-                <div className="flex justify-center">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={quickAddFrog}
-                      onChange={(e) => setQuickAddFrog(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 rounded"
-                    />
-                    <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
-                  </label>
-                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setQuickAddDay(null);
                       setQuickAddTitle('');
-                      setQuickAddFrog(false);
                     }}
                     className="flex-1 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
                   >

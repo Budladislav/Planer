@@ -1,6 +1,5 @@
 // Service Worker для MonoFocus Planner
 // Версия кэша - обновлять при изменении статики
-const CACHE_NAME = 'monofocus-v2.6';
 const STATIC_CACHE = 'monofocus-static-v2.6';
 
 // Файлы для кэширования (статичные ресурсы)
@@ -116,4 +115,3 @@ self.addEventListener('fetch', (event) => {
     }
   }
 });
-

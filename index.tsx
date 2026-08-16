@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
 
 // Настройка PWA (manifest и service worker)
 if (typeof window !== 'undefined') {

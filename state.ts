@@ -1,0 +1,284 @@
+import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState } from './types';
+import { formatEventTitle, generateId, getTodayString, getWeekString } from './utils';
+
+export const CURRENT_SCHEMA_VERSION = 2;
+
+type UnknownRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is UnknownRecord => {
+  return typeof value === 'object' && value !== null;
+};
+
+const asString = (value: unknown, fallback: string): string => {
+  return typeof value === 'string' ? value : fallback;
+};
+
+const asNullableString = (value: unknown): string | null => {
+  return typeof value === 'string' ? value : null;
+};
+
+const migrateOrderMap = (value: unknown): Record<string, string[]> => {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, order]) => [
+      key,
+      Array.isArray(order) ? order.filter((id): id is string => typeof id === 'string') : [],
+    ]),
+  );
+};
+
+export const migrateAppState = (value: unknown): AppState => {
+  const parsed = isRecord(value) ? value : {};
+  const now = new Date().toISOString();
+  const today = getTodayString();
+  const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done'];
+  const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
+  const lastActiveView = allowedViews.includes(requestedView as ViewState)
+    ? requestedView as ViewState
+    : 'today';
+
+  const tasks = Array.isArray(parsed.tasks)
+    ? parsed.tasks.flatMap((value): Task[] => {
+        if (!isRecord(value)) return [];
+
+        const rawPlan = isRecord(value.plan) ? value.plan : {};
+        const status: Task['status'] = value.status === 'done' ? 'done' : 'todo';
+        const createdAt = asString(value.createdAt, now);
+        const updatedAt = asString(value.updatedAt, createdAt);
+        const task: Task = {
+          id: asString(value.id, generateId()),
+          title: asString(value.title, ''),
+          status,
+          plan: {
+            day: asNullableString(rawPlan.day),
+            week: asNullableString(rawPlan.week),
+          },
+          projectId: asNullableString(value.projectId),
+          eventId: asNullableString(value.eventId),
+          createdAt,
+          updatedAt,
+          completedAt: status === 'done'
+            ? asString(value.completedAt, updatedAt)
+            : null,
+          timeSpent: typeof value.timeSpent === 'number' && value.timeSpent >= 0
+            ? value.timeSpent
+            : undefined,
+        };
+
+        if (task.status === 'todo' && task.plan.day && task.plan.day < today) {
+          task.plan = { day: today, week: getWeekString(today) };
+        }
+
+        return [task];
+      })
+    : [];
+
+  const captures = Array.isArray(parsed.captures)
+    ? parsed.captures.flatMap((value): Capture[] => {
+        if (!isRecord(value)) return [];
+        const status: Capture['status'] = value.status === 'processed' || value.status === 'archived'
+          ? value.status
+          : 'new';
+        return [{
+          id: asString(value.id, generateId()),
+          text: asString(value.text, ''),
+          createdAt: asString(value.createdAt, now),
+          status,
+        }];
+      })
+    : [];
+
+  const events = Array.isArray(parsed.events)
+    ? parsed.events.flatMap((value): CalendarEvent[] => {
+        if (!isRecord(value)) return [];
+        return [{
+          id: asString(value.id, generateId()),
+          title: asString(value.title, ''),
+          date: asString(value.date, today),
+          time: asString(value.time, '00:00'),
+          note: asNullableString(value.note),
+        }];
+      })
+    : [];
+
+  const requestedActiveTaskId = asNullableString(parsed.activeTaskId);
+  const activeTaskId = tasks.some(task => task.id === requestedActiveTaskId && task.status === 'todo')
+    ? requestedActiveTaskId
+    : null;
+
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    captures,
+    tasks,
+    events,
+    activeTaskId,
+    activeTaskStartedAt: activeTaskId && typeof parsed.activeTaskStartedAt === 'number'
+      ? parsed.activeTaskStartedAt
+      : null,
+    lastActiveView,
+    taskOrderByDay: migrateOrderMap(parsed.taskOrderByDay),
+    taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
+  };
+};
+
+export type Action =
+  | { type: 'INIT_STATE'; payload: AppState }
+  | { type: 'SET_VIEW'; payload: ViewState }
+  | { type: 'ADD_CAPTURE'; payload: string }
+  | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
+  | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
+  | { type: 'DELETE_CAPTURE'; payload: string }
+  | { type: 'ADD_TASK'; payload: Task }
+  | { type: 'UPDATE_TASK'; payload: Partial<Task> & { id: string } }
+  | { type: 'DELETE_TASK'; payload: string }
+  | { type: 'ADD_EVENT'; payload: CalendarEvent }
+  | { type: 'UPDATE_EVENT'; payload: Partial<CalendarEvent> & { id: string } }
+  | { type: 'DELETE_EVENT'; payload: string }
+  | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
+  | { type: 'UPDATE_TASK_ORDER'; payload: { day: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_WEEK_BUCKET'; payload: { week: string; order: string[] } }
+  | { type: 'IMPORT_DATA'; payload: unknown }
+  | { type: 'RESET_DATA' };
+
+export const appReducer = (state: AppState, action: Action): AppState => {
+  switch (action.type) {
+    case 'INIT_STATE':
+      return action.payload;
+    case 'SET_VIEW':
+      return { ...state, lastActiveView: action.payload };
+    case 'ADD_CAPTURE':
+      return {
+        ...state,
+        captures: [
+          { id: generateId(), text: action.payload, createdAt: new Date().toISOString(), status: 'new' },
+          ...state.captures,
+        ],
+      };
+    case 'UPDATE_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload.id
+          ? { ...c, text: action.payload.text }
+          : c),
+      };
+    case 'PROCESS_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload.id
+          ? { ...c, status: action.payload.status }
+          : c),
+      };
+    case 'DELETE_CAPTURE':
+      return { ...state, captures: state.captures.filter(c => c.id !== action.payload) };
+    case 'ADD_TASK':
+      return { ...state, tasks: [...state.tasks, action.payload] };
+    case 'UPDATE_TASK': {
+      const previousTask = state.tasks.find(task => task.id === action.payload.id);
+      if (!previousTask) return state;
+
+      const now = new Date().toISOString();
+      let completedAt = action.payload.completedAt ?? previousTask.completedAt;
+      if (action.payload.status === 'done' && previousTask.status !== 'done') completedAt = now;
+      if (action.payload.status === 'todo') completedAt = null;
+
+      const tasks = state.tasks.map(task => task.id === action.payload.id
+        ? { ...task, ...action.payload, completedAt, updatedAt: now }
+        : task);
+      let events = state.events;
+
+      if (previousTask.eventId && (action.payload.title !== undefined || action.payload.plan !== undefined)) {
+        const finalTask = tasks.find(task => task.id === action.payload.id);
+        if (finalTask) {
+          const titleMatch = finalTask.title.match(/^(\d{2}:\d{2})\s+(.+)$/);
+          events = state.events.map(event => {
+            if (event.id !== previousTask.eventId) return event;
+            return {
+              ...event,
+              title: titleMatch?.[2] ?? event.title,
+              time: titleMatch?.[1] ?? event.time,
+              date: finalTask.plan.day ?? event.date,
+            };
+          });
+        }
+      }
+
+      return {
+        ...state,
+        tasks,
+        events,
+        activeTaskId: action.payload.status === 'done' && state.activeTaskId === action.payload.id
+          ? null
+          : state.activeTaskId,
+        activeTaskStartedAt: action.payload.status === 'done' && state.activeTaskId === action.payload.id
+          ? null
+          : state.activeTaskStartedAt,
+      };
+    }
+    case 'DELETE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== action.payload),
+        activeTaskId: state.activeTaskId === action.payload ? null : state.activeTaskId,
+        activeTaskStartedAt: state.activeTaskId === action.payload ? null : state.activeTaskStartedAt,
+      };
+    case 'ADD_EVENT':
+      return { ...state, events: [...state.events, action.payload] };
+    case 'UPDATE_EVENT': {
+      const events = state.events.map(event => event.id === action.payload.id
+        ? { ...event, ...action.payload }
+        : event);
+      const updatedEvent = events.find(event => event.id === action.payload.id);
+      const linkedTask = state.tasks.find(task => task.eventId === action.payload.id);
+      if (!updatedEvent || !linkedTask) return { ...state, events };
+
+      return {
+        ...state,
+        events,
+        tasks: state.tasks.map(task => task.id === linkedTask.id
+          ? {
+              ...task,
+              title: formatEventTitle(updatedEvent.time, updatedEvent.title),
+              plan: { day: updatedEvent.date, week: getWeekString(updatedEvent.date) },
+              updatedAt: new Date().toISOString(),
+            }
+          : task),
+      };
+    }
+    case 'DELETE_EVENT': {
+      const linkedTask = state.tasks.find(task => task.eventId === action.payload);
+      return {
+        ...state,
+        events: state.events.filter(event => event.id !== action.payload),
+        tasks: linkedTask ? state.tasks.filter(task => task.id !== linkedTask.id) : state.tasks,
+        activeTaskId: linkedTask?.id === state.activeTaskId ? null : state.activeTaskId,
+        activeTaskStartedAt: linkedTask?.id === state.activeTaskId ? null : state.activeTaskStartedAt,
+      };
+    }
+    case 'SET_ACTIVE_TASK':
+      return {
+        ...state,
+        activeTaskId: action.payload.id,
+        activeTaskStartedAt: action.payload.id ? action.payload.startedAt ?? Date.now() : null,
+      };
+    case 'UPDATE_TASK_ORDER':
+      return {
+        ...state,
+        taskOrderByDay: { ...state.taskOrderByDay, [action.payload.day]: action.payload.order },
+      };
+    case 'UPDATE_TASK_ORDER_WEEK_BUCKET':
+      return {
+        ...state,
+        taskOrderByWeekBucket: {
+          ...state.taskOrderByWeekBucket,
+          [action.payload.week]: action.payload.order,
+        },
+      };
+    case 'IMPORT_DATA':
+      return migrateAppState(action.payload);
+    case 'RESET_DATA':
+      return { ...INITIAL_STATE };
+    default:
+      return state;
+  }
+};

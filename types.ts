@@ -15,11 +15,11 @@ export interface Task {
     day: string | null; // YYYY-MM-DD
     week: string | null; // YYYY-WW
   };
-  frog: boolean;
   projectId: string | null;
   eventId: string | null; // Link to CalendarEvent if task was created from event
   createdAt: string;
   updatedAt: string;
+  completedAt: string | null;
   timeSpent?: number; // Time spent in seconds
 }
 
@@ -32,6 +32,7 @@ export interface CalendarEvent {
 }
 
 export interface AppState {
+  schemaVersion: number;
   captures: Capture[];
   tasks: Task[];
   events: CalendarEvent[];
@@ -43,6 +44,7 @@ export interface AppState {
 }
 
 export const INITIAL_STATE: AppState = {
+  schemaVersion: 2,
   captures: [],
   tasks: [],
   events: [],

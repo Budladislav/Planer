@@ -30,7 +30,6 @@ export const InboxView: React.FC = () => {
     // Form States
     const [captureText, setCaptureText] = useState(item.text);
     const [taskType, setTaskType] = useState<'today' | 'week'>('today');
-    const [isFrog, setIsFrog] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState(getWeekString());
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -114,10 +113,11 @@ export const InboxView: React.FC = () => {
             day: planDay,
             week: planWeek,
           },
-          frog: isFrog,
           projectId: null,
+          eventId: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          completedAt: null,
         }
       });
       dispatch({ type: 'PROCESS_CAPTURE', payload: { id: item.id, status: 'processed' } });
@@ -236,18 +236,6 @@ export const InboxView: React.FC = () => {
               </button>
             </div>
           )}
-
-          <div className="flex justify-center">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input 
-                type="checkbox" 
-                checked={isFrog} 
-                onChange={e => setIsFrog(e.target.checked)} 
-                className="w-4 h-4 text-indigo-600 rounded" 
-              />
-              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
-            </label>
-          </div>
 
           <button 
             onClick={handleConvertToTask} 

@@ -2,13 +2,26 @@ export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 9);
 };
 
+const pad2 = (value: number): string => value.toString().padStart(2, '0');
+
+const parseLocalDate = (dateString: string): Date => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!match) return new Date(dateString);
+
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), 12);
+};
+
+export const getDateString = (date: Date): string => {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+};
+
 export const getTodayString = (): string => {
-  const d = new Date();
-  return d.toISOString().split('T')[0];
+  return getDateString(new Date());
 };
 
 export const getWeekString = (dateString?: string): string => {
-  const date = dateString ? new Date(dateString) : new Date();
+  const date = dateString ? parseLocalDate(dateString) : new Date();
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -18,12 +31,12 @@ export const getWeekString = (dateString?: string): string => {
 };
 
 export const formatDateReadable = (dateStr: string): string => {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 };
 
 export const formatDateShort = (dateStr: string): string => {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
@@ -35,38 +48,48 @@ export const getWeekRange = (weekStr: string) => {
   return `Week ${weekStr.split('-W')[1]}, ${weekStr.split('-W')[0]}`;
 };
 
-export const getWeekDateRange = (weekStr: string): { start: string; end: string } => {
-  // Parse YYYY-Www format
+export const getISOWeeksInYear = (year: number): number => {
+  return Number(getWeekString(`${year}-12-28`).split('-W')[1]);
+};
+
+export const isValidWeekString = (weekStr: string): boolean => {
+  const match = /^(\d{4})-W(\d{2})$/.exec(weekStr);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  return year >= 2020 && year <= 2100 && week >= 1 && week <= getISOWeeksInYear(year);
+};
+
+export const getWeekDates = (weekStr: string): string[] => {
+  if (!isValidWeekString(weekStr)) return [];
+
   const [yearStr, weekNumStr] = weekStr.split('-W');
-  const year = parseInt(yearStr);
-  const weekNum = parseInt(weekNumStr);
-  
-  // Calculate the first day of the ISO week (Monday)
-  // ISO week 1 is the week containing the first Thursday of the year
-  const jan4 = new Date(year, 0, 4);
-  const jan4Day = jan4.getDay() || 7; // Convert Sunday (0) to 7
-  const daysToMonday = jan4Day - 1; // Days to subtract to get to Monday
+  const year = Number(yearStr);
+  const weekNum = Number(weekNumStr);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
   const firstMonday = new Date(jan4);
-  firstMonday.setDate(jan4.getDate() - daysToMonday);
-  
-  // Calculate the start date of the requested week
-  const weekStart = new Date(firstMonday);
-  weekStart.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
-  
-  // Calculate the end date (Sunday)
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  
-  // Format as DD.MM
-  const formatDate = (date: Date): string => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  firstMonday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  firstMonday.setUTCDate(firstMonday.getUTCDate() + (weekNum - 1) * 7);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(firstMonday);
+    date.setUTCDate(firstMonday.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+};
+
+export const getWeekDateRange = (weekStr: string): { start: string; end: string } => {
+  const dates = getWeekDates(weekStr);
+  const formatDate = (date: string): string => {
+    const [, month, day] = date.split('-');
     return `${day}.${month}`;
   };
-  
+
   return {
-    start: formatDate(weekStart),
-    end: formatDate(weekEnd),
+    start: dates[0] ? formatDate(dates[0]) : '—',
+    end: dates[6] ? formatDate(dates[6]) : '—',
   };
 };
 

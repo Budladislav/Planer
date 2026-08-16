@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { generateId, getTodayString, formatTime } from '../../utils';
-import { Trash2, Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 
 export const DoneView: React.FC = () => {
@@ -45,10 +45,11 @@ export const DoneView: React.FC = () => {
         title: quickAdd.trim(),
         status: 'done',
         plan: { day: getTodayString(), week: null },
-        frog: false,
         projectId: null,
+        eventId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
       },
     });
     setQuickAdd('');
@@ -94,7 +95,6 @@ export const DoneView: React.FC = () => {
     const [showActions, setShowActions] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(task.title);
-    const [editFrog, setEditFrog] = useState(task.frog);
 
     // Only allow "Undone" for tasks completed today
     const completedDate = task.plan.day || task.updatedAt.split('T')[0];
@@ -109,7 +109,6 @@ export const DoneView: React.FC = () => {
         payload: {
           id: task.id,
           title: editTitle.trim(),
-          frog: editFrog,
         },
       });
       setIsEditing(false);
@@ -118,7 +117,6 @@ export const DoneView: React.FC = () => {
     const handleCancelEdit = () => {
       setIsEditing(false);
       setEditTitle(task.title);
-      setEditFrog(task.frog);
     };
 
     if (isEditing) {
@@ -134,17 +132,6 @@ export const DoneView: React.FC = () => {
               className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
               autoFocus
             />
-          </div>
-          <div className="flex justify-center">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={editFrog}
-                onChange={(e) => setEditFrog(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded"
-              />
-              <span className="text-sm text-slate-700">Eat the Frog? 🐸</span>
-            </label>
           </div>
           <div className="flex justify-end gap-2">
             <button
@@ -169,7 +156,6 @@ export const DoneView: React.FC = () => {
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {task.frog && <span className="flex-shrink-0">🐸</span>}
             <span className="text-sm break-all line-through text-slate-500">
               {task.title}
             </span>
@@ -244,9 +230,6 @@ export const DoneView: React.FC = () => {
               .map(([date, tasks]) => {
                 const isExpanded = expandedDates.has(date);
                 const totalTime = tasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
-                const dateObj = new Date(date);
-                const year = dateObj.getFullYear();
-                
                 return (
                   <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
                     <button
@@ -345,4 +328,3 @@ export const DoneView: React.FC = () => {
     </>
   );
 };
-

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { CalendarEvent } from '../../types';
 import { getTodayString, generateId, formatDateShort, getWeekString, formatEventTitle } from '../../utils';
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 
 const EventItem: React.FC<{ 
@@ -87,7 +87,6 @@ export const EventsView: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
-  const [originalEvent, setOriginalEvent] = useState<CalendarEvent | null>(null);
 
   const [showPastEvents, setShowPastEvents] = useState(false);
   const todayStr = getTodayString();
@@ -145,11 +144,11 @@ export const EventsView: React.FC = () => {
         title: eventTitle,
         status: 'todo',
         plan: { day: newDate, week: getWeekString(newDate) },
-        frog: false,
         projectId: null,
         eventId: eventId, // Link to event
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        completedAt: null,
       },
     });
 
@@ -163,7 +162,6 @@ export const EventsView: React.FC = () => {
     setEditTitle(event.title);
     setEditDate(event.date);
     setEditTime(event.time);
-    setOriginalEvent(event); // Save original event to find and delete old task
     // Auto-resize textarea after state update
     setTimeout(() => {
       if (textareaRef.current) {
@@ -192,7 +190,6 @@ export const EventsView: React.FC = () => {
     setEditTitle('');
     setEditDate('');
     setEditTime('');
-    setOriginalEvent(null);
   };
 
   const handleCancelEdit = () => {
@@ -200,7 +197,6 @@ export const EventsView: React.FC = () => {
     setEditTitle('');
     setEditDate('');
     setEditTime('');
-    setOriginalEvent(null);
   };
 
   // Auto-resize textarea when editing
