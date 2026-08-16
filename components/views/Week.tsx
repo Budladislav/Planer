@@ -4,6 +4,7 @@ import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
+import { planTaskForWeek } from '../../task-planning';
 import {
   DndContext,
   closestCenter,
@@ -56,19 +57,12 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
     e.preventDefault();
     if (!editTitle.trim()) return;
     if (!isValidWeekString(editWeek)) return;
-    const originalWeek = task.plan.day
-      ? getWeekString(task.plan.day)
-      : task.plan.week ?? getWeekString(todayStr);
-    const weekChanged = editWeek !== originalWeek;
-
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id: task.id,
         title: editTitle.trim(),
-        plan: weekChanged
-          ? { day: null, week: editWeek }
-          : { day: task.plan.day, week: editWeek },
+        plan: planTaskForWeek(task, editWeek),
       },
     });
     setIsEditing(false);
@@ -346,7 +340,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
       payload: {
         id: task.id,
         title: editTitle.trim(),
-        plan: { week: editWeek, day: null },
+        plan: planTaskForWeek(task, editWeek),
       },
     });
     setIsEditing(false);
