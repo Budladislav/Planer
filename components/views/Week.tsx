@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString, getISOWeeksInYear } from '../../utils';
+import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString, shiftWeekString } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { planTaskForWeek } from '../../task-planning';
@@ -860,21 +860,9 @@ export const WeekView: React.FC = () => {
     }
   };
 
-  // Helper to change week (disallow navigating to past weeks)
+  // Navigate freely between past and future weeks.
   const changeWeek = (delta: number) => {
-    const [yearStr, weekStr] = currentWeek.split('-W');
-    let year = parseInt(yearStr, 10);
-    let week = parseInt(weekStr, 10) + delta;
-
-    if (week > getISOWeeksInYear(year)) { year++; week = 1; }
-    if (week < 1) { year--; week = getISOWeeksInYear(year); }
-
-    const nextWeekStr = `${year}-W${week.toString().padStart(2, '0')}`;
-    if (nextWeekStr < thisWeek) {
-      setCurrentWeek(thisWeek);
-    } else {
-      setCurrentWeek(nextWeekStr);
-    }
+    setCurrentWeek(week => shiftWeekString(week, delta));
   };
 
   const moveTask = (id: string, day: string | null) => {

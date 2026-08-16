@@ -7,6 +7,7 @@ import {
   getWeekDates,
   getWeekString,
   isValidWeekString,
+  shiftWeekString,
 } from './utils';
 
 describe('date utilities', () => {
@@ -33,5 +34,11 @@ describe('date utilities', () => {
       '2027-01-03',
     ]);
     expect(getWeekDateRange('2026-W53')).toEqual({ start: '28.12', end: '03.01' });
+  });
+
+  it('moves between past and future weeks across ISO year boundaries', () => {
+    expect(shiftWeekString('2027-W01', -1)).toBe('2026-W53');
+    expect(shiftWeekString('2026-W53', 1)).toBe('2027-W01');
+    expect(shiftWeekString('2026-W33', -2)).toBe('2026-W31');
   });
 });

@@ -80,6 +80,17 @@ export const getWeekDates = (weekStr: string): string[] => {
   });
 };
 
+export const shiftWeekString = (weekStr: string, delta: number): string => {
+  if (!Number.isInteger(delta)) return weekStr;
+
+  const dates = getWeekDates(weekStr);
+  if (dates.length !== 7) return weekStr;
+
+  const monday = new Date(`${dates[0]}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() + delta * 7);
+  return getWeekString(monday.toISOString().slice(0, 10));
+};
+
 export const getWeekDateRange = (weekStr: string): { start: string; end: string } => {
   const dates = getWeekDates(weekStr);
   const formatDate = (date: string): string => {
