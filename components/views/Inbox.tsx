@@ -127,7 +127,7 @@ export const InboxView: React.FC = () => {
     if (processingId !== item.id) {
       return (
         <div 
-          className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm text-sm cursor-pointer hover:bg-slate-50 transition-colors"
+          className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm cursor-pointer hover:bg-slate-50 transition-colors"
           onClick={() => setProcessingId(item.id)}
         >
           <div className="flex items-center justify-between gap-2">

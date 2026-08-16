@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { Download, Upload, Trash2 } from 'lucide-react';
+import { CheckSquare, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 
 export const SettingsView: React.FC = () => {
@@ -158,6 +158,32 @@ export const SettingsView: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
+         <button
+           type="button"
+           onClick={() => dispatch({ type: 'SET_VIEW', payload: 'inbox' })}
+           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+         >
+           <Inbox className="h-5 w-5 text-purple-500" />
+           <div className="flex-1">
+             <h3 className="font-semibold text-slate-800">Inbox</h3>
+             <p className="text-sm text-slate-500">Open unprocessed notes.</p>
+           </div>
+           <ChevronRight className="h-5 w-5 text-slate-400" />
+         </button>
+
+         <button
+           type="button"
+           onClick={() => dispatch({ type: 'SET_VIEW', payload: 'done' })}
+           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+         >
+           <CheckSquare className="h-5 w-5 text-green-500" />
+           <div className="flex-1">
+             <h3 className="font-semibold text-slate-800">Completed Tasks</h3>
+             <p className="text-sm text-slate-500">History and TXT reports.</p>
+           </div>
+           <ChevronRight className="h-5 w-5 text-slate-400" />
+         </button>
+
          <div className="p-6 flex items-center justify-between">
             <div>
                <h3 className="font-semibold text-slate-800">Export Data</h3>

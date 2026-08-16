@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../store';
 import { ViewState } from '../types';
 import { 
-  Target, Calendar, List, Inbox, Settings, CheckSquare
+  Target, Calendar, List, Settings, type LucideIcon,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -15,12 +15,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   const { state } = useAppStore();
   const isFocusMode = currentView === 'today' && state.activeTaskId !== null;
 
-  const navItems: Array<{ view: ViewState; icon: any; label: string }> = [
-    { view: 'settings', icon: Settings, label: 'Settings' },
-    { view: 'inbox', icon: Inbox, label: 'Inbox' },
+  const navItems: Array<{ view: ViewState; icon: LucideIcon; label: string }> = [
     { view: 'events', icon: Calendar, label: 'Events' },
-    { view: 'done', icon: CheckSquare, label: 'Done' }, // swapped
-    { view: 'week', icon: List, label: 'Week' }, // swapped
+    { view: 'week', icon: List, label: 'Weekly Plan' },
     { view: 'today', icon: Target, label: 'Today' },
   ];
 
@@ -30,8 +27,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         case 'today': return 'text-indigo-600';
         case 'week': return 'text-indigo-500';
         case 'events': return 'text-amber-600';
-        case 'done': return 'text-green-600';
-        case 'inbox': return 'text-purple-600';
         case 'settings': return 'text-slate-600';
         default: return 'text-slate-600';
       }
@@ -40,15 +35,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         case 'today': return 'text-indigo-400';
         case 'week': return 'text-indigo-400';
         case 'events': return 'text-amber-500';
-        case 'done': return 'text-green-500';
-        case 'inbox': return 'text-purple-500';
         case 'settings': return 'text-slate-400';
         default: return 'text-slate-400';
       }
     }
   };
 
-  const NavItem = ({ view, icon: Icon, label }: { view: ViewState; icon: any; label: string }) => {
+  const NavItem = ({ view, icon: Icon, label }: { view: ViewState; icon: LucideIcon; label: string }) => {
     const isActive = currentView === view;
     return (
       <button
@@ -65,19 +58,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     );
   };
 
-  const IconNavItem = ({ view, icon: Icon }: { view: ViewState; icon: any }) => {
+  const IconNavItem = ({ view, icon: Icon, label }: { view: ViewState; icon: LucideIcon; label: string }) => {
     const isActive = currentView === view;
     return (
       <button
         onClick={() => onNavigate(view)}
-        className={`flex flex-col items-center justify-center flex-1 aspect-square rounded-lg transition-colors ${
+        className={`flex h-16 flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
           isActive
             ? 'text-slate-900 bg-slate-100'
             : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
         }`}
-        title={navItems.find(item => item.view === view)?.label}
+        title={label}
       >
-        <Icon className={`w-7 h-7 ${getIconColor(view, isActive)}`} />
+        <Icon className={`h-6 w-6 ${getIconColor(view, isActive)}`} />
+        <span className="text-[10px] font-medium">{label}</span>
       </button>
     );
   };
@@ -101,6 +95,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
               <NavItem key={item.view} view={item.view} icon={item.icon} label={item.label} />
             ))}
           </nav>
+          <div className="border-t border-slate-100 p-4">
+            <NavItem view="settings" icon={Settings} label="Settings" />
+          </div>
         </aside>
       )}
 
@@ -112,13 +109,27 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
         {/* Mobile Bottom Navigation Bar */}
         {!isFocusMode && (
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-10 bg-slate-50">
+          <>
+          <button
+            type="button"
+            onClick={() => onNavigate('settings')}
+            className={`fixed right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm lg:hidden ${
+              currentView === 'settings'
+                ? 'border-slate-400 text-slate-800'
+                : 'border-slate-200 text-slate-500'
+            }`}
+            title="Settings"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+          <nav className="fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200 bg-white lg:hidden">
             <div className="flex items-center w-full">
               {navItems.map(item => (
-                <IconNavItem key={item.view} view={item.view} icon={item.icon} />
+                <IconNavItem key={item.view} view={item.view} icon={item.icon} label={item.label} />
               ))}
             </div>
           </nav>
+          </>
         )}
       </div>
     </div>

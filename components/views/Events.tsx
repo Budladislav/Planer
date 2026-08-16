@@ -20,7 +20,7 @@ const EventItem: React.FC<{
 
   return (
     <div
-      className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-sm transition-all overflow-hidden text-sm"
+      className="bg-white border border-slate-200 rounded-lg px-3 py-2 hover:shadow-sm transition-all overflow-hidden text-sm"
     >
       <div 
         className={`cursor-pointer ${showActions ? 'space-y-2' : ''}`}
@@ -47,7 +47,7 @@ const EventItem: React.FC<{
       </div>
       <div
         className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >

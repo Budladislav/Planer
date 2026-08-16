@@ -182,7 +182,7 @@ export const DoneView: React.FC = () => {
 
     return (
       <div
-        className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
+        className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
         onClick={() => setShowActions((prev) => !prev)}
       >
         <div className="flex items-center justify-between gap-2">
@@ -210,7 +210,7 @@ export const DoneView: React.FC = () => {
 
         <div
           className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'opacity-100 max-h-40 mt-3' : 'opacity-0 max-h-0 overflow-hidden'
+            showActions ? 'opacity-100 max-h-40 mt-2' : 'opacity-0 max-h-0 overflow-hidden'
           }`}
           onClick={(e) => e.stopPropagation()}
         >

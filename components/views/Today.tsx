@@ -120,7 +120,7 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-3 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
+      className={`px-3 py-2 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
         isFirst
           ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
           : 'bg-white border border-slate-200 hover:border-slate-300'
@@ -130,7 +130,7 @@ const SortableTaskItem: React.FC<{
       <div
         {...attributes}
         {...listeners}
-        className={`flex gap-3 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none ${
+        className={`flex gap-2 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none ${
           showActions ? 'items-start' : 'items-center'
         }`}
       >
@@ -149,16 +149,18 @@ const SortableTaskItem: React.FC<{
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
-          className={`w-10 h-10 flex items-center justify-center bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors flex-shrink-0 ${showActions ? 'mt-0' : ''}`}
+          className={`-my-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-green-700 ${showActions ? 'mt-0' : ''}`}
           title="Mark as done"
         >
-          <Check className="w-5 h-5" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-green-50 transition-colors hover:bg-green-100">
+            <Check className="h-4 w-4" />
+          </span>
         </button>
       </div>
 
       <div
         className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >

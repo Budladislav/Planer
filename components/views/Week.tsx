@@ -176,7 +176,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
 
   return (
     <div
-      className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -237,7 +237,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
 
       <div
         className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -454,7 +454,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
 
   return (
     <div
-      className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -508,7 +508,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           onTouchStart={(e) => {
             e.stopPropagation();
           }}
-          className={`px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
+          className={`px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
             showActions ? 'mt-0' : ''
           }`}
           title="Move"
@@ -519,7 +519,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
 
       <div
         className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-3 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
