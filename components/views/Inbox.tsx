@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
-import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange } from '../../utils';
+import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
 import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek } from '../../month-planning';
@@ -47,35 +47,16 @@ export const InboxView: React.FC = () => {
       }
     }, [captureText]);
 
-    const getWeekOffset = (weekStr: string): number => {
-      const currentWeek = getWeekString();
-      const [currentYear, currentWeekNum] = currentWeek.split('-W').map(Number);
-      const [targetYear, targetWeekNum] = weekStr.split('-W').map(Number);
-      
-      if (targetYear === currentYear) {
-        return targetWeekNum - currentWeekNum;
-      } else if (targetYear > currentYear) {
-        // Future year: weeks from current week to end of year + weeks in target year
-        // For range 0-4, this should work correctly
-        return (52 - currentWeekNum + 1) + targetWeekNum;
-      } else {
-        // Past year: negative offset
-        return -(currentWeekNum - 1 + (52 - targetWeekNum + 1));
-      }
-    };
-
     const changeWeek = (delta: number) => {
       const [yearStr, weekStr] = selectedWeek.split('-W');
       let year = parseInt(yearStr);
       let week = parseInt(weekStr) + delta;
       
-      if (week > 52) { year++; week = 1; }
-      if (week < 1) { year--; week = 52; }
+      if (week > getISOWeeksInYear(year)) { year++; week = 1; }
+      if (week < 1) { year--; week = getISOWeeksInYear(year); }
       
       const newWeek = `${year}-W${week.toString().padStart(2, '0')}`;
-      const offset = getWeekOffset(newWeek);
-      // Allow any future week (offset >= 0), no upper limit
-      if (offset >= 0) {
+      if (getWeekDates(newWeek)[0] >= getWeekDates(getWeekString())[0]) {
         setSelectedWeek(newWeek);
       }
     };

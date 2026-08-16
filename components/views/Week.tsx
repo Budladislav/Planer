@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString } from '../../utils';
+import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString, getISOWeeksInYear } from '../../utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+import { formatWorkShift, getWorkShiftForWeek } from '../../week-shifts';
 import {
   DndContext,
   closestCenter,
@@ -15,6 +16,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -24,6 +26,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+const weekBucketContainer = (week: string): string => `week-bucket:${week}`;
+const weekDayContainer = (day: string): string => `week-day:${day}`;
 
 type DayTaskItemProps = {
   task: Task;
@@ -287,7 +292,10 @@ const SortableDayTaskItem: React.FC<DayTaskItemProps> = (props) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: props.task.id });
+  } = useSortable({
+    id: props.task.id,
+    data: { containerId: weekDayContainer(props.task.plan.day ?? '') },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -296,7 +304,7 @@ const SortableDayTaskItem: React.FC<DayTaskItemProps> = (props) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} data-task-id={props.task.id}>
       <DayTaskItem {...props} dragListeners={listeners} isDragging={isDragging} />
     </div>
   );
@@ -568,7 +576,10 @@ const SortableBucketTaskItem: React.FC<BucketTaskItemProps> = (props) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: props.task.id });
+  } = useSortable({
+    id: props.task.id,
+    data: { containerId: weekBucketContainer(props.currentWeek) },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -580,8 +591,28 @@ const SortableBucketTaskItem: React.FC<BucketTaskItemProps> = (props) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="w-full max-w-full min-w-0 overflow-hidden">
+    <div ref={setNodeRef} style={style} {...attributes} data-task-id={props.task.id} className="w-full max-w-full min-w-0 overflow-hidden">
       <BucketTaskItem {...props} dragListeners={listeners} isDragging={isDragging} />
+    </div>
+  );
+};
+
+const WeekTaskDropZone: React.FC<{
+  id: string;
+  tasks: Task[];
+  children: React.ReactNode;
+  className?: string;
+}> = ({ id, tasks, children, className = '' }) => {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { containerId: id } });
+  return (
+    <div
+      ref={setNodeRef}
+      data-container-id={id}
+      className={`${className} min-h-12 transition-colors ${isOver ? 'bg-indigo-50 ring-2 ring-indigo-200' : ''}`}
+    >
+      <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
     </div>
   );
 };
@@ -737,39 +768,6 @@ export const WeekView: React.FC = () => {
     })
   );
 
-  // Handle drag end for week bucket
-  const handleBucketDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = weekTasks.findIndex(t => t.id === active.id);
-    const newIndex = weekTasks.findIndex(t => t.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const newOrder = arrayMove(weekTasks, oldIndex, newIndex).map(t => t.id);
-    dispatch({
-      type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
-      payload: { week: currentWeek, order: newOrder },
-    });
-  };
-
-  // Handle drag end for day tasks
-  const handleDayDragEnd = (day: string) => (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const tasks = dayTasks[day] || [];
-    const oldIndex = tasks.findIndex(t => t.id === active.id);
-    const newIndex = tasks.findIndex(t => t.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const newOrder = arrayMove(tasks, oldIndex, newIndex).map(t => t.id);
-    dispatch({
-      type: 'UPDATE_TASK_ORDER',
-      payload: { day, order: newOrder },
-    });
-  };
-
   // Tasks grouped by day for current week
   // Show only TODO tasks assigned to each day (plan.day === day.date)
   const dayTasks = useMemo(() => {
@@ -801,14 +799,75 @@ export const WeekView: React.FC = () => {
     return map;
   }, [state.tasks, weekDays, state.taskOrderByDay]);
 
+  const containerForTask = (taskId: string): string | null => {
+    const task = state.tasks.find(item => item.id === taskId);
+    if (!task) return null;
+    return task.plan.day
+      ? weekDayContainer(task.plan.day)
+      : task.plan.week === currentWeek
+        ? weekBucketContainer(currentWeek)
+        : null;
+  };
+
+  const tasksForContainer = (containerId: string): Task[] => {
+    if (containerId === weekBucketContainer(currentWeek)) return weekTasks;
+    if (containerId.startsWith('week-day:')) return dayTasks[containerId.slice('week-day:'.length)] ?? [];
+    return [];
+  };
+
+  const handleWeekDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const sourceContainer = containerForTask(activeId);
+    const targetContainer = overId.startsWith('week-bucket:') || overId.startsWith('week-day:')
+      ? overId
+      : containerForTask(overId);
+    if (!sourceContainer || !targetContainer) return;
+
+    if (sourceContainer === targetContainer) {
+      const tasks = tasksForContainer(sourceContainer);
+      const oldIndex = tasks.findIndex(task => task.id === activeId);
+      const newIndex = tasks.findIndex(task => task.id === overId);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      const order = arrayMove(tasks, oldIndex, newIndex).map(task => task.id);
+      if (sourceContainer.startsWith('week-day:')) {
+        dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: sourceContainer.slice('week-day:'.length), order } });
+      } else {
+        dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: { week: currentWeek, order } });
+      }
+      return;
+    }
+
+    const task = state.tasks.find(item => item.id === activeId);
+    if (!task) return;
+    const planningMonth = getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek);
+    if (targetContainer.startsWith('week-day:')) {
+      const day = targetContainer.slice('week-day:'.length);
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: { id: activeId, plan: { day, week: currentWeek, month: planningMonth ?? day.slice(0, 7) } },
+      });
+      const targetOrder = (dayTasks[day] ?? []).map(item => item.id).filter(id => id !== activeId);
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day, order: [...targetOrder, activeId] } });
+    } else {
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: { id: activeId, plan: { day: null, week: currentWeek, month: planningMonth } },
+      });
+      const targetOrder = weekTasks.map(item => item.id).filter(id => id !== activeId);
+      dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: { week: currentWeek, order: [...targetOrder, activeId] } });
+    }
+  };
+
   // Helper to change week (disallow navigating to past weeks)
   const changeWeek = (delta: number) => {
     const [yearStr, weekStr] = currentWeek.split('-W');
     let year = parseInt(yearStr, 10);
     let week = parseInt(weekStr, 10) + delta;
 
-    if (week > 52) { year++; week = 1; }
-    if (week < 1) { year--; week = 52; }
+    if (week > getISOWeeksInYear(year)) { year++; week = 1; }
+    if (week < 1) { year--; week = getISOWeeksInYear(year); }
 
     const nextWeekStr = `${year}-W${week.toString().padStart(2, '0')}`;
     if (nextWeekStr < thisWeek) {
@@ -849,6 +908,12 @@ export const WeekView: React.FC = () => {
           payload: { week: currentWeek, order: newBucketOrder },
         });
       }
+    } else {
+      const bucketOrder = (state.taskOrderByWeekBucket[currentWeek] || []).filter(taskId => taskId !== id);
+      dispatch({
+        type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+        payload: { week: currentWeek, order: [...bucketOrder, id] },
+      });
     }
     setMoveTaskId(null);
   };
@@ -952,6 +1017,15 @@ export const WeekView: React.FC = () => {
       {/* Header - Centered */}
       <div className="text-center mb-3">
         <h2 className="text-3xl font-bold text-slate-900">Weekly Plan</h2>
+        <div className="mt-1">
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+            getWorkShiftForWeek(state.workShiftSettings, currentWeek)
+              ? 'bg-indigo-50 text-indigo-700'
+              : 'bg-slate-100 text-slate-400'
+          }`}>
+            {formatWorkShift(getWorkShiftForWeek(state.workShiftSettings, currentWeek))}
+          </span>
+        </div>
         <p className="text-slate-400 text-sm mt-1">
           {todoWeekTasks.length} left • {doneWeekTasks.length} done
           {(() => {
@@ -968,113 +1042,80 @@ export const WeekView: React.FC = () => {
 
       {/* Content - with bottom padding for fixed forms */}
       <div className="pb-32 lg:pb-16 min-h-[60vh] flex flex-col">
-        <div className="flex-1 space-y-2 rounded-lg border border-slate-200 border-dashed p-2">
-          <div className="text-sm font-semibold text-slate-600 text-center">Week tasks (no date)</div>
-          {weekTasks.length === 0 ? (
-            <div className="text-sm text-slate-400 italic">
-              No tasks in week bucket. Drag a task here from a specific day.
-            </div>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleBucketDragEnd}
-            >
-              <SortableContext
-                items={weekTasks.map(t => t.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="grid gap-3">
-                  {weekTasks.map(task => (
-                    <SortableBucketTaskItem
-                      key={task.id}
-                      task={task}
-                      currentWeek={currentWeek}
-                      dispatch={dispatch}
-                      onMove={(id) => setMoveTaskId(id)}
-                      onDeleteConfirm={handleDeleteConfirm}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )}
-          {isTouch && weekTasks.length > 0 && (
-            <div className="text-xs text-slate-400">
-              On mobile: use Move button on task to move to a day.
-            </div>
-          )}
-        </div>
-        {/* Days list with tasks */}
-        <div className="mt-3 space-y-2">
-          {weekDays.map((day) => {
-            // In the current week, hide days that are already in the past
-            if (currentWeek === thisWeek && day.date < todayStr) {
-              return null;
-            }
-            const tasks = dayTasks[day.date] || [];
-            const tasksCount = tasks.length;
-            return (
-              <div
-                key={day.date}
-                className="rounded-lg border border-slate-200 transition-colors bg-white"
-              >
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex-1 flex items-center justify-between text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-800">{day.weekday}</span>
-                      <span className="text-xs text-slate-500">{day.label}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setQuickAddDay(day.date)}
-                        className="w-6 h-6 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 rounded transition-colors flex-shrink-0"
-                        title="Add task to this day"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                      <span className="text-sm text-slate-500">{tasksCount === 0 ? 'No tasks' : `${tasksCount}`}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-4 pb-4 pt-4 border-t border-slate-100 space-y-2">
-                    {tasksCount === 0 && (
-                      <div className="text-sm text-slate-400 italic">
-                        Drag a task here from week list or another day
-                      </div>
-                    )}
-                    {tasksCount > 0 && (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDayDragEnd(day.date)}
-                      >
-                        <SortableContext
-                          items={tasks.map(t => t.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {tasks.map((t) => (
-                            <SortableDayTaskItem
-                              key={t.id}
-                              task={t}
-                              todayStr={todayStr}
-                              dispatch={dispatch}
-                              onMove={(id) => setMoveTaskId(id)}
-                              onDeleteConfirm={handleDeleteConfirm}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    )}
-                  </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWeekDragEnd}>
+          <WeekTaskDropZone
+            id={weekBucketContainer(currentWeek)}
+            tasks={weekTasks}
+            className="flex-1 space-y-2 rounded-lg border border-dashed border-slate-200 p-2"
+          >
+            <div className="text-center text-sm font-semibold text-slate-600">Week tasks (no date)</div>
+            {weekTasks.length === 0 ? (
+              <div className="text-sm italic text-slate-400">No tasks in week bucket. Drag a task here from a specific day.</div>
+            ) : (
+              <div className="grid gap-2">
+                {weekTasks.map(task => (
+                  <SortableBucketTaskItem
+                    key={task.id}
+                    task={task}
+                    currentWeek={currentWeek}
+                    dispatch={dispatch}
+                    onMove={id => setMoveTaskId(id)}
+                    onDeleteConfirm={handleDeleteConfirm}
+                  />
+                ))}
               </div>
-            );
-          })}
-        </div>
+            )}
+            {isTouch && weekTasks.length > 0 && (
+              <div className="text-xs text-slate-400">Long-press and drag, or use Move as an alternative.</div>
+            )}
+          </WeekTaskDropZone>
+
+          <div className="mt-3 space-y-2">
+            {weekDays.map(day => {
+              if (currentWeek === thisWeek && day.date < todayStr) return null;
+              const tasks = dayTasks[day.date] || [];
+              return (
+                <div key={day.date} className="rounded-lg border border-slate-200 bg-white transition-colors">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex flex-1 items-center justify-between text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800">{day.weekday}</span>
+                        <span className="text-xs text-slate-500">{day.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title="Add task to this day">
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm text-slate-500">{tasks.length === 0 ? 'No tasks' : tasks.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <WeekTaskDropZone
+                    id={weekDayContainer(day.date)}
+                    tasks={tasks}
+                    className="space-y-2 border-t border-slate-100 px-4 pb-4 pt-4"
+                  >
+                    {tasks.length === 0 && <div className="text-sm italic text-slate-400">Drag a task here from the week list or another day</div>}
+                    {tasks.map(task => (
+                      <SortableDayTaskItem
+                        key={task.id}
+                        task={task}
+                        todayStr={todayStr}
+                        dispatch={dispatch}
+                        onMove={id => setMoveTaskId(id)}
+                        onDeleteConfirm={handleDeleteConfirm}
+                      />
+                    ))}
+                  </WeekTaskDropZone>
+                </div>
+              );
+            })}
+          </div>
+        </DndContext>
       </div>
 
-      {/* Move modal for touch devices */}
-      {isTouch && moveTaskId && (
+      {/* Move remains available as an alternative to drag and drop. */}
+      {moveTaskId && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => setMoveTaskId(null)}>
           <div
             className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
