@@ -7,11 +7,13 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  message: string;
+  message?: string;
+  children?: React.ReactNode;
   type?: ModalType;
+  wide?: boolean;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, type = 'info' }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, children, type = 'info', wide = false }) => {
   if (!isOpen) return null;
 
   const iconConfig = {
@@ -30,7 +32,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, t
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden"
+        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-md'} bg-white rounded-lg shadow-xl overflow-hidden`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`${config.bg} px-4 py-3 flex items-center justify-between`}>
@@ -45,8 +47,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, t
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="px-4 py-4">
-          <p className="text-sm text-slate-700 whitespace-pre-line">{message}</p>
+        <div className="max-h-[65vh] overflow-y-auto px-4 py-4">
+          {children ?? <p className="text-sm text-slate-700 whitespace-pre-line">{message}</p>}
         </div>
         <div className="px-4 py-3 bg-slate-50 flex justify-end">
           <button

@@ -2,10 +2,17 @@ import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
 import { CheckSquare, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
+import changelogMarkdown from '../../CHANGELOG_MONOFOCUS.md?raw';
+import packageJson from '../../package.json';
+import { parseReleaseHistory } from '../../release-history';
+import { getDateString } from '../../utils';
+
+const RELEASES = parseReleaseHistory(changelogMarkdown);
 
 export const SettingsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showChangelog, setShowChangelog] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type?: 'info' | 'success' | 'error' | 'warning' }>({
     isOpen: false,
     title: '',
@@ -23,7 +30,7 @@ export const SettingsView: React.FC = () => {
     try {
       // Generate filename with date and time: monofocus_backup_2024-01-15_14-30.json
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const dateStr = getDateString(now); // local YYYY-MM-DD
       const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
       const filename = `monofocus_backup_${dateStr}_${timeStr}.json`;
       
@@ -224,9 +231,13 @@ export const SettingsView: React.FC = () => {
          </div>
       </div>
       
-      <div className="text-center text-xs text-slate-400 mt-6">
-         MonoFocus v2.6 • Data stored locally in browser
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowChangelog(true)}
+        className="mx-auto block text-center text-xs text-slate-400 underline-offset-4 hover:text-indigo-600 hover:underline"
+      >
+         MonoFocus v{packageJson.version} • Data stored locally in browser
+      </button>
 
       <Modal
         isOpen={modal.isOpen}
@@ -235,6 +246,27 @@ export const SettingsView: React.FC = () => {
         message={modal.message}
         type={modal.type}
       />
+
+      <Modal
+        isOpen={showChangelog}
+        onClose={() => setShowChangelog(false)}
+        title="MonoFocus changelog"
+        wide
+      >
+        <div className="space-y-5">
+          {RELEASES.map(release => (
+            <section key={release.version}>
+              <div className="flex items-baseline gap-2">
+                <h4 className="font-bold text-slate-800">v{release.version}</h4>
+                <span className="text-xs text-slate-400">{release.date}</span>
+              </div>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                {release.changes.map(change => <li key={change}>{change}</li>)}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
