@@ -4,6 +4,7 @@ import { CalendarEvent } from '../../types';
 import { getTodayString, generateId, formatDateShort, getWeekString, formatEventTitle } from '../../utils';
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
+import { groupEventsForDisplay } from '../../event-history';
 
 const EventItem: React.FC<{ 
   event: CalendarEvent;
@@ -91,31 +92,10 @@ export const EventsView: React.FC = () => {
   const [showPastEvents, setShowPastEvents] = useState(false);
   const todayStr = getTodayString();
 
-  // Sort events: by date (ascending), then by time (ascending)
-  const sortedEvents = useMemo(() => {
-    return [...state.events].sort((a, b) => {
-      if (a.date !== b.date) {
-        return a.date.localeCompare(b.date);
-      }
-      return a.time.localeCompare(b.time);
-    });
-  }, [state.events]);
-
-  // Separate events into current/future and past
-  const { currentEvents, pastEvents } = useMemo(() => {
-    const current: CalendarEvent[] = [];
-    const past: CalendarEvent[] = [];
-    
-    sortedEvents.forEach(event => {
-      if (event.date < todayStr) {
-        past.push(event);
-      } else {
-        current.push(event);
-      }
-    });
-    
-    return { currentEvents: current, pastEvents: past };
-  }, [sortedEvents, todayStr]);
+  const { currentEvents, pastEvents } = useMemo(
+    () => groupEventsForDisplay(state.events, state.tasks, todayStr),
+    [state.events, state.tasks, todayStr],
+  );
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
