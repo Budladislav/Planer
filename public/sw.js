@@ -1,6 +1,6 @@
 // Service Worker для MonoFocus Planner
 // Версия кэша - обновлять при изменении статики
-const STATIC_CACHE = 'monofocus-static-v2.6';
+const STATIC_CACHE = 'monofocus-static-v2.7.0';
 
 // Файлы для кэширования (статичные ресурсы)
 // Пути должны соответствовать base path из vite.config.ts
