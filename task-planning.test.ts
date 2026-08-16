@@ -6,7 +6,7 @@ const datedTask: Task = {
   id: 'dated',
   title: 'Dated task',
   status: 'todo',
-  plan: { day: '2026-08-12', week: '2026-W33' },
+  plan: { month: '2026-08', day: '2026-08-12', week: '2026-W33' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-10T08:00:00.000Z',
@@ -19,6 +19,7 @@ describe('planTaskForWeek', () => {
     expect(planTaskForWeek(datedTask, '2026-W34')).toEqual({
       day: null,
       week: '2026-W34',
+      month: '2026-08',
     });
   });
 
@@ -26,6 +27,7 @@ describe('planTaskForWeek', () => {
     expect(planTaskForWeek(datedTask, '2026-W33')).toEqual({
       day: '2026-08-12',
       week: '2026-W33',
+      month: '2026-08',
     });
   });
 });

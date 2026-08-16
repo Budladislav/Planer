@@ -54,7 +54,7 @@ export const DoneView: React.FC = () => {
         id: generateId(),
         title: quickAdd.trim(),
         status: 'done',
-        plan: { day: getTodayString(), week: null },
+        plan: { day: getTodayString(), week: null, month: getTodayString().slice(0, 7) },
         projectId: null,
         eventId: null,
         createdAt: new Date().toISOString(),

@@ -14,7 +14,7 @@ const linkedTask = (eventId: string, status: Task['status'], completedAt: string
   id: `task-${eventId}`,
   title: eventId,
   status,
-  plan: { day: '2026-08-20', week: '2026-W34' },
+  plan: { month: '2026-08', day: '2026-08-20', week: '2026-W34' },
   projectId: null,
   eventId,
   createdAt: '2026-08-16T08:00:00.000Z',

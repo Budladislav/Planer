@@ -123,7 +123,7 @@ export const EventsView: React.FC = () => {
         id: generateId(),
         title: eventTitle,
         status: 'todo',
-        plan: { day: newDate, week: getWeekString(newDate) },
+        plan: { day: newDate, week: getWeekString(newDate), month: newDate.slice(0, 7) },
         projectId: null,
         eventId: eventId, // Link to event
         createdAt: new Date().toISOString(),

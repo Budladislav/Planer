@@ -1,7 +1,8 @@
-import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState } from './types';
-import { formatEventTitle, generateId, getTodayString, getWeekString } from './utils';
+import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState, WorkShift } from './types';
+import { formatEventTitle, generateId, getTodayString, getWeekString, isValidWeekString } from './utils';
+import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -28,11 +29,18 @@ const migrateOrderMap = (value: unknown): Record<string, string[]> => {
   );
 };
 
+const removeTaskFromOrderMap = (
+  orderMap: Record<string, string[]>,
+  taskId: string,
+): Record<string, string[]> => Object.fromEntries(
+  Object.entries(orderMap).map(([key, order]) => [key, order.filter(id => id !== taskId)]),
+);
+
 export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
   const today = getTodayString();
-  const allowedViews: ViewState[] = ['today', 'week', 'inbox', 'events', 'settings', 'done'];
+  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done'];
   const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
   const lastActiveView = allowedViews.includes(requestedView as ViewState)
     ? requestedView as ViewState
@@ -46,13 +54,20 @@ export const migrateAppState = (value: unknown): AppState => {
         const status: Task['status'] = value.status === 'done' ? 'done' : 'todo';
         const createdAt = asString(value.createdAt, now);
         const updatedAt = asString(value.updatedAt, createdAt);
+        const day = asNullableString(rawPlan.day);
+        const week = asNullableString(rawPlan.week);
+        const rawMonth = asNullableString(rawPlan.month);
+        const month = rawMonth && isValidMonthString(rawMonth)
+          ? rawMonth
+          : day?.slice(0, 7) ?? (week ? getMonthForWeek(week) : null);
         const task: Task = {
           id: asString(value.id, generateId()),
           title: asString(value.title, ''),
           status,
           plan: {
-            day: asNullableString(rawPlan.day),
-            week: asNullableString(rawPlan.week),
+            day,
+            week,
+            month,
           },
           projectId: asNullableString(value.projectId),
           eventId: asNullableString(value.eventId),
@@ -67,7 +82,7 @@ export const migrateAppState = (value: unknown): AppState => {
         };
 
         if (task.status === 'todo' && task.plan.day && task.plan.day < today) {
-          task.plan = { day: today, week: getWeekString(today) };
+          task.plan = { day: today, week: getWeekString(today), month: today.slice(0, 7) };
         }
 
         return [task];
@@ -107,6 +122,16 @@ export const migrateAppState = (value: unknown): AppState => {
     ? requestedActiveTaskId
     : null;
 
+  const rawShiftSettings = isRecord(parsed.workShiftSettings) ? parsed.workShiftSettings : {};
+  const baseWeekCandidate = asNullableString(rawShiftSettings.baseWeek);
+  const baseShiftCandidate = rawShiftSettings.baseShift;
+  const rawOverrides = isRecord(rawShiftSettings.overrides) ? rawShiftSettings.overrides : {};
+  const overrides = Object.fromEntries(
+    Object.entries(rawOverrides).filter(
+      (entry): entry is [string, WorkShift] => isValidWeekString(entry[0]) && (entry[1] === 1 || entry[1] === 2),
+    ),
+  );
+
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     captures,
@@ -119,6 +144,13 @@ export const migrateAppState = (value: unknown): AppState => {
     lastActiveView,
     taskOrderByDay: migrateOrderMap(parsed.taskOrderByDay),
     taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
+    taskOrderByMonthBucket: migrateOrderMap(parsed.taskOrderByMonthBucket),
+    taskOrderByMonthWeek: migrateOrderMap(parsed.taskOrderByMonthWeek),
+    workShiftSettings: {
+      baseWeek: baseWeekCandidate && isValidWeekString(baseWeekCandidate) ? baseWeekCandidate : null,
+      baseShift: baseShiftCandidate === 1 || baseShiftCandidate === 2 ? baseShiftCandidate : null,
+      overrides,
+    },
   };
 };
 
@@ -138,6 +170,9 @@ export type Action =
   | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
   | { type: 'UPDATE_TASK_ORDER'; payload: { day: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_WEEK_BUCKET'; payload: { week: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_MONTH_BUCKET'; payload: { month: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_MONTH_WEEK'; payload: { key: string; order: string[] } }
+  | { type: 'UPDATE_WORK_SHIFT_SETTINGS'; payload: AppState['workShiftSettings'] }
   | { type: 'IMPORT_DATA'; payload: unknown }
   | { type: 'RESET_DATA' };
 
@@ -219,6 +254,10 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       return {
         ...state,
         tasks: state.tasks.filter(task => task.id !== action.payload),
+        taskOrderByDay: removeTaskFromOrderMap(state.taskOrderByDay, action.payload),
+        taskOrderByWeekBucket: removeTaskFromOrderMap(state.taskOrderByWeekBucket, action.payload),
+        taskOrderByMonthBucket: removeTaskFromOrderMap(state.taskOrderByMonthBucket, action.payload),
+        taskOrderByMonthWeek: removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload),
         activeTaskId: state.activeTaskId === action.payload ? null : state.activeTaskId,
         activeTaskStartedAt: state.activeTaskId === action.payload ? null : state.activeTaskStartedAt,
       };
@@ -239,7 +278,11 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           ? {
               ...task,
               title: formatEventTitle(updatedEvent.time, updatedEvent.title),
-              plan: { day: updatedEvent.date, week: getWeekString(updatedEvent.date) },
+              plan: {
+                day: updatedEvent.date,
+                week: getWeekString(updatedEvent.date),
+                month: updatedEvent.date.slice(0, 7),
+              },
               updatedAt: new Date().toISOString(),
             }
           : task),
@@ -274,6 +317,24 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           [action.payload.week]: action.payload.order,
         },
       };
+    case 'UPDATE_TASK_ORDER_MONTH_BUCKET':
+      return {
+        ...state,
+        taskOrderByMonthBucket: {
+          ...state.taskOrderByMonthBucket,
+          [action.payload.month]: action.payload.order,
+        },
+      };
+    case 'UPDATE_TASK_ORDER_MONTH_WEEK':
+      return {
+        ...state,
+        taskOrderByMonthWeek: {
+          ...state.taskOrderByMonthWeek,
+          [action.payload.key]: action.payload.order,
+        },
+      };
+    case 'UPDATE_WORK_SHIFT_SETTINGS':
+      return { ...state, workShiftSettings: action.payload };
     case 'IMPORT_DATA':
       return migrateAppState(action.payload);
     case 'RESET_DATA':

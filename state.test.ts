@@ -6,7 +6,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',
   title: 'Test task',
   status: 'todo',
-  plan: { day: '2026-08-16', week: '2026-W33' },
+  plan: { month: '2026-08', day: '2026-08-16', week: '2026-W33' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-16T08:00:00.000Z',
@@ -48,6 +48,7 @@ describe('migrateAppState', () => {
       id: 'legacy-task',
       completedAt: '2026-01-05T09:00:00.000Z',
       eventId: null,
+      plan: { day: '2026-01-05', week: null, month: '2026-01' },
     }));
     expect(migrated.tasks[0]).not.toHaveProperty('frog');
     expect(migrated.tasks[0]).not.toHaveProperty('difficulty');
@@ -62,6 +63,23 @@ describe('migrateAppState', () => {
     });
 
     expect(migrated.taskOrderByDay['2026-08-16']).toEqual(['a', 'b']);
+  });
+
+  it('preserves valid work shift settings and rejects malformed overrides', () => {
+    const migrated = migrateAppState({
+      tasks: [], captures: [], events: [],
+      workShiftSettings: {
+        baseWeek: '2026-W33',
+        baseShift: 2,
+        overrides: { '2026-W34': 1, invalid: 2, '2026-W35': 3 },
+      },
+    });
+
+    expect(migrated.workShiftSettings).toEqual({
+      baseWeek: '2026-W33',
+      baseShift: 2,
+      overrides: { '2026-W34': 1 },
+    });
   });
 });
 

@@ -297,7 +297,7 @@ export const TodayView: React.FC = () => {
         id: newTaskId,
         title: quickAdd.trim(),
         status: 'todo',
-        plan: { day: todayStr, week: null },
+        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
         projectId: null,
         eventId: null,
         createdAt: new Date().toISOString(),
@@ -360,7 +360,7 @@ export const TodayView: React.FC = () => {
             id: activeTask.id, 
             status: 'done',
             timeSpent: finalTime,
-            plan: { day: todayStr, week: null }
+            plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) }
           } 
         });
         // При завершении задачи она переходит в Done
@@ -413,7 +413,7 @@ export const TodayView: React.FC = () => {
       payload: { 
         id, 
         status: 'done',
-        plan: { day: todayStr, week: null }
+        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) }
       } 
     });
   };

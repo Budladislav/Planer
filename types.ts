@@ -1,4 +1,12 @@
-export type ViewState = 'today' | 'week' | 'inbox' | 'events' | 'settings' | 'done';
+export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done';
+
+export type WorkShift = 1 | 2;
+
+export interface WorkShiftSettings {
+  baseWeek: string | null;
+  baseShift: WorkShift | null;
+  overrides: Record<string, WorkShift>;
+}
 
 export interface Capture {
   id: string;
@@ -14,6 +22,7 @@ export interface Task {
   plan: {
     day: string | null; // YYYY-MM-DD
     week: string | null; // YYYY-WW
+    month: string | null; // YYYY-MM planning month
   };
   projectId: string | null;
   eventId: string | null; // Link to CalendarEvent if task was created from event
@@ -41,6 +50,9 @@ export interface AppState {
   lastActiveView: ViewState;
   taskOrderByDay: Record<string, string[]>; // Maps day (YYYY-MM-DD) to ordered task IDs
   taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
+  taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
+  taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
+  workShiftSettings: WorkShiftSettings;
 }
 
 export const INITIAL_STATE: AppState = {
@@ -53,4 +65,7 @@ export const INITIAL_STATE: AppState = {
   lastActiveView: 'today',
   taskOrderByDay: {},
   taskOrderByWeekBucket: {},
+  taskOrderByMonthBucket: {},
+  taskOrderByMonthWeek: {},
+  workShiftSettings: { baseWeek: null, baseShift: null, overrides: {} },
 };

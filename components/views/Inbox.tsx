@@ -4,6 +4,7 @@ import { Capture } from '../../types';
 import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange } from '../../utils';
 import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
+import { getMonthForWeek } from '../../month-planning';
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -112,6 +113,7 @@ export const InboxView: React.FC = () => {
           plan: {
             day: planDay,
             week: planWeek,
+            month: planDay?.slice(0, 7) ?? (planWeek ? getMonthForWeek(planWeek) : null),
           },
           projectId: null,
           eventId: null,
