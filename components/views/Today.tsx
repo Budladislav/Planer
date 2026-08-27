@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
-import { Check, Pause, Play, Plus } from 'lucide-react';
-import { getTodayString, generateId, formatDateReadable, formatTime } from '../../utils';
+import { Check, ChevronDown, Pause, Play, Plus, RotateCcw } from 'lucide-react';
+import { getTodayString, generateId, formatDateReadable, formatTime, getWeekString } from '../../utils';
+import {
+  getCompletedTasksForLocalDay,
+  getLocalDateFromTimestamp,
+  getPreviousLocalDayTimestamp,
+  getTaskCompletionTimestamp,
+} from '../../today-tasks';
 import { ConfirmModal } from '../Modal';
 import {
   DndContext,
@@ -28,10 +34,11 @@ const SortableTaskItem: React.FC<{
   task: Task; 
   onSetActive: (id: string) => void;
   onComplete: (id: string) => void;
+  onCompleteYesterday: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
   isFirst?: boolean;
-}> = ({ task, onSetActive, onComplete, onUpdate, onDeleteConfirm, isFirst = false }) => {
+}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onUpdate, onDeleteConfirm, isFirst = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [showActions, setShowActions] = useState(false);
@@ -159,8 +166,8 @@ const SortableTaskItem: React.FC<{
       </div>
 
       <div
-        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`flex flex-wrap items-center justify-between gap-2 px-1 transition-all duration-200 sm:px-4 ${
+          showActions ? 'mt-2 opacity-100 max-h-64' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -178,6 +185,13 @@ const SortableTaskItem: React.FC<{
             title="Edit task"
           >
             Edit
+          </button>
+          <button
+            onClick={() => onCompleteYesterday(task.id)}
+            className="whitespace-nowrap rounded bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100"
+            title="Record this task as completed yesterday"
+          >
+            Done yesterday
           </button>
         </div>
         <button
@@ -218,7 +232,8 @@ export const TodayView: React.FC = () => {
     return t.plan.day < todayStr && t.status === 'todo';
   });
   const todoTasks = allTodayTasks.filter(t => t.status === 'todo');
-  const doneTasks = allTodayTasks.filter(t => t.status === 'done');
+  const completedTodayTasks = getCompletedTasksForLocalDay(state.tasks, todayStr);
+  const completedTodayTime = completedTodayTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
   
   // Tasks for today that are todo and NOT the active task
   const availableTasks = todoTasks.filter(t => t.id !== state.activeTaskId);
@@ -418,6 +433,44 @@ export const TodayView: React.FC = () => {
     });
   };
 
+  const handleCompleteYesterday = (id: string) => {
+    const newOrder = orderedIds.filter(taskId => taskId !== id);
+    const completedAt = getPreviousLocalDayTimestamp();
+    const completedDay = getLocalDateFromTimestamp(completedAt) ?? todayStr;
+    dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id,
+        status: 'done',
+        completedAt,
+        plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7) },
+      },
+    });
+  };
+
+  const handleUndoComplete = (id: string) => {
+    const currentOrder = state.taskOrderByDay[todayStr] || [];
+    if (!currentOrder.includes(id)) {
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: [...currentOrder, id] } });
+    }
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id,
+        status: 'todo',
+        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
+      },
+    });
+  };
+
+  const toggleCompletedToday = () => {
+    dispatch({
+      type: 'UPDATE_UI_PREFERENCES',
+      payload: { todayCompletedExpanded: !state.uiPreferences.todayCompletedExpanded },
+    });
+  };
+
   const handleUpdate = (id: string, updates: Partial<Task>) => {
     dispatch({ type: 'UPDATE_TASK', payload: { id, ...updates } });
   };
@@ -469,32 +522,29 @@ export const TodayView: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           {/* Today Section - Header */}
           <div className="text-center mb-3">
-            <h2 className="text-3xl font-bold text-slate-900">Today</h2>
+            <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Today</h2>
             <p className="text-slate-500">{formatDateReadable(todayStr)}</p>
             <p className="text-slate-400 text-sm mt-1">
-              {todoTasks.length} left • {doneTasks.length} done
-              {(() => {
-                const totalTime = doneTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
-                return totalTime > 0 ? (
-                  <span className="text-indigo-600 font-medium">
-                    {' • '}
-                    {formatTime(totalTime)}
-                  </span>
-                ) : null;
-              })()}
+              {todoTasks.length} left • {completedTodayTasks.length} done
+              {completedTodayTime > 0 && (
+                <span className="text-indigo-600 font-medium">
+                  {' • '}
+                  {formatTime(completedTodayTime)}
+                </span>
+              )}
             </p>
           </div>
 
           {/* Tasks List - with bottom padding for fixed form */}
-          <div className="pb-20 lg:pb-4 min-h-[60vh] flex flex-col">
+          <div className="space-y-3 pb-20 lg:pb-4">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <div className="space-y-4 flex-1 flex flex-col">
+              <div className="flex flex-col space-y-4">
                 {todayTasks.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center">
+                  <div className="flex items-center justify-center">
                     <div className="text-center py-8 text-slate-400 italic border border-dashed border-slate-200 rounded-lg w-full">
                       No pending tasks for today. Check your Week plan?
                     </div>
@@ -509,6 +559,7 @@ export const TodayView: React.FC = () => {
                           task={task} 
                           onSetActive={handleSetActive}
                           onComplete={handleComplete}
+                          onCompleteYesterday={handleCompleteYesterday}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}
                           isFirst={index === 0}
@@ -520,6 +571,53 @@ export const TodayView: React.FC = () => {
                 )}
               </div>
             </DndContext>
+
+            <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <button
+                type="button"
+                onClick={toggleCompletedToday}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
+                aria-expanded={state.uiPreferences.todayCompletedExpanded}
+              >
+                <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-50 text-green-700">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  Completed today ({completedTodayTasks.length})
+                </span>
+                <span className="flex flex-shrink-0 items-center gap-2 text-xs text-slate-500">
+                  {completedTodayTime > 0 && formatTime(completedTodayTime)}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${state.uiPreferences.todayCompletedExpanded ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
+
+              {state.uiPreferences.todayCompletedExpanded && (
+                <div className="divide-y divide-slate-100 border-t border-slate-100">
+                  {completedTodayTasks.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm italic text-slate-400">No tasks completed today yet.</p>
+                  ) : completedTodayTasks.map(task => (
+                    <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
+                        <div className="mt-0.5 text-xs text-slate-400">
+                          {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {task.timeSpent && task.timeSpent > 0 ? ` • ${formatTime(task.timeSpent)}` : ''}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleUndoComplete(task.id)}
+                        className="flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Return task to today's list"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Undo
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
 
           {/* Add Form - Fixed at bottom */}
