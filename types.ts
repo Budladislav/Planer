@@ -8,6 +8,19 @@ export interface WorkShiftSettings {
   overrides: Record<string, WorkShift>;
 }
 
+export interface WeekNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UiPreferences {
+  todayCompletedExpanded: boolean;
+  eventsDistantExpanded: boolean;
+  eventsPastExpanded: boolean;
+}
+
 export interface Capture {
   id: string;
   text: string;
@@ -53,10 +66,12 @@ export interface AppState {
   taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
   taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
   workShiftSettings: WorkShiftSettings;
+  weekNotes: Record<string, WeekNote[]>; // Maps ISO week (YYYY-Www) to user-authored notes
+  uiPreferences: UiPreferences;
 }
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 2,
+  schemaVersion: 4,
   captures: [],
   tasks: [],
   events: [],
@@ -68,4 +83,10 @@ export const INITIAL_STATE: AppState = {
   taskOrderByMonthBucket: {},
   taskOrderByMonthWeek: {},
   workShiftSettings: { baseWeek: null, baseShift: null, overrides: {} },
+  weekNotes: {},
+  uiPreferences: {
+    todayCompletedExpanded: false,
+    eventsDistantExpanded: false,
+    eventsPastExpanded: false,
+  },
 };

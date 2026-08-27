@@ -81,6 +81,75 @@ describe('migrateAppState', () => {
       overrides: { '2026-W34': 1 },
     });
   });
+
+  it('upgrades a 3.0 backup with safe defaults for 3.1 data', () => {
+    const migrated = migrateAppState({
+      schemaVersion: 3,
+      tasks: [makeTask()],
+      captures: [{
+        id: 'capture-1',
+        text: 'Keep me',
+        createdAt: '2026-08-16T07:00:00.000Z',
+        status: 'new',
+      }],
+      events: [{
+        id: 'event-1',
+        title: 'Keep event',
+        date: '2026-08-20',
+        time: '18:00',
+        note: null,
+      }],
+      taskOrderByMonthBucket: { '2026-08': ['task-1'] },
+      workShiftSettings: { baseWeek: '2026-W33', baseShift: 1, overrides: {} },
+    });
+
+    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.tasks).toHaveLength(1);
+    expect(migrated.captures).toHaveLength(1);
+    expect(migrated.events).toHaveLength(1);
+    expect(migrated.taskOrderByMonthBucket).toEqual({ '2026-08': ['task-1'] });
+    expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
+    expect(migrated.weekNotes).toEqual({});
+    expect(migrated.uiPreferences).toEqual({
+      todayCompletedExpanded: false,
+      eventsDistantExpanded: false,
+      eventsPastExpanded: false,
+    });
+  });
+
+  it('sanitizes week notes and persisted UI preferences', () => {
+    const migrated = migrateAppState({
+      tasks: [], captures: [], events: [],
+      weekNotes: {
+        '2026-W33': [{
+          id: 'note-1',
+          text: '  Vacation  ',
+          createdAt: '2026-08-01T08:00:00.000Z',
+          updatedAt: '2026-08-02T08:00:00.000Z',
+        }, { id: 'empty', text: '   ' }, 'invalid'],
+        invalid: [{ id: 'note-2', text: 'Discard me' }],
+      },
+      uiPreferences: {
+        todayCompletedExpanded: true,
+        eventsDistantExpanded: 'yes',
+        eventsPastExpanded: true,
+      },
+    });
+
+    expect(migrated.weekNotes).toEqual({
+      '2026-W33': [{
+        id: 'note-1',
+        text: 'Vacation',
+        createdAt: '2026-08-01T08:00:00.000Z',
+        updatedAt: '2026-08-02T08:00:00.000Z',
+      }],
+    });
+    expect(migrated.uiPreferences).toEqual({
+      todayCompletedExpanded: true,
+      eventsDistantExpanded: false,
+      eventsPastExpanded: true,
+    });
+  });
 });
 
 describe('appReducer task completion', () => {
@@ -115,6 +184,74 @@ describe('appReducer task completion', () => {
     });
 
     expect(reopened.tasks[0].completedAt).toBeNull();
+  });
+
+  it('preserves an explicit historical completion timestamp', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-17T12:34:56.000Z'));
+
+    const completed = appReducer(withTask(makeTask()), {
+      type: 'UPDATE_TASK',
+      payload: {
+        id: 'task-1',
+        status: 'done',
+        completedAt: '2026-08-16T20:00:00.000Z',
+      },
+    });
+
+    expect(completed.tasks[0].completedAt).toBe('2026-08-16T20:00:00.000Z');
+    expect(completed.tasks[0].updatedAt).toBe('2026-08-17T12:34:56.000Z');
+  });
+});
+
+describe('appReducer week notes and UI preferences', () => {
+  it('adds, updates and deletes a week note', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-16T08:00:00.000Z'));
+
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_WEEK_NOTE',
+      payload: { week: '2026-W33', text: '  Vacation  ' },
+    });
+    const note = added.weekNotes['2026-W33'][0];
+
+    expect(note).toEqual(expect.objectContaining({
+      text: 'Vacation',
+      createdAt: '2026-08-16T08:00:00.000Z',
+      updatedAt: '2026-08-16T08:00:00.000Z',
+    }));
+
+    vi.setSystemTime(new Date('2026-08-16T09:00:00.000Z'));
+    const updated = appReducer(added, {
+      type: 'UPDATE_WEEK_NOTE',
+      payload: { week: '2026-W33', id: note.id, text: 'Annual leave' },
+    });
+
+    expect(updated.weekNotes['2026-W33'][0]).toEqual({
+      ...note,
+      text: 'Annual leave',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+    });
+
+    const deleted = appReducer(updated, {
+      type: 'DELETE_WEEK_NOTE',
+      payload: { week: '2026-W33', id: note.id },
+    });
+
+    expect(deleted.weekNotes).toEqual({});
+  });
+
+  it('merges persisted UI preference updates', () => {
+    const updated = appReducer(INITIAL_STATE, {
+      type: 'UPDATE_UI_PREFERENCES',
+      payload: { eventsPastExpanded: true },
+    });
+
+    expect(updated.uiPreferences).toEqual({
+      todayCompletedExpanded: false,
+      eventsDistantExpanded: false,
+      eventsPastExpanded: true,
+    });
   });
 });
 

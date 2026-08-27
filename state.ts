@@ -1,8 +1,8 @@
-import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState, WorkShift } from './types';
+import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState, WeekNote, WorkShift } from './types';
 import { formatEventTitle, generateId, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -26,6 +26,33 @@ const migrateOrderMap = (value: unknown): Record<string, string[]> => {
       key,
       Array.isArray(order) ? order.filter((id): id is string => typeof id === 'string') : [],
     ]),
+  );
+};
+
+const migrateWeekNotes = (value: unknown, now: string): Record<string, WeekNote[]> => {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([week, notes]): [string, WeekNote[]][] => {
+      if (!isValidWeekString(week) || !Array.isArray(notes)) return [];
+
+      const migratedNotes = notes.flatMap((note): WeekNote[] => {
+        if (!isRecord(note) || typeof note.text !== 'string') return [];
+
+        const text = note.text.trim();
+        if (!text) return [];
+
+        const createdAt = asString(note.createdAt, now);
+        return [{
+          id: asString(note.id, generateId()),
+          text,
+          createdAt,
+          updatedAt: asString(note.updatedAt, createdAt),
+        }];
+      });
+
+      return migratedNotes.length > 0 ? [[week, migratedNotes]] : [];
+    }),
   );
 };
 
@@ -131,6 +158,7 @@ export const migrateAppState = (value: unknown): AppState => {
       (entry): entry is [string, WorkShift] => isValidWeekString(entry[0]) && (entry[1] === 1 || entry[1] === 2),
     ),
   );
+  const rawUiPreferences = isRecord(parsed.uiPreferences) ? parsed.uiPreferences : {};
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -150,6 +178,12 @@ export const migrateAppState = (value: unknown): AppState => {
       baseWeek: baseWeekCandidate && isValidWeekString(baseWeekCandidate) ? baseWeekCandidate : null,
       baseShift: baseShiftCandidate === 1 || baseShiftCandidate === 2 ? baseShiftCandidate : null,
       overrides,
+    },
+    weekNotes: migrateWeekNotes(parsed.weekNotes, now),
+    uiPreferences: {
+      todayCompletedExpanded: rawUiPreferences.todayCompletedExpanded === true,
+      eventsDistantExpanded: rawUiPreferences.eventsDistantExpanded === true,
+      eventsPastExpanded: rawUiPreferences.eventsPastExpanded === true,
     },
   };
 };
@@ -173,6 +207,10 @@ export type Action =
   | { type: 'UPDATE_TASK_ORDER_MONTH_BUCKET'; payload: { month: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_MONTH_WEEK'; payload: { key: string; order: string[] } }
   | { type: 'UPDATE_WORK_SHIFT_SETTINGS'; payload: AppState['workShiftSettings'] }
+  | { type: 'ADD_WEEK_NOTE'; payload: { week: string; text: string } }
+  | { type: 'UPDATE_WEEK_NOTE'; payload: { week: string; id: string; text: string } }
+  | { type: 'DELETE_WEEK_NOTE'; payload: { week: string; id: string } }
+  | { type: 'UPDATE_UI_PREFERENCES'; payload: Partial<AppState['uiPreferences']> }
   | { type: 'IMPORT_DATA'; payload: unknown }
   | { type: 'RESET_DATA' };
 
@@ -213,8 +251,14 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       if (!previousTask) return state;
 
       const now = new Date().toISOString();
-      let completedAt = action.payload.completedAt ?? previousTask.completedAt;
-      if (action.payload.status === 'done' && previousTask.status !== 'done') completedAt = now;
+      let completedAt = action.payload.completedAt !== undefined
+        ? action.payload.completedAt
+        : previousTask.completedAt;
+      if (
+        action.payload.status === 'done'
+        && previousTask.status !== 'done'
+        && action.payload.completedAt === undefined
+      ) completedAt = now;
       if (action.payload.status === 'todo') completedAt = null;
 
       const tasks = state.tasks.map(task => task.id === action.payload.id
@@ -353,6 +397,61 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       };
     case 'UPDATE_WORK_SHIFT_SETTINGS':
       return { ...state, workShiftSettings: action.payload };
+    case 'ADD_WEEK_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text || !isValidWeekString(action.payload.week)) return state;
+
+      const now = new Date().toISOString();
+      const note: WeekNote = {
+        id: generateId(),
+        text,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      return {
+        ...state,
+        weekNotes: {
+          ...state.weekNotes,
+          [action.payload.week]: [...(state.weekNotes[action.payload.week] ?? []), note],
+        },
+      };
+    }
+    case 'UPDATE_WEEK_NOTE': {
+      const text = action.payload.text.trim();
+      const notes = state.weekNotes[action.payload.week];
+      if (!text || !notes || !isValidWeekString(action.payload.week)) return state;
+
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        weekNotes: {
+          ...state.weekNotes,
+          [action.payload.week]: notes.map(note => note.id === action.payload.id
+            ? { ...note, text, updatedAt: now }
+            : note),
+        },
+      };
+    }
+    case 'DELETE_WEEK_NOTE': {
+      const notes = state.weekNotes[action.payload.week];
+      if (!notes) return state;
+
+      const remainingNotes = notes.filter(note => note.id !== action.payload.id);
+      const weekNotes = { ...state.weekNotes };
+      if (remainingNotes.length > 0) {
+        weekNotes[action.payload.week] = remainingNotes;
+      } else {
+        delete weekNotes[action.payload.week];
+      }
+
+      return { ...state, weekNotes };
+    }
+    case 'UPDATE_UI_PREFERENCES':
+      return {
+        ...state,
+        uiPreferences: { ...state.uiPreferences, ...action.payload },
+      };
     case 'IMPORT_DATA':
       return migrateAppState(action.payload);
     case 'RESET_DATA':
