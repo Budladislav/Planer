@@ -9,7 +9,6 @@ interface WeekMetaBadgesProps {
   week: string;
   onEdit?: () => void;
   maxNotes?: number;
-  showUnsetShift?: boolean;
   className?: string;
 }
 
@@ -17,7 +16,6 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
   week,
   onEdit,
   maxNotes = 2,
-  showUnsetShift = true,
   className = '',
 }) => {
   const { state } = useAppStore();
@@ -28,10 +26,8 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
 
   return (
     <div className={`flex min-w-0 flex-wrap items-center gap-1.5 ${className}`}>
-      {(shift || showUnsetShift) && (
-        <span className={`flex-shrink-0 rounded px-2 py-1 text-[10px] font-semibold ${
-          shift ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'
-        }`}>
+      {shift && (
+        <span className="flex-shrink-0 rounded bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700">
           {formatWorkShift(shift)}
         </span>
       )}

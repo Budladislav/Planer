@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { CheckSquare, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
+import { BriefcaseBusiness, CheckSquare, ChevronDown, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 import changelogMarkdown from '../../CHANGELOG_MONOFOCUS.md?raw';
 import packageJson from '../../package.json';
@@ -14,6 +14,7 @@ export const SettingsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showWorkShifts, setShowWorkShifts] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type?: 'info' | 'success' | 'error' | 'warning' }>({
     isOpen: false,
     title: '',
@@ -192,7 +193,26 @@ export const SettingsView: React.FC = () => {
            <ChevronRight className="h-5 w-5 text-slate-400" />
          </button>
 
-         <WorkShiftSettingsPanel />
+         <div>
+           <button
+             type="button"
+             aria-expanded={showWorkShifts}
+             onClick={() => setShowWorkShifts(value => !value)}
+             className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+           >
+             <BriefcaseBusiness className="h-5 w-5 text-indigo-500" />
+             <div className="min-w-0 flex-1">
+               <h3 className="font-semibold text-slate-800">Work Shifts</h3>
+               <p className="text-sm text-slate-500">Alternating weekly schedule and exceptions.</p>
+             </div>
+             <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${showWorkShifts ? 'rotate-180' : ''}`} />
+           </button>
+           {showWorkShifts && (
+             <div className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-6 sm:pb-6">
+               <WorkShiftSettingsPanel />
+             </div>
+           )}
+         </div>
 
          <div className="p-6 flex items-center justify-between">
             <div>

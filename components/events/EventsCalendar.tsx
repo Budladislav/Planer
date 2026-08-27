@@ -91,7 +91,6 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
                 week={week}
                 onEdit={() => setEditingWeek(week)}
                 maxNotes={2}
-                showUnsetShift={false}
                 className="min-w-0 flex-1"
               />
             </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WorkShiftSettings } from './types';
-import { getWorkShiftForWeek } from './week-shifts';
+import { formatWorkShift, getWorkShiftForWeek } from './week-shifts';
 
 const settings: WorkShiftSettings = {
   baseWeek: '2026-W52',
@@ -22,5 +22,11 @@ describe('getWorkShiftForWeek', () => {
 
   it('returns null until a base week and shift are configured', () => {
     expect(getWorkShiftForWeek({ baseWeek: null, baseShift: null, overrides: {} }, '2026-W33')).toBeNull();
+  });
+
+  it('does not expose a placeholder label before shifts are configured', () => {
+    expect(formatWorkShift(null)).toBe('');
+    expect(formatWorkShift(1)).toBe('First shift');
+    expect(formatWorkShift(2)).toBe('Second shift');
   });
 });

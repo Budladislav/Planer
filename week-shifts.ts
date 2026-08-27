@@ -24,5 +24,5 @@ export const getWorkShiftForWeek = (
 };
 
 export const formatWorkShift = (shift: WorkShift | null): string => {
-  return shift === null ? 'Shift not set' : `${shift === 1 ? 'First' : 'Second'} shift`;
+  return shift === null ? '' : `${shift === 1 ? 'First' : 'Second'} shift`;
 };
