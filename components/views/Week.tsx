@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, isValidWeekString, shiftWeekString } from '../../utils';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import {
   DndContext,
@@ -622,6 +623,7 @@ export const WeekView: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
+  const [pastDaysExpanded, setPastDaysExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
     taskId: null,
@@ -692,6 +694,11 @@ export const WeekView: React.FC = () => {
     return days;
   }, [currentWeek]);
 
+  const { pastDays, currentAndFutureDays } = useMemo(
+    () => partitionWeekDays(weekDays, todayStr),
+    [todayStr, weekDays],
+  );
+
   // All tasks for current week (both assigned to days and in bucket)
   const allWeekTasks = useMemo(() => {
     const weekDates = weekDays.map(d => d.date);
@@ -737,7 +744,6 @@ export const WeekView: React.FC = () => {
     });
   }, [currentWeek, thisWeek, todayStr, weekDays, state.tasks, state.taskOrderByDay, dispatch]);
 
-  // UI state (days всегда раскрыты, без сворачивания)
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null); // touch-friendly move
   const [quickAddDay, setQuickAddDay] = useState<string | null>(null); // день для быстрого добавления задачи
   const [quickAddTitle, setQuickAddTitle] = useState(''); // заголовок для быстрого добавления
@@ -799,6 +805,16 @@ export const WeekView: React.FC = () => {
     });
     return map;
   }, [state.tasks, weekDays, state.taskOrderByDay]);
+
+  const completedDayTasks = useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    weekDays.forEach(day => {
+      map[day.date] = state.tasks
+        .filter(task => task.plan.day === day.date && task.status === 'done')
+        .sort((a, b) => (b.completedAt ?? b.updatedAt).localeCompare(a.completedAt ?? a.updatedAt));
+    });
+    return map;
+  }, [state.tasks, weekDays]);
 
   const containerForTask = (taskId: string): string | null => {
     const task = state.tasks.find(item => item.id === taskId);
@@ -863,6 +879,7 @@ export const WeekView: React.FC = () => {
 
   // Navigate freely between past and future weeks.
   const changeWeek = (delta: number) => {
+    setPastDaysExpanded(false);
     setCurrentWeek(week => shiftWeekString(week, delta));
   };
 
@@ -1001,6 +1018,91 @@ export const WeekView: React.FC = () => {
 
   const weekDateRange = getWeekDateRange(currentWeek);
 
+  const renderDay = (day: (typeof weekDays)[number], isPast: boolean) => {
+    const tasks = dayTasks[day.date] ?? [];
+    const completedTasks = isPast ? (completedDayTasks[day.date] ?? []) : [];
+    const taskCount = tasks.length + completedTasks.length;
+    const canPlanDay = !(currentWeek === thisWeek && isPast);
+
+    const content = (
+      <>
+        {canPlanDay && tasks.length === 0 && completedTasks.length === 0 && (
+          <div className="text-sm italic text-slate-400">Drag a task here from the week list or another day</div>
+        )}
+        {tasks.map(task => (
+          <SortableDayTaskItem
+            key={task.id}
+            task={task}
+            todayStr={todayStr}
+            dispatch={dispatch}
+            onMove={id => setMoveTaskId(id)}
+            onDeleteConfirm={handleDeleteConfirm}
+          />
+        ))}
+        {completedTasks.map(task => {
+          const completedAt = task.completedAt ?? task.updatedAt;
+          const completedTime = completedAt
+            ? new Date(completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : null;
+          return (
+            <div key={task.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-green-100 bg-green-50/60 px-3 py-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" />
+              <span className="min-w-0 flex-1 truncate text-slate-500 line-through" title={task.title}>{task.title}</span>
+              {(task.timeSpent ?? 0) > 0 && (
+                <span className="flex-shrink-0 text-xs text-slate-400">{formatTime(task.timeSpent ?? 0)}</span>
+              )}
+              {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'UPDATE_TASK', payload: { id: task.id, status: 'todo' } })}
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white hover:text-indigo-600"
+                title="Return task to work"
+                aria-label={`Return ${task.title} to work`}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })}
+        {!canPlanDay && completedTasks.length === 0 && (
+          <div className="text-sm italic text-slate-400">No completed tasks</div>
+        )}
+      </>
+    );
+
+    return (
+      <div key={day.date} className={`rounded-lg border bg-white transition-colors ${isPast ? 'border-slate-200/80' : 'border-slate-200'}`}>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex flex-1 items-center justify-between text-left">
+            <div className="flex items-center gap-2">
+              <span className={`font-semibold ${isPast ? 'text-slate-500' : 'text-slate-800'}`}>{day.weekday}</span>
+              <span className="text-xs text-slate-500">{day.label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {canPlanDay && (
+                <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title="Add task to this day">
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
+              <span className="text-sm text-slate-500">{taskCount === 0 ? 'No tasks' : taskCount}</span>
+            </div>
+          </div>
+        </div>
+        {canPlanDay ? (
+          <WeekTaskDropZone
+            id={weekDayContainer(day.date)}
+            tasks={tasks}
+            className="space-y-2 border-t border-slate-100 px-4 pb-4 pt-4"
+          >
+            {content}
+          </WeekTaskDropZone>
+        ) : (
+          <div className="space-y-2 border-t border-slate-100 px-4 pb-4 pt-4">{content}</div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
@@ -1056,45 +1158,25 @@ export const WeekView: React.FC = () => {
           </WeekTaskDropZone>
 
           <div className="mt-3 space-y-2">
-            {weekDays.map(day => {
-              if (currentWeek === thisWeek && day.date < todayStr) return null;
-              const tasks = dayTasks[day.date] || [];
-              return (
-                <div key={day.date} className="rounded-lg border border-slate-200 bg-white transition-colors">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex flex-1 items-center justify-between text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-800">{day.weekday}</span>
-                        <span className="text-xs text-slate-500">{day.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title="Add task to this day">
-                          <Plus className="h-4 w-4" />
-                        </button>
-                        <span className="text-sm text-slate-500">{tasks.length === 0 ? 'No tasks' : tasks.length}</span>
-                      </div>
-                    </div>
+            {pastDays.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-1.5">
+                <button
+                  type="button"
+                  aria-expanded={pastDaysExpanded}
+                  onClick={() => setPastDaysExpanded(value => !value)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+                >
+                  <span>Past days ({pastDays.length})</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${pastDaysExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                {pastDaysExpanded && (
+                  <div className="mt-1.5 space-y-2">
+                    {pastDays.map(day => renderDay(day, true))}
                   </div>
-                  <WeekTaskDropZone
-                    id={weekDayContainer(day.date)}
-                    tasks={tasks}
-                    className="space-y-2 border-t border-slate-100 px-4 pb-4 pt-4"
-                  >
-                    {tasks.length === 0 && <div className="text-sm italic text-slate-400">Drag a task here from the week list or another day</div>}
-                    {tasks.map(task => (
-                      <SortableDayTaskItem
-                        key={task.id}
-                        task={task}
-                        todayStr={todayStr}
-                        dispatch={dispatch}
-                        onMove={id => setMoveTaskId(id)}
-                        onDeleteConfirm={handleDeleteConfirm}
-                      />
-                    ))}
-                  </WeekTaskDropZone>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            )}
+            {currentAndFutureDays.map(day => renderDay(day, false))}
           </div>
         </DndContext>
       </div>
@@ -1117,7 +1199,9 @@ export const WeekView: React.FC = () => {
               >
                 Week bucket (no date)
               </button>
-              {weekDays.map((day) => (
+              {weekDays
+                .filter(day => currentWeek !== thisWeek || day.date >= todayStr)
+                .map((day) => (
                 <button
                   key={day.date}
                   onClick={() => moveTask(moveTaskId, day.date)}

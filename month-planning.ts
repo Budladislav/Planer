@@ -28,6 +28,14 @@ export const getMonthWeeks = (month: string): string[] => {
   return weeks;
 };
 
+export const partitionMonthWeeks = (
+  weeks: string[],
+  currentWeek: string,
+): { pastWeeks: string[]; currentAndFutureWeeks: string[] } => ({
+  pastWeeks: weeks.filter(week => week < currentWeek),
+  currentAndFutureWeeks: weeks.filter(week => week >= currentWeek),
+});
+
 export const getTaskPlanningMonth = (task: Pick<Task, 'plan'>): string | null => {
   if (task.plan.month && isValidMonthString(task.plan.month)) return task.plan.month;
   if (task.plan.day) return task.plan.day.slice(0, 7);

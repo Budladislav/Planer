@@ -18,13 +18,14 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, ChevronLeft, ChevronRight, GripVertical, Plus } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, GripVertical, Plus } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import {
   getMonthWeeks,
   getTaskPlanningMonth,
   monthWeekOrderKey,
+  partitionMonthWeeks,
   planTaskForMonth,
 } from '../../month-planning';
 import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
@@ -161,8 +162,13 @@ export const MonthView: React.FC = () => {
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
+  const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
 
   const weeks = useMemo(() => getMonthWeeks(currentMonth), [currentMonth]);
+  const { pastWeeks, currentAndFutureWeeks } = useMemo(
+    () => partitionMonthWeeks(weeks, getWeekString(today)),
+    [today, weeks],
+  );
   const todoTasks = useMemo(
     () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningMonth(task) === currentMonth),
     [currentMonth, state.tasks],
@@ -269,6 +275,7 @@ export const MonthView: React.FC = () => {
     const [year, month] = currentMonth.split('-').map(Number);
     const next = new Date(year, month - 1 + delta, 1);
     setCurrentMonth(`${next.getFullYear()}-${(next.getMonth() + 1).toString().padStart(2, '0')}`);
+    setPastWeeksExpanded(false);
   };
 
   const openEditor = (task: Task) => {
@@ -348,6 +355,32 @@ export const MonthView: React.FC = () => {
     month: 'long', year: 'numeric',
   });
 
+  const renderWeek = (week: string) => {
+    const range = getWeekDateRange(week);
+    const tasks = tasksByWeek[week] ?? [];
+    return (
+      <section key={week} className="rounded-lg border border-slate-200 bg-white p-2">
+        <div className="mb-1 flex items-center gap-2 px-1">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-slate-700">Week {week.split('-W')[1]}</h3>
+            <div className="text-xs text-slate-400">{range.start}–{range.end}</div>
+          </div>
+          <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={`Add task to ${week}`}>
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        <WeekMetaBadges
+          week={week}
+          onEdit={() => setNotesEditorWeek(week)}
+          className="mb-1 px-1"
+        />
+        <TaskContainer id={weekContainer(week)} tasks={tasks} emptyText="Drop a month task into this week">
+          {tasks.map(task => renderTask(task, weekContainer(week)))}
+        </TaskContainer>
+      </section>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-3xl pb-20">
       <div className="mb-3 text-center">
@@ -379,31 +412,25 @@ export const MonthView: React.FC = () => {
         </section>
 
         <div className="mt-3 space-y-2">
-          {weeks.map(week => {
-            const range = getWeekDateRange(week);
-            const tasks = tasksByWeek[week] ?? [];
-            return (
-              <section key={week} className="rounded-lg border border-slate-200 bg-white p-2">
-                <div className="mb-1 flex items-center gap-2 px-1">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-slate-700">Week {week.split('-W')[1]}</h3>
-                    <div className="text-xs text-slate-400">{range.start}–{range.end}</div>
-                  </div>
-                  <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={`Add task to ${week}`}>
-                    <Plus className="h-4 w-4" />
-                  </button>
+          {pastWeeks.length > 0 && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-1.5">
+              <button
+                type="button"
+                aria-expanded={pastWeeksExpanded}
+                onClick={() => setPastWeeksExpanded(value => !value)}
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+              >
+                <span>Past weeks ({pastWeeks.length})</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${pastWeeksExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {pastWeeksExpanded && (
+                <div className="mt-1.5 space-y-2">
+                  {pastWeeks.map(renderWeek)}
                 </div>
-                <WeekMetaBadges
-                  week={week}
-                  onEdit={() => setNotesEditorWeek(week)}
-                  className="mb-1 px-1"
-                />
-                <TaskContainer id={weekContainer(week)} tasks={tasks} emptyText="Drop a month task into this week">
-                  {tasks.map(task => renderTask(task, weekContainer(week)))}
-                </TaskContainer>
-              </section>
-            );
-          })}
+              )}
+            </div>
+          )}
+          {currentAndFutureWeeks.map(renderWeek)}
         </div>
       </DndContext>
 
