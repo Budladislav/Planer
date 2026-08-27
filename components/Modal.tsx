@@ -11,9 +11,10 @@ interface ModalProps {
   children?: React.ReactNode;
   type?: ModalType;
   wide?: boolean;
+  hideFooter?: boolean;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, children, type = 'info', wide = false }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, children, type = 'info', wide = false, hideFooter = false }) => {
   if (!isOpen) return null;
 
   const iconConfig = {
@@ -50,14 +51,16 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, c
         <div className="max-h-[65vh] overflow-y-auto px-4 py-4">
           {children ?? <p className="text-sm text-slate-700 whitespace-pre-line">{message}</p>}
         </div>
-        <div className="px-4 py-3 bg-slate-50 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-          >
-            OK
-          </button>
-        </div>
+        {!hideFooter && (
+          <div className="px-4 py-3 bg-slate-50 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
