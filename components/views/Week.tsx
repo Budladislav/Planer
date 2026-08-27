@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
-import { formatWorkShift, getWorkShiftForWeek } from '../../week-shifts';
+import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import {
   DndContext,
   closestCenter,
@@ -621,6 +621,7 @@ export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
   const [quickAdd, setQuickAdd] = useState('');
+  const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
     taskId: null,
@@ -1004,16 +1005,12 @@ export const WeekView: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="text-center mb-3">
-        <h2 className="text-3xl font-bold text-slate-900">Weekly Plan</h2>
-        <div className="mt-1">
-          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-            getWorkShiftForWeek(state.workShiftSettings, currentWeek)
-              ? 'bg-indigo-50 text-indigo-700'
-              : 'bg-slate-100 text-slate-400'
-          }`}>
-            {formatWorkShift(getWorkShiftForWeek(state.workShiftSettings, currentWeek))}
-          </span>
-        </div>
+        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Weekly Plan</h2>
+        <WeekMetaBadges
+          week={currentWeek}
+          onEdit={() => setNotesEditorWeek(currentWeek)}
+          className="mt-1 justify-center"
+        />
         <p className="text-slate-400 text-sm mt-1">
           {todoWeekTasks.length} left • {doneWeekTasks.length} done
           {(() => {
@@ -1216,6 +1213,8 @@ export const WeekView: React.FC = () => {
         variant="danger"
         confirmText="Delete"
       />
+
+      <WeekNotesEditor week={notesEditorWeek} onClose={() => setNotesEditorWeek(null)} />
 
       {/* Week Selector - Fixed at bottom (mobile) */}
       <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">

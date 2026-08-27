@@ -28,8 +28,8 @@ import {
   planTaskForMonth,
 } from '../../month-planning';
 import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
-import { formatWorkShift, getWorkShiftForWeek } from '../../week-shifts';
 import { ConfirmModal } from '../Modal';
+import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -160,6 +160,7 @@ export const MonthView: React.FC = () => {
   const [quickAddTarget, setQuickAddTarget] = useState<string | null | undefined>(undefined);
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
 
   const weeks = useMemo(() => getMonthWeeks(currentMonth), [currentMonth]);
   const todoTasks = useMemo(
@@ -350,7 +351,7 @@ export const MonthView: React.FC = () => {
   return (
     <div className="mx-auto max-w-3xl pb-20">
       <div className="mb-3 text-center">
-        <h2 className="text-3xl font-bold text-slate-900">Month Plan</h2>
+        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Month Plan</h2>
         <p className="mt-1 text-sm text-slate-400">{todoTasks.length} planned tasks</p>
       </div>
 
@@ -381,7 +382,6 @@ export const MonthView: React.FC = () => {
           {weeks.map(week => {
             const range = getWeekDateRange(week);
             const tasks = tasksByWeek[week] ?? [];
-            const shift = getWorkShiftForWeek(state.workShiftSettings, week);
             return (
               <section key={week} className="rounded-lg border border-slate-200 bg-white p-2">
                 <div className="mb-1 flex items-center gap-2 px-1">
@@ -389,13 +389,15 @@ export const MonthView: React.FC = () => {
                     <h3 className="text-sm font-semibold text-slate-700">Week {week.split('-W')[1]}</h3>
                     <div className="text-xs text-slate-400">{range.start}–{range.end}</div>
                   </div>
-                  <span className={`rounded px-2 py-1 text-[10px] font-semibold ${shift ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
-                    {formatWorkShift(shift)}
-                  </span>
                   <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={`Add task to ${week}`}>
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
+                <WeekMetaBadges
+                  week={week}
+                  onEdit={() => setNotesEditorWeek(week)}
+                  className="mb-1 px-1"
+                />
                 <TaskContainer id={weekContainer(week)} tasks={tasks} emptyText="Drop a month task into this week">
                   {tasks.map(task => renderTask(task, weekContainer(week)))}
                 </TaskContainer>
@@ -469,6 +471,8 @@ export const MonthView: React.FC = () => {
         variant="danger"
         confirmText="Delete"
       />
+
+      <WeekNotesEditor week={notesEditorWeek} onClose={() => setNotesEditorWeek(null)} />
     </div>
   );
 };
