@@ -1,20 +1,44 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# MonoFocus
 
-# Run and deploy your AI Studio app
+MonoFocus — локальный планер задач и событий. Приложение работает без сервера, сохраняет данные в браузере и остаётся доступным офлайн как PWA.
 
-This contains everything you need to run your app locally.
+## Возможности
 
-View your app in AI Studio: https://ai.studio/apps/temp/1
+- Today с быстрым добавлением, фокус-таймером и историей выполненного за день.
+- Weekly Plan и Month Plan с общей сущностью задачи, drag-and-drop и командой Move.
+- Автоматически чередующиеся рабочие смены, исключения и ручные пометки недель.
+- Events с ближайшими, дальними и прошедшими событиями, а также месячным календарём занятости.
+- Inbox, история выполненных задач и TXT-отчёты для анализа через LLM.
+- JSON backup/import с безопасной миграцией старых локальных данных.
 
-## Run Locally
+## Локальный запуск
 
-**Prerequisites:**  Node.js
+Требуется актуальная LTS-версия Node.js.
 
+```bash
+npm install
+npm run dev
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Vite использует порт `3000` из `vite.config.ts`. Если порт занят, можно запустить проект на другом порту:
+
+```bash
+npm run dev -- --port 4307
+```
+
+## Проверки
+
+```bash
+npm run check
+npm run build
+```
+
+`npm run check` последовательно запускает TypeScript, ESLint и Vitest.
+
+## Данные и публикация
+
+- Основные данные хранятся в `localStorage` под ключом `monofocus_v1`.
+- Перед переносом браузера или устройства рекомендуется создать JSON backup в Settings.
+- Push в `main` запускает проверку, production-сборку и публикацию GitHub Pages через GitHub Actions.
+
+История пользовательских изменений находится в [CHANGELOG_MONOFOCUS.md](CHANGELOG_MONOFOCUS.md), инструкция по публикации — в [DEPLOY.md](DEPLOY.md).
