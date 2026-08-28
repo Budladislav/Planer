@@ -9,6 +9,7 @@ import {
   getReportDateRange,
   ReportPeriod,
 } from '../../completed-report';
+import { reopenTask } from '../../task-lifecycle';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -66,7 +67,8 @@ export const DoneView: React.FC = () => {
   };
 
   const handleUndo = (id: string) => {
-    dispatch({ type: 'UPDATE_TASK', payload: { id, status: 'todo' } });
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (task) reopenTask(dispatch, task);
   };
 
   const handleDelete = (id: string) => {

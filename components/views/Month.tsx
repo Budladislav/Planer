@@ -31,6 +31,7 @@ import {
 import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
+import { completeTask } from '../../task-lifecycle';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -346,7 +347,7 @@ export const MonthView: React.FC = () => {
       containerId={containerId}
       onMove={setMoveTaskId}
       onEdit={openEditor}
-      onComplete={id => dispatch({ type: 'UPDATE_TASK', payload: { id, status: 'done' } })}
+      onComplete={() => completeTask(dispatch, task)}
       onDelete={setDeleteTaskId}
     />
   );

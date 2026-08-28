@@ -8,6 +8,7 @@ import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
+import { completeTask, reopenTask } from '../../task-lifecycle';
 import {
   DndContext,
   closestCenter,
@@ -265,13 +266,8 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         <button
           onClick={(e) => {
             e.stopPropagation();
-            dispatch({
-              type: 'UPDATE_TASK',
-              payload: {
-                id: task.id,
-                status: 'done',
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
-              },
+            completeTask(dispatch, task, {
+              plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
             });
           }}
           className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
@@ -549,13 +545,8 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         </button>
         <button
           onClick={() => {
-            dispatch({
-              type: 'UPDATE_TASK',
-              payload: {
-                id: task.id,
-                status: 'done',
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) }, // Move to today when completed
-              },
+            completeTask(dispatch, task, {
+              plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) }, // Move to today when completed
             });
           }}
           className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
@@ -1054,7 +1045,7 @@ export const WeekView: React.FC = () => {
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <button
                 type="button"
-                onClick={() => dispatch({ type: 'UPDATE_TASK', payload: { id: task.id, status: 'todo' } })}
+                onClick={() => reopenTask(dispatch, task)}
                 className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white hover:text-indigo-600"
                 title="Return task to work"
                 aria-label={`Return ${task.title} to work`}

@@ -28,6 +28,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
+import { completeTask, reopenTask } from '../../task-lifecycle';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -369,14 +370,9 @@ export const TodayView: React.FC = () => {
         // Save accumulated time
         const finalTime = timerSeconds;
         // Always set plan.day to today when completing, so it appears in Done under today's date
-        dispatch({ 
-          type: 'UPDATE_TASK', 
-          payload: { 
-            id: activeTask.id, 
-            status: 'done',
-            timeSpent: finalTime,
-            plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) }
-          } 
+        completeTask(dispatch, activeTask, {
+          timeSpent: finalTime,
+          plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
         });
         // При завершении задачи она переходит в Done
         dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
@@ -419,48 +415,39 @@ export const TodayView: React.FC = () => {
   };
 
   const handleComplete = (id: string) => {
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (!task) return;
     // Remove from task order if present
     const newOrder = orderedIds.filter(taskId => taskId !== id);
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     // Always set plan.day to today when completing, so it appears in Done under today's date
-    dispatch({ 
-      type: 'UPDATE_TASK', 
-      payload: { 
-        id, 
-        status: 'done',
-        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) }
-      } 
+    completeTask(dispatch, task, {
+      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
     });
   };
 
   const handleCompleteYesterday = (id: string) => {
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (!task) return;
     const newOrder = orderedIds.filter(taskId => taskId !== id);
     const completedAt = getPreviousLocalDayTimestamp();
     const completedDay = getLocalDateFromTimestamp(completedAt) ?? todayStr;
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    dispatch({
-      type: 'UPDATE_TASK',
-      payload: {
-        id,
-        status: 'done',
-        completedAt,
-        plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7) },
-      },
+    completeTask(dispatch, task, {
+      completedAt,
+      plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7) },
     });
   };
 
   const handleUndoComplete = (id: string) => {
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (!task) return;
     const currentOrder = state.taskOrderByDay[todayStr] || [];
     if (!currentOrder.includes(id)) {
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: [...currentOrder, id] } });
     }
-    dispatch({
-      type: 'UPDATE_TASK',
-      payload: {
-        id,
-        status: 'todo',
-        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
-      },
+    reopenTask(dispatch, task, {
+      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
     });
   };
 
