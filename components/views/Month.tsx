@@ -32,6 +32,7 @@ import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekS
 import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask } from '../../task-lifecycle';
+import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -87,6 +88,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
         >
           <GripVertical className="h-4 w-4" />
         </button>
+        <RewardGradeMarker taskId={task.id} />
         <span className={`min-w-0 flex-1 ${showActions ? 'break-words' : 'truncate'} text-slate-700`}>
           {task.title}
         </span>
@@ -109,11 +111,16 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
       </div>
 
       <div
-        className={`flex items-center justify-between overflow-hidden px-2 transition-all ${
-          showActions ? 'mt-2 max-h-20 opacity-100' : 'max-h-0 opacity-0'
+        className={`flex flex-wrap items-center justify-between gap-2 overflow-hidden px-2 transition-all ${
+          showActions ? 'mt-2 max-h-40 opacity-100' : 'max-h-0 opacity-0'
         }`}
         onClick={event => event.stopPropagation()}
       >
+        {showActions && (
+          <div className="w-full">
+            <RewardGradeSelector taskId={task.id} compact />
+          </div>
+        )}
         <button type="button" onClick={() => onDelete(task.id)} className="rounded bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
           Delete
         </button>

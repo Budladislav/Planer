@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { claimTaskCompletion, createDefaultRewardsLabState, setTaskGrade } from '../domain';
+import { REWARDS_LAB_LIFECYCLE_OUTBOX_KEY } from '../outbox';
 import {
   EXPERIMENT_FLAGS_STORAGE_KEY,
   REWARDS_LAB_STORAGE_KEY,
@@ -124,8 +125,29 @@ describe('Rewards Lab sidecar storage', () => {
     expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(false);
 
     saveRewardsLabState(storage, createDefaultRewardsLabState());
+    storage.values.set(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY, '{"schemaVersion":1,"events":[]}');
     expect(eraseRewardsLab(storage)).toBe(true);
     expect(loadExperimentFlags(storage).rewardsLab).toBe(false);
     expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(false);
+    expect(storage.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(false);
+  });
+
+  it('does not delete sidecar data when its disable write fails', () => {
+    const backing = new MemoryStorage();
+    setRewardsLabEnabled(backing, true);
+    saveRewardsLabState(backing, createDefaultRewardsLabState());
+    backing.values.set(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY, '{"schemaVersion":1,"events":[]}');
+    const blocked: StorageLike = {
+      getItem: key => backing.getItem(key),
+      setItem: (key, value) => {
+        if (key === EXPERIMENT_FLAGS_STORAGE_KEY) throw new Error('flag write blocked');
+        backing.setItem(key, value);
+      },
+      removeItem: key => backing.removeItem(key),
+    };
+
+    expect(eraseRewardsLab(blocked)).toBe(false);
+    expect(backing.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(true);
+    expect(backing.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(true);
   });
 });

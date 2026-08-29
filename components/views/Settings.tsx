@@ -2,18 +2,19 @@ import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
 import { BriefcaseBusiness, CheckSquare, ChevronDown, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
-import changelogMarkdown from '../../CHANGELOG_MONOFOCUS.md?raw';
 import packageJson from '../../package.json';
 import { parseReleaseHistory } from '../../release-history';
 import { getDateString } from '../../utils';
 import { WorkShiftSettingsPanel } from '../settings/WorkShiftSettings';
-
-const RELEASES = parseReleaseHistory(changelogMarkdown);
+import { RewardsLabSettingsRow } from '../../features/rewards-lab/ui/RewardsLabSettingsRow';
 
 export const SettingsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [releases, setReleases] = useState<ReturnType<typeof parseReleaseHistory> | null>(null);
+  const [releaseHistoryLoading, setReleaseHistoryLoading] = useState(false);
+  const [releaseHistoryError, setReleaseHistoryError] = useState(false);
   const [showWorkShifts, setShowWorkShifts] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type?: 'info' | 'success' | 'error' | 'warning' }>({
     isOpen: false,
@@ -152,12 +153,23 @@ export const SettingsView: React.FC = () => {
   const handleReset = () => {
     setConfirmModal({
       isOpen: true,
-      title: 'Reset All Data',
-      message: "ARE YOU SURE? This will wipe all data permanently.",
+      title: 'Reset planner data',
+      message: "ARE YOU SURE? This will permanently delete planner tasks, events and settings. Rewards Lab data is stored separately and will not be changed.",
       onConfirm: () => {
         dispatch({ type: 'RESET_DATA' });
       },
     });
+  };
+
+  const openChangelog = () => {
+    setShowChangelog(true);
+    if (releases || releaseHistoryLoading) return;
+    setReleaseHistoryLoading(true);
+    setReleaseHistoryError(false);
+    import('../../CHANGELOG_MONOFOCUS.md?raw')
+      .then(module => setReleases(parseReleaseHistory(module.default)))
+      .catch(() => setReleaseHistoryError(true))
+      .finally(() => setReleaseHistoryLoading(false));
   };
 
   return (
@@ -214,6 +226,8 @@ export const SettingsView: React.FC = () => {
            )}
          </div>
 
+         <RewardsLabSettingsRow />
+
          <div className="p-6 flex items-center justify-between">
             <div>
                <h3 className="font-semibold text-slate-800">Export Data</h3>
@@ -246,17 +260,17 @@ export const SettingsView: React.FC = () => {
          <div className="p-6 flex items-center justify-between bg-red-50">
             <div>
                <h3 className="font-semibold text-red-900">Danger Zone</h3>
-               <p className="text-sm text-red-700">Delete all tasks, events, and settings.</p>
+               <p className="text-sm text-red-700">Delete planner tasks, events, and settings. Rewards Lab stays unchanged.</p>
             </div>
             <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded hover:bg-red-100">
-               <Trash2 className="w-4 h-4" /> Reset All
+               <Trash2 className="w-4 h-4" /> Reset planner
             </button>
          </div>
       </div>
       
       <button
         type="button"
-        onClick={() => setShowChangelog(true)}
+        onClick={openChangelog}
         className="mx-auto block text-center text-xs text-slate-400 underline-offset-4 hover:text-indigo-600 hover:underline"
       >
          MonoFocus v{packageJson.version} • Data stored locally in browser
@@ -277,7 +291,15 @@ export const SettingsView: React.FC = () => {
         wide
       >
         <div className="space-y-5">
-          {RELEASES.map(release => (
+          {releaseHistoryLoading && (
+            <p className="py-4 text-center text-sm text-slate-500">Loading release history…</p>
+          )}
+          {releaseHistoryError && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Release history is not available offline yet. Open it once while connected and it will be cached.
+            </p>
+          )}
+          {releases?.map(release => (
             <section key={release.version}>
               <div className="flex items-baseline gap-2">
                 <h4 className="font-bold text-slate-800">v{release.version}</h4>
@@ -298,7 +320,7 @@ export const SettingsView: React.FC = () => {
         title={confirmModal.title}
         message={confirmModal.message}
         variant="danger"
-        confirmText="Reset All"
+        confirmText="Reset planner"
       />
     </div>
   );

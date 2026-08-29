@@ -3,6 +3,11 @@ import type { TaskLifecycleEvent } from '../../../task-lifecycle';
 import type { Task } from '../../../types';
 import { createDefaultRewardsLabState, getWalletBalance } from '../domain';
 import {
+  REWARDS_LAB_LIFECYCLE_OUTBOX_KEY,
+  enqueueRewardsLabLifecycleEvent,
+  getRewardsLabLifecycleOutboxSize,
+} from '../outbox';
+import {
   EXPERIMENT_FLAGS_STORAGE_KEY,
   REWARDS_LAB_STORAGE_KEY,
   StorageLike,
@@ -16,6 +21,8 @@ class MemoryStorage implements StorageLike {
   reads: string[] = [];
   writes: string[] = [];
   removals: string[] = [];
+  blockedWrites = new Set<string>();
+  blockedRemovals = new Set<string>();
 
   getItem(key: string): string | null {
     this.reads.push(key);
@@ -23,11 +30,13 @@ class MemoryStorage implements StorageLike {
   }
 
   setItem(key: string, value: string): void {
+    if (this.blockedWrites.has(key)) throw new Error(`write blocked: ${key}`);
     this.writes.push(key);
     this.values.set(key, value);
   }
 
   removeItem(key: string): void {
+    if (this.blockedRemovals.has(key)) throw new Error(`remove blocked: ${key}`);
     this.removals.push(key);
     this.values.delete(key);
   }
@@ -105,6 +114,10 @@ describe('Rewards Lab runtime activation', () => {
     const storage = new MemoryStorage();
     storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
     storage.values.set(REWARDS_LAB_STORAGE_KEY, JSON.stringify({ secret: 'must stay untouched' }));
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent());
+    storage.reads = [];
+    storage.writes = [];
+    storage.removals = [];
 
     const runtime = createRewardsLabRuntime(storage, '?safe=1');
     expect(runtime.getSnapshot()).toMatchObject({
@@ -119,6 +132,7 @@ describe('Rewards Lab runtime activation', () => {
     expect(storage.writes).toEqual([]);
     expect(storage.removals).toEqual([]);
     expect(storage.values.get(REWARDS_LAB_STORAGE_KEY)).toBe(JSON.stringify({ secret: 'must stay untouched' }));
+    expect(storage.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(true);
   });
 
   it('allows safe-mode recovery to disable or erase without loading sidecar state', () => {
@@ -185,6 +199,35 @@ describe('Rewards Lab runtime activation', () => {
 });
 
 describe('Rewards Lab task lifecycle', () => {
+  it('drains a completion captured before runtime import when a page reload creates the runtime', () => {
+    const storage = new MemoryStorage();
+    storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent());
+
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(2);
+    expect(runtime.getSnapshot().state!.claims['task-1']).toBeDefined();
+    expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(0);
+  });
+
+  it('retains a queued event after persistence/import failure and retries it on the next runtime', () => {
+    const storage = new MemoryStorage();
+    storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent());
+    storage.blockedWrites.add(REWARDS_LAB_STORAGE_KEY);
+
+    const failedRuntime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    expect(failedRuntime.getSnapshot().state!.claims).toEqual({});
+    expect(failedRuntime.getSnapshot().lastError).toContain('could not be saved');
+    expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(1);
+
+    storage.blockedWrites.delete(REWARDS_LAB_STORAGE_KEY);
+    const recoveredRuntime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    expect(getWalletBalance(recoveredRuntime.getSnapshot().state!)).toBe(2);
+    expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(0);
+  });
+
   it('earns once, reverses, then restores the immutable claim without rerolling', () => {
     const storage = new MemoryStorage();
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
@@ -305,14 +348,52 @@ describe('Rewards Lab wallet, catalog and controls', () => {
     expect(runtime.enable()).toBe(true);
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(9);
 
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent({ id: 'pending-reset' }));
     expect(runtime.resetDataKeepingEnabled()).toBe(true);
     expect(runtime.getSnapshot().enabled).toBe(true);
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(0);
     expect(loadExperimentFlags(storage).rewardsLab).toBe(true);
+    expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(0);
 
     expect(runtime.disableAndErase()).toBe(true);
     expect(runtime.getSnapshot()).toMatchObject({ flagEnabled: false, enabled: false, state: null });
     expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(false);
     expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+  });
+
+  it('does not erase anything unless disable succeeds', () => {
+    const storage = new MemoryStorage();
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    runtime.enable();
+    runtime.adjustBalance(9, 'Seed');
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent());
+    storage.blockedWrites.add(EXPERIMENT_FLAGS_STORAGE_KEY);
+
+    expect(runtime.disableAndErase()).toBe(false);
+    expect(runtime.getSnapshot().enabled).toBe(true);
+    expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(true);
+    expect(storage.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(true);
+  });
+
+  it('stays disabled when state or outbox cleanup partially fails', () => {
+    const storage = new MemoryStorage();
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    runtime.enable();
+    runtime.adjustBalance(9, 'Seed');
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent());
+    storage.blockedRemovals.add(REWARDS_LAB_STORAGE_KEY);
+    storage.blockedRemovals.add(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY);
+
+    expect(runtime.disableAndErase()).toBe(false);
+    expect(runtime.getSnapshot()).toMatchObject({
+      flagEnabled: false,
+      enabled: false,
+      state: null,
+      isOpen: false,
+    });
+    expect(runtime.getSnapshot().lastError).toContain('disabled');
+    expect(loadExperimentFlags(storage).rewardsLab).toBe(false);
+    expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(true);
+    expect(storage.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(true);
   });
 });

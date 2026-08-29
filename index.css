@@ -26,3 +26,28 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+@keyframes rewards-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.rewards-toast-enter {
+  animation: rewards-toast-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rewards-toast-enter.rewards-toast-static {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rewards-toast-enter {
+    animation: none;
+  }
+}

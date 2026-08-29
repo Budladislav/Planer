@@ -9,6 +9,7 @@ import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask, reopenTask } from '../../task-lifecycle';
+import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 import {
   DndContext,
   closestCenter,
@@ -208,6 +209,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
+          <RewardGradeMarker taskId={task.id} />
           <span
             className={`block text-sm flex-1 min-w-0 ${
               showActions
@@ -238,11 +240,16 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
       </div>
 
       <div
-        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`flex flex-wrap items-center justify-between px-4 gap-3 transition-all duration-200 ${
+          showActions ? 'mt-2 opacity-100 max-h-56' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {showActions && (
+          <div className="w-full">
+            <RewardGradeSelector taskId={task.id} compact />
+          </div>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -485,6 +492,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
+          <RewardGradeMarker taskId={task.id} />
           <span
             className={`block text-sm flex-1 min-w-0 max-w-full ${
               showActions
@@ -518,11 +526,16 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
       </div>
 
       <div
-        className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-2 opacity-100 max-h-40' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`flex flex-wrap items-center justify-between px-4 gap-3 transition-all duration-200 ${
+          showActions ? 'mt-2 opacity-100 max-h-56' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {showActions && (
+          <div className="w-full">
+            <RewardGradeSelector taskId={task.id} compact />
+          </div>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

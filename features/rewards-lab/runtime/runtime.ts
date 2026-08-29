@@ -1,4 +1,3 @@
-import type { TaskLifecycleEvent } from '../../../task-lifecycle';
 import {
   REWARD_GRADES,
   RewardDefinition,
@@ -24,8 +23,13 @@ import type {
   RefundOutcome,
 } from '../domain';
 import {
+  clearRewardsLabLifecycleOutbox,
+  drainRewardsLabLifecycleOutbox,
+} from '../outbox';
+import type { RewardsLabLifecycleEvent } from '../outbox';
+import {
   StorageLike,
-  eraseRewardsLab,
+  clearRewardsLabData,
   loadExperimentFlags,
   loadRewardsLabState,
   saveRewardsLabState,
@@ -70,7 +74,8 @@ export interface RewardsLabRuntime {
   closeLab(): void;
   dismissToast(): void;
   setTaskGrade(taskId: string, grade: RewardGrade): boolean;
-  handleTaskLifecycle(event: TaskLifecycleEvent): void;
+  /** True means the event was handled idempotently and may be acknowledged. */
+  handleTaskLifecycle(event: RewardsLabLifecycleEvent): boolean;
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
   archiveReward(rewardId: string): boolean;
@@ -139,6 +144,10 @@ export const createRewardsLabRuntime = (
 
   const unavailable = (): boolean => !snapshot.enabled || snapshot.state === null;
 
+  const drainPendingLifecycle = (): boolean => (
+    drainRewardsLabLifecycleOutbox(storage, event => runtime.handleTaskLifecycle(event)).complete
+  );
+
   const persist = (state: RewardsLabState, patch: Partial<RewardsLabRuntimeSnapshot> = {}): boolean => {
     if (!saveRewardsLabState(storage, state)) {
       return fail('Rewards Lab data could not be saved on this device.');
@@ -177,6 +186,9 @@ export const createRewardsLabRuntime = (
           toast: null,
           lastError: null,
         });
+        // Pending work may have been captured immediately before an earlier
+        // disable or page close. Re-enable always retries it in order.
+        drainPendingLifecycle();
         return true;
       } catch (error) {
         return fail(errorMessage(error));
@@ -206,11 +218,13 @@ export const createRewardsLabRuntime = (
       try {
         if (safeMode || !snapshot.flagEnabled) return false;
         const state = createDefaultRewardsLabState();
+        // Reset is explicitly destructive for this sidecar. Clear pending work
+        // first so an old completion cannot repopulate the freshly reset lab.
+        if (!clearRewardsLabLifecycleOutbox(storage)) {
+          return fail('Rewards Lab pending events could not be cleared on this device.');
+        }
         if (!saveRewardsLabState(storage, state)) {
           return fail('Rewards Lab data could not be reset on this device.');
-        }
-        if (!setRewardsLabEnabled(storage, true)) {
-          return fail('Rewards Lab could not remain enabled after reset.');
         }
         patchSnapshot({
           flagEnabled: true,
@@ -228,8 +242,11 @@ export const createRewardsLabRuntime = (
 
     disableAndErase: () => {
       try {
-        if (!eraseRewardsLab(storage)) {
-          return fail('Rewards Lab data could not be erased completely.');
+        // Disable first. Nothing destructive happens unless the persisted kill
+        // switch is guaranteed, and the in-memory runtime is deactivated before
+        // state/outbox cleanup is attempted.
+        if (!setRewardsLabEnabled(storage, false)) {
+          return fail('Rewards Lab could not be disabled, so no data was erased.');
         }
         patchSnapshot({
           flagEnabled: false,
@@ -239,6 +256,15 @@ export const createRewardsLabRuntime = (
           toast: null,
           lastError: null,
         });
+
+        const dataCleared = clearRewardsLabData(storage);
+        const outboxCleared = clearRewardsLabLifecycleOutbox(storage);
+        if (!dataCleared || !outboxCleared) {
+          patchSnapshot({
+            lastError: 'Rewards Lab is disabled, but some experimental data could not be erased.',
+          });
+          return false;
+        }
         return true;
       } catch (error) {
         return fail(errorMessage(error));
@@ -289,7 +315,7 @@ export const createRewardsLabRuntime = (
 
     handleTaskLifecycle: event => {
       try {
-        if (unavailable()) return;
+        if (unavailable()) return false;
 
         if (event.type === 'task.completed') {
           const result = claimTaskCompletion(snapshot.state!, {
@@ -297,7 +323,7 @@ export const createRewardsLabRuntime = (
             taskTitle: event.title,
             completedAt: event.completedAt,
           }, economyRuntime);
-          if (result.outcome === 'already-posted') return;
+          if (result.outcome === 'already-posted') return true;
 
           const toast: RewardsLabToast = {
             id: ++toastId,
@@ -310,16 +336,18 @@ export const createRewardsLabRuntime = (
             amount: result.claim.amount,
             currencyName: result.state.currencyName,
           };
-          persist(result.state, { toast });
-          return;
+          return persist(result.state, { toast });
         }
 
         if (event.type === 'task.reopened') {
           const result = reverseTaskCompletion(snapshot.state!, event.taskId, economyRuntime);
-          if (result.outcome === 'reversed') persist(result.state);
+          if (result.outcome === 'reversed') return persist(result.state);
+          return true;
         }
+        return true;
       } catch (error) {
         fail(errorMessage(error));
+        return false;
       }
     },
 
@@ -409,6 +437,8 @@ export const createRewardsLabRuntime = (
       }
     },
   };
+
+  if (initiallyEnabled) drainPendingLifecycle();
 
   return runtime;
 };

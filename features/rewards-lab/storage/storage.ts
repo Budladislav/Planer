@@ -15,8 +15,10 @@ import {
   WalletTransactionKind,
   createDefaultRewardsLabState,
 } from '../domain';
+import { REWARDS_LAB_EXPERIMENT_FLAGS_KEY } from '../contracts';
+import { clearRewardsLabLifecycleOutbox } from '../outbox';
 
-export const EXPERIMENT_FLAGS_STORAGE_KEY = 'monofocus:experiments:v1';
+export const EXPERIMENT_FLAGS_STORAGE_KEY = REWARDS_LAB_EXPERIMENT_FLAGS_KEY;
 export const REWARDS_LAB_STORAGE_KEY = 'monofocus:rewards-lab:v1';
 
 export interface StorageLike {
@@ -281,7 +283,11 @@ export const clearRewardsLabData = (storage: StorageLike): boolean => {
 };
 
 export const eraseRewardsLab = (storage: StorageLike): boolean => {
-  const dataCleared = clearRewardsLabData(storage);
+  // Persist the kill switch before deleting anything. If disabling fails, the
+  // destructive part is not attempted.
   const disabled = setRewardsLabEnabled(storage, false);
-  return dataCleared && disabled;
+  if (!disabled) return false;
+  const dataCleared = clearRewardsLabData(storage);
+  const outboxCleared = clearRewardsLabLifecycleOutbox(storage);
+  return dataCleared && outboxCleared;
 };

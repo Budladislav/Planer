@@ -9,6 +9,8 @@ import { EventsView } from './components/views/Events';
 import { DoneView } from './components/views/Done';
 import { SettingsView } from './components/views/Settings';
 import { ViewState } from './types';
+import { RewardsLabHost } from './features/rewards-lab/ui/RewardsLabHost';
+import { RewardsLabGateProvider } from './features/rewards-lab/ui/RewardsLabGateProvider';
 
 const Main: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -41,7 +43,10 @@ const Main: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AppProvider>
-      <Main />
+      <RewardsLabGateProvider>
+        <Main />
+        <RewardsLabHost />
+      </RewardsLabGateProvider>
     </AppProvider>
   );
 };

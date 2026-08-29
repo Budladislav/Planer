@@ -29,6 +29,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
 import { completeTask, reopenTask } from '../../task-lifecycle';
+import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -143,6 +145,7 @@ const SortableTaskItem: React.FC<{
         }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          <RewardGradeMarker taskId={task.id} />
           <span className={`text-sm text-slate-700 font-medium ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
           </span>
@@ -172,6 +175,11 @@ const SortableTaskItem: React.FC<{
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {showActions && (
+          <div className="w-full">
+            <RewardGradeSelector taskId={task.id} compact />
+          </div>
+        )}
         <button
           onClick={() => onDeleteConfirm(task.id)}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
@@ -476,6 +484,9 @@ export const TodayView: React.FC = () => {
                 <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center break-words overflow-hidden max-w-full px-4">
                   {activeTask.title}
                 </h3>
+                <div className="mx-auto max-w-sm">
+                  <RewardGradeSelector taskId={activeTask.id} />
+                </div>
                 <div className="text-center mb-12">
                   <div className={`text-4xl md:text-6xl font-mono font-bold text-indigo-600 transition-colors ${isCompleting ? 'text-green-500' : ''}`}>
                     {formatTime(timerSeconds)}
@@ -511,15 +522,18 @@ export const TodayView: React.FC = () => {
           <div className="text-center mb-3">
             <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Today</h2>
             <p className="text-slate-500">{formatDateReadable(todayStr)}</p>
-            <p className="text-slate-400 text-sm mt-1">
-              {todoTasks.length} left • {completedTodayTasks.length} done
-              {completedTodayTime > 0 && (
-                <span className="text-indigo-600 font-medium">
-                  {' • '}
-                  {formatTime(completedTodayTime)}
-                </span>
-              )}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+              <p className="text-sm text-slate-400">
+                {todoTasks.length} left • {completedTodayTasks.length} done
+                {completedTodayTime > 0 && (
+                  <span className="font-medium text-indigo-600">
+                    {' • '}
+                    {formatTime(completedTodayTime)}
+                  </span>
+                )}
+              </p>
+              <RewardsBalancePill />
+            </div>
           </div>
 
           {/* Tasks List - with bottom padding for fixed form */}
