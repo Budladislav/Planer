@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
 import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
-import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check, CalendarDays } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek } from '../../month-planning';
 
@@ -17,6 +17,17 @@ export const InboxView: React.FC = () => {
 
   // Filter new captures
   const newCaptures = state.captures.filter(c => c.status === 'new');
+
+  const formatCaptureDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Creation date unavailable';
+
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   const handleCapture = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,9 +125,18 @@ export const InboxView: React.FC = () => {
           onClick={() => setProcessingId(item.id)}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-slate-700 font-medium flex-1 min-w-0 truncate">
-              {item.text}
-            </span>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-slate-700">
+                {item.text}
+              </span>
+              <time
+                dateTime={item.createdAt}
+                className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400"
+              >
+                <CalendarDays className="h-3 w-3" aria-hidden="true" />
+                {formatCaptureDate(item.createdAt)}
+              </time>
+            </div>
             <button 
                onClick={(e) => {
                  e.stopPropagation();

@@ -65,6 +65,25 @@ describe('migrateAppState', () => {
     expect(migrated.taskOrderByDay['2026-08-16']).toEqual(['a', 'b']);
   });
 
+  it('preserves Inbox creation dates and backfills them for legacy captures', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-30T09:15:00.000Z'));
+
+    const migrated = migrateAppState({
+      tasks: [],
+      events: [],
+      captures: [
+        { id: 'dated', text: 'Already dated', createdAt: '2026-08-20T07:00:00.000Z', status: 'new' },
+        { id: 'legacy', text: 'Needs a date', status: 'new' },
+      ],
+    });
+
+    expect(migrated.captures).toEqual([
+      expect.objectContaining({ id: 'dated', createdAt: '2026-08-20T07:00:00.000Z' }),
+      expect.objectContaining({ id: 'legacy', createdAt: '2026-08-30T09:15:00.000Z' }),
+    ]);
+  });
+
   it('preserves valid work shift settings and rejects malformed overrides', () => {
     const migrated = migrateAppState({
       tasks: [], captures: [], events: [],
@@ -149,6 +168,25 @@ describe('migrateAppState', () => {
       eventsDistantExpanded: false,
       eventsPastExpanded: true,
     });
+  });
+});
+
+describe('appReducer Inbox captures', () => {
+  it('records the creation time when a capture is added', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-30T10:20:30.000Z'));
+
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_CAPTURE',
+      payload: 'Remember this',
+    });
+
+    expect(added.captures).toHaveLength(1);
+    expect(added.captures[0]).toEqual(expect.objectContaining({
+      text: 'Remember this',
+      createdAt: '2026-08-30T10:20:30.000Z',
+      status: 'new',
+    }));
   });
 });
 
