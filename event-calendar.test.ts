@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEventCalendarMonth } from './event-calendar';
+import { buildEventCalendarMonth, partitionEventCalendarWeeks } from './event-calendar';
 
 describe('buildEventCalendarMonth', () => {
   it('builds full Monday-first weeks around the displayed month', () => {
@@ -39,5 +39,29 @@ describe('buildEventCalendarMonth', () => {
   it('returns no rows for an invalid month', () => {
     expect(buildEventCalendarMonth('2026-13')).toEqual([]);
     expect(buildEventCalendarMonth('not-a-month')).toEqual([]);
+  });
+});
+
+describe('partitionEventCalendarWeeks', () => {
+  it('separates completed week rows from the current and future rows', () => {
+    const weeks = buildEventCalendarMonth('2026-08');
+
+    const partitioned = partitionEventCalendarWeeks(weeks, '2026-W34');
+
+    expect(partitioned.pastWeeks.map(item => item.week)).toEqual([
+      '2026-W31', '2026-W32', '2026-W33',
+    ]);
+    expect(partitioned.currentAndFutureWeeks.map(item => item.week)).toEqual([
+      '2026-W34', '2026-W35', '2026-W36',
+    ]);
+  });
+
+  it('can collapse an entirely past month without losing its rows', () => {
+    const weeks = buildEventCalendarMonth('2026-08');
+
+    const partitioned = partitionEventCalendarWeeks(weeks, '2026-W40');
+
+    expect(partitioned.pastWeeks).toEqual(weeks);
+    expect(partitioned.currentAndFutureWeeks).toEqual([]);
   });
 });

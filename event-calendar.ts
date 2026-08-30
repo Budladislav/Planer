@@ -28,3 +28,11 @@ export const buildEventCalendarMonth = (month: string): EventCalendarWeek[] => {
     })),
   }));
 };
+
+export const partitionEventCalendarWeeks = (
+  weeks: EventCalendarWeek[],
+  currentWeek: string,
+): { pastWeeks: EventCalendarWeek[]; currentAndFutureWeeks: EventCalendarWeek[] } => ({
+  pastWeeks: weeks.filter(({ week }) => week < currentWeek),
+  currentAndFutureWeeks: weeks.filter(({ week }) => week >= currentWeek),
+});

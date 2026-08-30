@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
-import { buildEventCalendarMonth } from '../../event-calendar';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { buildEventCalendarMonth, partitionEventCalendarWeeks } from '../../event-calendar';
 import { CalendarEvent } from '../../types';
-import { formatDateReadable } from '../../utils';
+import { formatDateReadable, getWeekString } from '../../utils';
 import { Modal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 
@@ -29,7 +29,12 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingWeek, setEditingWeek] = useState<string | null>(null);
+  const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
   const weeks = useMemo(() => buildEventCalendarMonth(month), [month]);
+  const { pastWeeks, currentAndFutureWeeks } = useMemo(
+    () => partitionEventCalendarWeeks(weeks, getWeekString()),
+    [weeks],
+  );
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
     events.forEach(event => {
@@ -46,6 +51,60 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
     year: 'numeric',
   });
   const selectedEvents = selectedDate ? eventsByDate[selectedDate] ?? [] : [];
+
+  const renderWeek = ({ week, days }: (typeof weeks)[number]) => (
+    <div key={week} className="border-b border-slate-100 last:border-b-0">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50/80 px-2 py-1.5">
+        <span className="flex-shrink-0 text-[10px] font-bold uppercase text-slate-400">
+          W{week.split('-W')[1]}
+        </span>
+        <WeekMetaBadges
+          week={week}
+          onEdit={() => setEditingWeek(week)}
+          maxNotes={2}
+          className="min-w-0 flex-1"
+        />
+      </div>
+      <div className="grid grid-cols-7">
+        {days.map(day => {
+          const dayEvents = eventsByDate[day.date] ?? [];
+          return (
+            <button
+              key={day.date}
+              type="button"
+              onClick={() => setSelectedDate(day.date)}
+              className={`min-h-16 min-w-0 border-r border-slate-100 p-1 text-left align-top last:border-r-0 hover:bg-amber-50/50 sm:min-h-24 sm:p-1.5 ${
+                day.isInMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'
+              }`}
+              title={dayEvents.length ? `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : 'No events'}
+            >
+              <div className="flex items-center justify-between gap-0.5">
+                <span className={`text-[11px] font-semibold sm:text-xs ${day.isInMonth ? 'text-slate-600' : 'text-slate-300'}`}>
+                  {day.dayOfMonth}
+                </span>
+                {dayEvents.length > 0 && (
+                  <span className="rounded-full bg-amber-100 px-1 text-[9px] font-bold text-amber-700 sm:hidden">
+                    {dayEvents.length}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 space-y-0.5">
+                {dayEvents.slice(0, 3).map(event => (
+                  <div key={event.id} className="min-w-0 rounded-sm bg-amber-100 px-0.5 py-0.5 text-[8px] font-medium leading-tight text-amber-800 sm:px-1 sm:text-[9px]">
+                    <span className="sm:hidden">{event.time}</span>
+                    <span className="hidden truncate sm:block">{event.time} {event.title}</span>
+                  </div>
+                ))}
+                {dayEvents.length > 3 && (
+                  <div className="text-center text-[8px] font-semibold text-amber-700 sm:text-[9px]">+{dayEvents.length - 3}</div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -81,59 +140,23 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
           ))}
         </div>
 
-        {weeks.map(({ week, days }) => (
-          <div key={week} className="border-b border-slate-100 last:border-b-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50/80 px-2 py-1.5">
-              <span className="flex-shrink-0 text-[10px] font-bold uppercase text-slate-400">
-                W{week.split('-W')[1]}
-              </span>
-              <WeekMetaBadges
-                week={week}
-                onEdit={() => setEditingWeek(week)}
-                maxNotes={2}
-                className="min-w-0 flex-1"
-              />
-            </div>
-            <div className="grid grid-cols-7">
-              {days.map(day => {
-                const dayEvents = eventsByDate[day.date] ?? [];
-                return (
-                  <button
-                    key={day.date}
-                    type="button"
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`min-h-16 min-w-0 border-r border-slate-100 p-1 text-left align-top last:border-r-0 hover:bg-amber-50/50 sm:min-h-24 sm:p-1.5 ${
-                      day.isInMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'
-                    }`}
-                    title={dayEvents.length ? `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : 'No events'}
-                  >
-                    <div className="flex items-center justify-between gap-0.5">
-                      <span className={`text-[11px] font-semibold sm:text-xs ${day.isInMonth ? 'text-slate-600' : 'text-slate-300'}`}>
-                        {day.dayOfMonth}
-                      </span>
-                      {dayEvents.length > 0 && (
-                        <span className="rounded-full bg-amber-100 px-1 text-[9px] font-bold text-amber-700 sm:hidden">
-                          {dayEvents.length}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 space-y-0.5">
-                      {dayEvents.slice(0, 3).map(event => (
-                        <div key={event.id} className="min-w-0 rounded-sm bg-amber-100 px-0.5 py-0.5 text-[8px] font-medium leading-tight text-amber-800 sm:px-1 sm:text-[9px]">
-                          <span className="sm:hidden">{event.time}</span>
-                          <span className="hidden truncate sm:block">{event.time} {event.title}</span>
-                        </div>
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <div className="text-center text-[8px] font-semibold text-amber-700 sm:text-[9px]">+{dayEvents.length - 3}</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {pastWeeks.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setPastWeeksExpanded(value => !value)}
+            aria-expanded={pastWeeksExpanded}
+            className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50/70 px-3 py-2 text-left text-xs font-semibold text-slate-500 hover:bg-slate-100"
+          >
+            <span>Past weeks ({pastWeeks.length})</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${pastWeeksExpanded ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+          </button>
+        )}
+
+        {pastWeeksExpanded && pastWeeks.map(renderWeek)}
+        {currentAndFutureWeeks.map(renderWeek)}
       </section>
 
       <Modal
