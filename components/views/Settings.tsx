@@ -301,13 +301,25 @@ export const SettingsView: React.FC = () => {
           )}
           {releases?.map(release => (
             <section key={release.version}>
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <h4 className="font-bold text-slate-800">v{release.version}</h4>
                 <span className="text-xs text-slate-400">{release.date}</span>
               </div>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
-                {release.changes.map(change => <li key={change}>{change}</li>)}
-              </ul>
+              {release.title && (
+                <p className="mt-0.5 text-sm font-semibold text-slate-600">{release.title}</p>
+              )}
+              <div className="mt-2 space-y-2.5">
+                {release.sections.map(section => (
+                  <div key={section.title}>
+                    <h5 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {section.title}
+                    </h5>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                      {section.changes.map(change => <li key={change}>{change}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </section>
           ))}
         </div>
