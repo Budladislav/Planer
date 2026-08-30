@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import changelogMarkdown from './CHANGELOG_MONOFOCUS.md?raw';
+import changelogMarkdown from './CHANGELOG.md?raw';
 import packageJson from './package.json';
 import { parseReleaseHistory } from './release-history';
 

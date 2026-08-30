@@ -166,7 +166,7 @@ export const SettingsView: React.FC = () => {
     if (releases || releaseHistoryLoading) return;
     setReleaseHistoryLoading(true);
     setReleaseHistoryError(false);
-    import('../../CHANGELOG_MONOFOCUS.md?raw')
+    import('../../CHANGELOG.md?raw')
       .then(module => setReleases(parseReleaseHistory(module.default)))
       .catch(() => setReleaseHistoryError(true))
       .finally(() => setReleaseHistoryLoading(false));
