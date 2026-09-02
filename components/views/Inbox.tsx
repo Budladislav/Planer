@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
-import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
+import { generateId, getDateString, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
 import {
   CalendarDays,
   Check,
@@ -15,6 +15,32 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek } from '../../month-planning';
+
+const toDateInputValue = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? '' : getDateString(date);
+};
+
+const replaceLocalDate = (timestamp: string, dateString: string): string | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!match) return null;
+
+  const original = new Date(timestamp);
+  const hours = Number.isNaN(original.getTime()) ? 12 : original.getHours();
+  const minutes = Number.isNaN(original.getTime()) ? 0 : original.getMinutes();
+  const seconds = Number.isNaN(original.getTime()) ? 0 : original.getSeconds();
+  const milliseconds = Number.isNaN(original.getTime()) ? 0 : original.getMilliseconds();
+  const updated = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    hours,
+    minutes,
+    seconds,
+    milliseconds,
+  );
+  return Number.isNaN(updated.getTime()) ? null : updated.toISOString();
+};
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -298,17 +324,6 @@ export const InboxView: React.FC = () => {
 
       {/* Content - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
-        {newCaptures.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
-              <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-              <p className="text-slate-400 font-medium">No ideas waiting to be processed</p>
-          </div>
-        ) : (
-          <div className="flex-1 space-y-3">
-            {newCaptures.map(c => <ProcessItem key={c.id} item={c} />)}
-          </div>
-        )}
-
         {completedCaptures.length > 0 && (
           <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <button
@@ -334,12 +349,32 @@ export const InboxView: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
-                        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                          Created {formatCaptureDate(item.createdAt)} · Realized {formatCaptureDate(item.completedAt!)}
-                          <span className="block font-medium text-emerald-600">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-slate-400">
+                          <span>Created {formatCaptureDate(item.createdAt)}</span>
+                          <label className="flex items-center gap-1">
+                            <span>Realized</span>
+                            <input
+                              type="date"
+                              value={toDateInputValue(item.completedAt!)}
+                              min={toDateInputValue(item.createdAt)}
+                              max={getTodayString()}
+                              onChange={event => {
+                                const completedAt = replaceLocalDate(item.completedAt!, event.target.value);
+                                if (completedAt) {
+                                  dispatch({
+                                    type: 'UPDATE_CAPTURE_COMPLETED_AT',
+                                    payload: { id: item.id, completedAt },
+                                  });
+                                }
+                              }}
+                              aria-label={`Realized date for ${item.text}`}
+                              className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                            />
+                          </label>
+                          <span className="basis-full font-medium text-emerald-600">
                             {formatElapsed(item.createdAt, item.completedAt!)}
                           </span>
-                        </p>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -365,6 +400,17 @@ export const InboxView: React.FC = () => {
               </div>
             )}
           </section>
+        )}
+
+        {newCaptures.length === 0 ? (
+          <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
+            <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-2" />
+            <p className="text-slate-400 font-medium">No ideas waiting to be processed</p>
+          </div>
+        ) : (
+          <div className="flex-1 space-y-3">
+            {newCaptures.map(c => <ProcessItem key={c.id} item={c} />)}
+          </div>
         )}
       </div>
 

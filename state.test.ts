@@ -210,7 +210,13 @@ describe('appReducer Inbox captures', () => {
       completedAt: '2026-09-02T12:30:00.000Z',
     });
 
-    const reopened = appReducer(completed, { type: 'REOPEN_CAPTURE', payload: 'capture-1' });
+    const redated = appReducer(completed, {
+      type: 'UPDATE_CAPTURE_COMPLETED_AT',
+      payload: { id: 'capture-1', completedAt: '2026-08-28T12:00:00.000Z' },
+    });
+    expect(redated.captures[0].completedAt).toBe('2026-08-28T12:00:00.000Z');
+
+    const reopened = appReducer(redated, { type: 'REOPEN_CAPTURE', payload: 'capture-1' });
     expect(reopened.captures[0]).toMatchObject({ status: 'new', completedAt: null });
   });
 

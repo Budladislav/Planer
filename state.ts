@@ -198,6 +198,7 @@ export type Action =
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
   | { type: 'COMPLETE_CAPTURE'; payload: string }
+  | { type: 'UPDATE_CAPTURE_COMPLETED_AT'; payload: { id: string; completedAt: string } }
   | { type: 'REOPEN_CAPTURE'; payload: string }
   | { type: 'DELETE_CAPTURE'; payload: string }
   | { type: 'ADD_TASK'; payload: Task }
@@ -258,6 +259,13 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         captures: state.captures.map(c => c.id === action.payload
           ? { ...c, status: 'completed', completedAt: new Date().toISOString() }
+          : c),
+      };
+    case 'UPDATE_CAPTURE_COMPLETED_AT':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload.id && c.status === 'completed'
+          ? { ...c, completedAt: action.payload.completedAt }
           : c),
       };
     case 'REOPEN_CAPTURE':
