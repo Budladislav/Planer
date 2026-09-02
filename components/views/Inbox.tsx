@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Inbox,
+  Pencil,
   Plus,
   RotateCcw,
   Trash2,
@@ -47,6 +48,8 @@ export const InboxView: React.FC = () => {
   const [captureInput, setCaptureInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [editingCompletedId, setEditingCompletedId] = useState<string | null>(null);
+  const [editingCompletedText, setEditingCompletedText] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; captureId: string | null }>({
     isOpen: false,
     captureId: null,
@@ -83,6 +86,22 @@ export const InboxView: React.FC = () => {
     if (captureInput.trim()) {
       dispatch({ type: 'ADD_CAPTURE', payload: captureInput.trim() });
       setCaptureInput('');
+    }
+  };
+
+  const startEditingCompleted = (item: Capture) => {
+    setEditingCompletedId(item.id);
+    setEditingCompletedText(item.text);
+  };
+
+  const saveCompletedTitle = (item: Capture) => {
+    const text = editingCompletedText.trim();
+    if (text && text !== item.text) {
+      dispatch({ type: 'UPDATE_CAPTURE', payload: { id: item.id, text } });
+    }
+    if (text) {
+      setEditingCompletedId(null);
+      setEditingCompletedText('');
     }
   };
 
@@ -344,11 +363,28 @@ export const InboxView: React.FC = () => {
 
             {completedExpanded && (
               <div className="divide-y divide-slate-100 border-t border-slate-100">
-                {completedCaptures.map(item => (
+                {completedCaptures.map(item => {
+                  const isEditing = editingCompletedId === item.id;
+                  return (
                   <article key={item.id} className="px-3 py-3">
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingCompletedText}
+                            onChange={event => setEditingCompletedText(event.target.value)}
+                            onKeyDown={event => {
+                              if (event.key === 'Enter') saveCompletedTitle(item);
+                              if (event.key === 'Escape') setEditingCompletedId(null);
+                            }}
+                            aria-label={`Edit title for ${item.text}`}
+                            className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
+                          />
+                        ) : (
+                          <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
+                        )}
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-slate-400">
                           <span>Created {formatCaptureDate(item.createdAt)}</span>
                           <label className="flex items-center gap-1">
@@ -378,6 +414,16 @@ export const InboxView: React.FC = () => {
                       </div>
                       <button
                         type="button"
+                        onClick={() => isEditing ? saveCompletedTitle(item) : startEditingCompleted(item)}
+                        disabled={isEditing && !editingCompletedText.trim()}
+                        className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        title={isEditing ? 'Save title' : 'Edit title'}
+                        aria-label={isEditing ? `Save title for ${item.text}` : `Edit title for ${item.text}`}
+                      >
+                        {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => dispatch({ type: 'REOPEN_CAPTURE', payload: item.id })}
                         className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600"
                         title="Return to Inbox"
@@ -396,7 +442,8 @@ export const InboxView: React.FC = () => {
                       </button>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
