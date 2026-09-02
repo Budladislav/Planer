@@ -122,7 +122,7 @@ describe('migrateAppState', () => {
       workShiftSettings: { baseWeek: '2026-W33', baseShift: 1, overrides: {} },
     });
 
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(5);
     expect(migrated.tasks).toHaveLength(1);
     expect(migrated.captures).toHaveLength(1);
     expect(migrated.events).toHaveLength(1);
@@ -186,7 +186,51 @@ describe('appReducer Inbox captures', () => {
       text: 'Remember this',
       createdAt: '2026-08-30T10:20:30.000Z',
       status: 'new',
+      completedAt: null,
     }));
+  });
+
+  it('marks an Inbox idea as completed and can return it for processing', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T12:30:00.000Z'));
+    const state: AppState = {
+      ...INITIAL_STATE,
+      captures: [{
+        id: 'capture-1',
+        text: 'Build a reading nook',
+        createdAt: '2026-08-20T07:00:00.000Z',
+        status: 'new',
+        completedAt: null,
+      }],
+    };
+
+    const completed = appReducer(state, { type: 'COMPLETE_CAPTURE', payload: 'capture-1' });
+    expect(completed.captures[0]).toMatchObject({
+      status: 'completed',
+      completedAt: '2026-09-02T12:30:00.000Z',
+    });
+
+    const reopened = appReducer(completed, { type: 'REOPEN_CAPTURE', payload: 'capture-1' });
+    expect(reopened.captures[0]).toMatchObject({ status: 'new', completedAt: null });
+  });
+
+  it('migrates completed Inbox ideas and backfills their realization date', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T12:30:00.000Z'));
+
+    const migrated = migrateAppState({
+      captures: [{
+        id: 'capture-1',
+        text: 'Completed idea',
+        createdAt: '2026-08-20T07:00:00.000Z',
+        status: 'completed',
+      }],
+    });
+
+    expect(migrated.captures[0]).toMatchObject({
+      status: 'completed',
+      completedAt: '2026-09-02T12:30:00.000Z',
+    });
   });
 });
 

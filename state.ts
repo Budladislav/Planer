@@ -2,7 +2,7 @@ import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState, WeekN
 import { formatEventTitle, generateId, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -119,7 +119,9 @@ export const migrateAppState = (value: unknown): AppState => {
   const captures = Array.isArray(parsed.captures)
     ? parsed.captures.flatMap((value): Capture[] => {
         if (!isRecord(value)) return [];
-        const status: Capture['status'] = value.status === 'processed' || value.status === 'archived'
+        const status: Capture['status'] = value.status === 'processed'
+          || value.status === 'archived'
+          || value.status === 'completed'
           ? value.status
           : 'new';
         return [{
@@ -127,6 +129,7 @@ export const migrateAppState = (value: unknown): AppState => {
           text: asString(value.text, ''),
           createdAt: asString(value.createdAt, now),
           status,
+          completedAt: status === 'completed' ? asString(value.completedAt, now) : null,
         }];
       })
     : [];
@@ -194,6 +197,8 @@ export type Action =
   | { type: 'ADD_CAPTURE'; payload: string }
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
+  | { type: 'COMPLETE_CAPTURE'; payload: string }
+  | { type: 'REOPEN_CAPTURE'; payload: string }
   | { type: 'DELETE_CAPTURE'; payload: string }
   | { type: 'ADD_TASK'; payload: Task }
   | { type: 'UPDATE_TASK'; payload: Partial<Task> & { id: string } }
@@ -224,7 +229,13 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       return {
         ...state,
         captures: [
-          { id: generateId(), text: action.payload, createdAt: new Date().toISOString(), status: 'new' },
+          {
+            id: generateId(),
+            text: action.payload,
+            createdAt: new Date().toISOString(),
+            status: 'new',
+            completedAt: null,
+          },
           ...state.captures,
         ],
       };
@@ -240,6 +251,20 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         captures: state.captures.map(c => c.id === action.payload.id
           ? { ...c, status: action.payload.status }
+          : c),
+      };
+    case 'COMPLETE_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload
+          ? { ...c, status: 'completed', completedAt: new Date().toISOString() }
+          : c),
+      };
+    case 'REOPEN_CAPTURE':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload
+          ? { ...c, status: 'new', completedAt: null }
           : c),
       };
     case 'DELETE_CAPTURE':

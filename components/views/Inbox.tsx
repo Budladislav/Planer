@@ -2,7 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
 import { generateId, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
-import { Trash2, Inbox, Plus, ChevronLeft, ChevronRight, Check, CalendarDays } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek } from '../../month-planning';
 
@@ -10,6 +20,7 @@ export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const [captureInput, setCaptureInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; captureId: string | null }>({
     isOpen: false,
     captureId: null,
@@ -17,6 +28,9 @@ export const InboxView: React.FC = () => {
 
   // Filter new captures
   const newCaptures = state.captures.filter(c => c.status === 'new');
+  const completedCaptures = state.captures
+    .filter(c => c.status === 'completed' && c.completedAt)
+    .sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!));
 
   const formatCaptureDate = (value: string) => {
     const date = new Date(value);
@@ -27,6 +41,15 @@ export const InboxView: React.FC = () => {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  const formatElapsed = (createdAt: string, completedAt: string) => {
+    const elapsedMs = Date.parse(completedAt) - Date.parse(createdAt);
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return 'Period unavailable';
+
+    const days = Math.floor(elapsedMs / 86_400_000);
+    if (days === 0) return 'Realized the same day';
+    return `Realized after ${days} day${days === 1 ? '' : 's'}`;
   };
 
   const handleCapture = (e: React.FormEvent) => {
@@ -137,7 +160,21 @@ export const InboxView: React.FC = () => {
                 {formatCaptureDate(item.createdAt)}
               </time>
             </div>
+            <button
+               type="button"
+               onClick={(e) => {
+                 e.stopPropagation();
+                 dispatch({ type: 'COMPLETE_CAPTURE', payload: item.id });
+                 setCompletedExpanded(true);
+               }}
+               className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+               title="Mark as realized"
+               aria-label={`Mark ${item.text} as realized`}
+            >
+              <Check className="w-4 h-4" />
+            </button>
             <button 
+               type="button"
                onClick={(e) => {
                  e.stopPropagation();
                  setDeleteConfirm({ isOpen: true, captureId: item.id });
@@ -260,18 +297,74 @@ export const InboxView: React.FC = () => {
       </div>
 
       {/* Content - with bottom padding for fixed form */}
-      <div className="pb-20 lg:pb-4 space-y-3 min-h-[60vh] flex flex-col">
+      <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {newCaptures.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">
+          <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
               <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-              <p className="text-slate-400 font-medium">Inbox is empty</p>
-            </div>
+              <p className="text-slate-400 font-medium">No ideas waiting to be processed</p>
           </div>
         ) : (
           <div className="flex-1 space-y-3">
             {newCaptures.map(c => <ProcessItem key={c.id} item={c} />)}
           </div>
+        )}
+
+        {completedCaptures.length > 0 && (
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <button
+              type="button"
+              onClick={() => setCompletedExpanded(value => !value)}
+              aria-expanded={completedExpanded}
+              className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-slate-50"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                Realized ({completedCaptures.length})
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${completedExpanded ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {completedExpanded && (
+              <div className="divide-y divide-slate-100 border-t border-slate-100">
+                {completedCaptures.map(item => (
+                  <article key={item.id} className="px-3 py-3">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                          Created {formatCaptureDate(item.createdAt)} · Realized {formatCaptureDate(item.completedAt!)}
+                          <span className="block font-medium text-emerald-600">
+                            {formatElapsed(item.createdAt, item.completedAt!)}
+                          </span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'REOPEN_CAPTURE', payload: item.id })}
+                        className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600"
+                        title="Return to Inbox"
+                        aria-label={`Return ${item.text} to Inbox`}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({ isOpen: true, captureId: item.id })}
+                        className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-red-500"
+                        title="Delete permanently"
+                        aria-label={`Delete ${item.text}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </div>
 

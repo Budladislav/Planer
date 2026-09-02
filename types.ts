@@ -25,7 +25,8 @@ export interface Capture {
   id: string;
   text: string;
   createdAt: string; // ISO string
-  status: 'new' | 'processed' | 'archived';
+  status: 'new' | 'processed' | 'archived' | 'completed';
+  completedAt: string | null;
 }
 
 export interface Task {
@@ -71,7 +72,7 @@ export interface AppState {
 }
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   captures: [],
   tasks: [],
   events: [],
