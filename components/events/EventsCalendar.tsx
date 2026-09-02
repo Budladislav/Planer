@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { buildEventCalendarMonth, partitionEventCalendarWeeks } from '../../event-calendar';
 import { CalendarEvent } from '../../types';
-import { formatDateReadable, getWeekString } from '../../utils';
+import { formatDateReadable, getTodayString, getWeekString } from '../../utils';
 import { Modal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 
@@ -30,6 +30,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingWeek, setEditingWeek] = useState<string | null>(null);
   const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
+  const today = getTodayString();
   const weeks = useMemo(() => buildEventCalendarMonth(month), [month]);
   const { pastWeeks, currentAndFutureWeeks } = useMemo(
     () => partitionEventCalendarWeeks(weeks, getWeekString()),
@@ -68,18 +69,26 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
       <div className="grid grid-cols-7">
         {days.map(day => {
           const dayEvents = eventsByDate[day.date] ?? [];
+          const isToday = day.date === today;
           return (
             <button
               key={day.date}
               type="button"
               onClick={() => setSelectedDate(day.date)}
+              aria-current={isToday ? 'date' : undefined}
               className={`min-h-16 min-w-0 border-r border-slate-100 p-1 text-left align-top last:border-r-0 hover:bg-amber-50/50 sm:min-h-24 sm:p-1.5 ${
-                day.isInMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'
+                isToday
+                  ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-500'
+                  : day.isInMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'
               }`}
-              title={dayEvents.length ? `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : 'No events'}
+              title={`${isToday ? 'Today · ' : ''}${dayEvents.length ? `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : 'No events'}`}
             >
               <div className="flex items-center justify-between gap-0.5">
-                <span className={`text-[11px] font-semibold sm:text-xs ${day.isInMonth ? 'text-slate-600' : 'text-slate-300'}`}>
+                <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold sm:text-xs ${
+                  isToday
+                    ? 'bg-indigo-600 text-white'
+                    : day.isInMonth ? 'text-slate-600' : 'text-slate-300'
+                }`}>
                   {day.dayOfMonth}
                 </span>
                 {dayEvents.length > 0 && (
