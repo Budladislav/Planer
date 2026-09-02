@@ -339,7 +339,7 @@ export const createRewardsLabRuntime = (
           return persist(result.state, { toast });
         }
 
-        if (event.type === 'task.reopened') {
+        if (event.type === 'task.reopened' || event.type === 'task.deleted') {
           const result = reverseTaskCompletion(snapshot.state!, event.taskId, economyRuntime);
           if (result.outcome === 'reversed') return persist(result.state);
           return true;

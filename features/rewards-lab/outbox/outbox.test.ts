@@ -58,11 +58,21 @@ const reopenedEvent = (taskId = 'task-1'): TaskLifecycleEvent => ({
   task: task({ id: taskId, title: `Task ${taskId}`, status: 'todo', completedAt: null }),
 });
 
+const deletedEvent = (taskId = 'task-1'): TaskLifecycleEvent => ({
+  type: 'task.deleted',
+  taskId,
+  title: `Task ${taskId}`,
+  occurredAt: '2026-08-29T12:00:00.000Z',
+  previousCompletedAt: '2026-08-29T10:00:00.000Z',
+  task: task({ id: taskId, title: `Task ${taskId}` }),
+});
+
 describe('Rewards Lab lifecycle outbox', () => {
   it('survives a reload boundary and drains strictly in insertion order', () => {
     const storage = new MemoryStorage();
     expect(enqueueRewardsLabLifecycleEvent(storage, completedEvent('first'))).toBe(true);
     expect(enqueueRewardsLabLifecycleEvent(storage, reopenedEvent('first'))).toBe(true);
+    expect(enqueueRewardsLabLifecycleEvent(storage, deletedEvent('first'))).toBe(true);
     expect(enqueueRewardsLabLifecycleEvent(storage, completedEvent('second'))).toBe(true);
 
     // A new reader over the same storage simulates a page/runtime reload.
@@ -75,9 +85,10 @@ describe('Rewards Lab lifecycle outbox', () => {
     expect(received).toEqual([
       'task.completed:first',
       'task.reopened:first',
+      'task.deleted:first',
       'task.completed:second',
     ]);
-    expect(result).toEqual({ processed: 3, remaining: 0, complete: true });
+    expect(result).toEqual({ processed: 4, remaining: 0, complete: true });
     expect(storage.values.has(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY)).toBe(false);
   });
 

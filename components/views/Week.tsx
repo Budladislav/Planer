@@ -8,7 +8,7 @@ import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
-import { completeTask, reopenTask } from '../../task-lifecycle';
+import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
 import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 import {
   DndContext,
@@ -1017,7 +1017,8 @@ export const WeekView: React.FC = () => {
         });
       }
     });
-    dispatch({ type: 'DELETE_TASK', payload: id });
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (task) deleteTask(dispatch, task);
   };
 
   const weekDateRange = getWeekDateRange(currentWeek);

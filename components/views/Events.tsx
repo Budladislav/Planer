@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import { groupEventsForDisplay } from '../../event-history';
 import { useAppStore } from '../../store';
+import { deleteTask } from '../../task-lifecycle';
 import { CalendarEvent } from '../../types';
 import { formatDateShort, formatEventTitle, generateId, getTodayString, getWeekString } from '../../utils';
 import { EventsCalendar } from '../events/EventsCalendar';
@@ -303,7 +304,11 @@ export const EventsView: React.FC = () => {
         isOpen={deleteConfirm.isOpen}
         onClose={() => setDeleteConfirm({ isOpen: false, eventId: null })}
         onConfirm={() => {
-          if (deleteConfirm.eventId) dispatch({ type: 'DELETE_EVENT', payload: deleteConfirm.eventId });
+          if (deleteConfirm.eventId) {
+            const linkedTask = state.tasks.find(task => task.eventId === deleteConfirm.eventId);
+            if (linkedTask) deleteTask(dispatch, linkedTask);
+            dispatch({ type: 'DELETE_EVENT', payload: deleteConfirm.eventId });
+          }
           setDeleteConfirm({ isOpen: false, eventId: null });
         }}
         title="Delete Event"

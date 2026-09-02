@@ -12,8 +12,8 @@ export interface RewardsLabLifecycleCompletedEvent {
   completedAt: string;
 }
 
-export interface RewardsLabLifecycleReopenedEvent {
-  type: 'task.reopened';
+export interface RewardsLabLifecycleReversalEvent {
+  type: 'task.reopened' | 'task.deleted';
   taskId: string;
   title: string;
   occurredAt: string;
@@ -22,7 +22,7 @@ export interface RewardsLabLifecycleReopenedEvent {
 
 export type RewardsLabLifecycleEvent =
   | RewardsLabLifecycleCompletedEvent
-  | RewardsLabLifecycleReopenedEvent;
+  | RewardsLabLifecycleReversalEvent;
 
 export interface RewardsLabOutboxStorage {
   getItem(key: string): string | null;
@@ -71,9 +71,10 @@ const sanitizeEvent = (value: unknown): RewardsLabLifecycleEvent | null => {
   }
 
   if (value.type === 'task.reopened'
-    && (value.previousCompletedAt === null || typeof value.previousCompletedAt === 'string')) {
+    || value.type === 'task.deleted') {
+    if (value.previousCompletedAt !== null && typeof value.previousCompletedAt !== 'string') return null;
     return {
-      type: 'task.reopened',
+      type: value.type,
       taskId: value.taskId,
       title: value.title,
       occurredAt: value.occurredAt,

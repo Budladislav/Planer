@@ -28,7 +28,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
-import { completeTask, reopenTask } from '../../task-lifecycle';
+import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
 import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 
@@ -419,7 +419,8 @@ export const TodayView: React.FC = () => {
     // Remove from task order if present
     const newOrder = orderedIds.filter(taskId => taskId !== id);
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    dispatch({ type: 'DELETE_TASK', payload: id });
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (task) deleteTask(dispatch, task);
   };
 
   const handleComplete = (id: string) => {

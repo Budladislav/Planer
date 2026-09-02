@@ -31,7 +31,7 @@ import {
 import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
-import { completeTask } from '../../task-lifecycle';
+import { completeTask, deleteTask } from '../../task-lifecycle';
 import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
@@ -499,7 +499,10 @@ export const MonthView: React.FC = () => {
         isOpen={deleteTaskId !== null}
         onClose={() => setDeleteTaskId(null)}
         onConfirm={() => {
-          if (deleteTaskId) dispatch({ type: 'DELETE_TASK', payload: deleteTaskId });
+          if (deleteTaskId) {
+            const task = state.tasks.find(candidate => candidate.id === deleteTaskId);
+            if (task) deleteTask(dispatch, task);
+          }
         }}
         title="Delete Task"
         message="Delete this task permanently?"

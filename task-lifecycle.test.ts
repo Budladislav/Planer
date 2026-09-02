@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { completeTask, reopenTask, subscribeToTaskLifecycle } from './task-lifecycle';
+import { completeTask, deleteTask, reopenTask, subscribeToTaskLifecycle } from './task-lifecycle';
 import type { Action } from './state';
 import type { Task } from './types';
 
@@ -167,5 +167,37 @@ describe('task lifecycle commands', () => {
     expect(reopened).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('deletes before emitting the task snapshot and previous completion time', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T12:00:00.000Z'));
+    const task = makeTask({
+      status: 'done',
+      completedAt: '2026-08-28T10:30:00.000Z',
+    });
+    const order: string[] = [];
+    const actions: Action[] = [];
+    const events: unknown[] = [];
+    const unsubscribe = subscribeToTaskLifecycle(event => {
+      order.push('event');
+      events.push(event);
+    });
+
+    deleteTask(action => {
+      order.push('dispatch');
+      actions.push(action);
+    }, task);
+    unsubscribe();
+
+    expect(order).toEqual(['dispatch', 'event']);
+    expect(actions).toEqual([{ type: 'DELETE_TASK', payload: 'task-1' }]);
+    expect(events).toEqual([expect.objectContaining({
+      type: 'task.deleted',
+      taskId: 'task-1',
+      previousCompletedAt: '2026-08-28T10:30:00.000Z',
+      occurredAt: '2026-08-28T12:00:00.000Z',
+      task,
+    })]);
   });
 });

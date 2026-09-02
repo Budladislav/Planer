@@ -26,7 +26,12 @@ export interface TaskReopenedEvent extends TaskLifecycleEventBase {
   previousCompletedAt: string | null;
 }
 
-export type TaskLifecycleEvent = TaskCompletedEvent | TaskReopenedEvent;
+export interface TaskDeletedEvent extends TaskLifecycleEventBase {
+  type: 'task.deleted';
+  previousCompletedAt: string | null;
+}
+
+export type TaskLifecycleEvent = TaskCompletedEvent | TaskReopenedEvent | TaskDeletedEvent;
 
 type TaskLifecycleListener = (event: TaskLifecycleEvent) => void;
 
@@ -127,6 +132,25 @@ export const reopenTask = (
     previousCompletedAt: task.completedAt,
     occurredAt,
     task: reopenedTask,
+  });
+  return true;
+};
+
+/** Delete a task and let optional sidecars reverse any posted completion reward. */
+export const deleteTask = (
+  dispatch: TaskDispatch,
+  task: Task,
+): boolean => {
+  const occurredAt = new Date().toISOString();
+
+  dispatch({ type: 'DELETE_TASK', payload: task.id });
+  publishTaskLifecycleEvent({
+    type: 'task.deleted',
+    taskId: task.id,
+    title: task.title,
+    previousCompletedAt: task.completedAt,
+    occurredAt,
+    task,
   });
   return true;
 };

@@ -9,7 +9,7 @@ import {
   getReportDateRange,
   ReportPeriod,
 } from '../../completed-report';
-import { reopenTask } from '../../task-lifecycle';
+import { deleteTask, reopenTask } from '../../task-lifecycle';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -77,7 +77,8 @@ export const DoneView: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteConfirm.taskId) {
-      dispatch({ type: 'DELETE_TASK', payload: deleteConfirm.taskId });
+      const task = state.tasks.find(candidate => candidate.id === deleteConfirm.taskId);
+      if (task) deleteTask(dispatch, task);
       setDeleteConfirm({ isOpen: false, taskId: null });
     }
   };

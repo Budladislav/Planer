@@ -85,6 +85,15 @@ const reopenedEvent = (): TaskLifecycleEvent => ({
   task: task({ status: 'todo', completedAt: null }),
 });
 
+const deletedEvent = (): TaskLifecycleEvent => ({
+  type: 'task.deleted',
+  taskId: 'task-1',
+  title: 'Write release notes',
+  previousCompletedAt: '2026-08-28T10:00:00.000Z',
+  occurredAt: '2026-08-28T12:00:00.000Z',
+  task: task(),
+});
+
 describe('Rewards Lab runtime activation', () => {
   it('recognizes only the explicit safe-mode query value', () => {
     expect(isRewardsLabSafeMode('?safe=1')).toBe(true);
@@ -274,6 +283,23 @@ describe('Rewards Lab task lifecycle', () => {
     runtime.handleTaskLifecycle(reopenedEvent());
     expect(runtime.setTaskGrade('task-1', 'mythic')).toBe(false);
     expect(runtime.getSnapshot().state!.claims['task-1'].grade).toBe('common');
+  });
+
+  it('reverses a posted completion reward when the completed task is deleted', () => {
+    const storage = new MemoryStorage();
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    runtime.enable();
+
+    runtime.handleTaskLifecycle(completedEvent());
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(2);
+
+    runtime.handleTaskLifecycle(deletedEvent());
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(0);
+    expect(runtime.getSnapshot().state!.ledger.at(-1)).toMatchObject({
+      kind: 'reverse',
+      amount: -2,
+      taskId: 'task-1',
+    });
   });
 
   it('keeps task completion safe when persistence breaks', () => {
