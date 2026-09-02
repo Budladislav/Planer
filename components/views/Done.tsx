@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { generateId, getDateString, getTodayString, formatTime, getWeekString } from '../../utils';
-import { Calendar, Plus, ChevronDown, ChevronRight, Download } from 'lucide-react';
+import { generateId, getDateString, getTodayString, formatTime } from '../../utils';
+import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
-import {
-  buildCompletedTasksReport,
-  getReportDateRange,
-  ReportPeriod,
-} from '../../completed-report';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 
 export const DoneView: React.FC = () => {
@@ -19,11 +14,6 @@ export const DoneView: React.FC = () => {
   });
   const [quickAdd, setQuickAdd] = useState('');
   const todayStr = getTodayString();
-  const [reportType, setReportType] = useState<ReportPeriod['type']>('week');
-  const [reportWeek, setReportWeek] = useState(getWeekString());
-  const [reportMonth, setReportMonth] = useState(todayStr.slice(0, 7));
-  const [customStart, setCustomStart] = useState(todayStr);
-  const [customEnd, setCustomEnd] = useState(todayStr);
   
   // State for expanded dates - default: today is expanded
   const [expandedDates, setExpandedDates] = useState<Set<string>>(() => {
@@ -81,27 +71,6 @@ export const DoneView: React.FC = () => {
       if (task) deleteTask(dispatch, task);
       setDeleteConfirm({ isOpen: false, taskId: null });
     }
-  };
-
-  const handleDownloadReport = () => {
-    const period: ReportPeriod = reportType === 'week'
-      ? { type: 'week', value: reportWeek }
-      : reportType === 'month'
-        ? { type: 'month', value: reportMonth }
-        : { type: 'custom', start: customStart, end: customEnd };
-    const range = getReportDateRange(period);
-    if (!range) return;
-
-    const report = buildCompletedTasksReport(state.tasks, range);
-    const blob = new Blob(['\uFEFF', report], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `monofocus_completed_${range.start}_${range.end}.txt`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
   };
 
   const toggleDate = (date: string) => {
@@ -248,79 +217,6 @@ export const DoneView: React.FC = () => {
           Completed tasks: {doneTasks.length}
         </p>
       </div>
-
-      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-auto text-sm font-semibold text-slate-700">TXT report for LLM</span>
-          {(['week', 'month', 'custom'] as const).map(type => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setReportType(type)}
-              className={`rounded px-2.5 py-1.5 text-xs font-semibold ${
-                reportType === type
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {type === 'week' ? 'Week' : type === 'month' ? 'Month' : 'Custom'}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          {reportType === 'week' && (
-            <label className="text-xs font-medium text-slate-500">
-              Week
-              <input
-                type="week"
-                value={reportWeek}
-                onChange={event => setReportWeek(event.target.value)}
-                className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
-              />
-            </label>
-          )}
-          {reportType === 'month' && (
-            <label className="text-xs font-medium text-slate-500">
-              Month
-              <input
-                type="month"
-                value={reportMonth}
-                onChange={event => setReportMonth(event.target.value)}
-                className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
-              />
-            </label>
-          )}
-          {reportType === 'custom' && (
-            <>
-              <label className="text-xs font-medium text-slate-500">
-                From
-                <input
-                  type="date"
-                  value={customStart}
-                  onChange={event => setCustomStart(event.target.value)}
-                  className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
-                />
-              </label>
-              <label className="text-xs font-medium text-slate-500">
-                To
-                <input
-                  type="date"
-                  value={customEnd}
-                  onChange={event => setCustomEnd(event.target.value)}
-                  className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
-                />
-              </label>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={handleDownloadReport}
-            className="ml-auto flex items-center gap-2 rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
-            <Download className="h-4 w-4" /> Download TXT
-          </button>
-        </div>
-      </section>
 
       {/* Tasks List - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">

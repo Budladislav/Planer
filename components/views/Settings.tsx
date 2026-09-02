@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { BriefcaseBusiness, CheckSquare, ChevronDown, ChevronRight, Download, Inbox, Upload, Trash2 } from 'lucide-react';
+import { BriefcaseBusiness, CheckSquare, ChevronDown, ChevronRight, Download, FileText, Inbox, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 import packageJson from '../../package.json';
 import { parseReleaseHistory } from '../../release-history';
@@ -200,7 +200,20 @@ export const SettingsView: React.FC = () => {
            <CheckSquare className="h-5 w-5 text-green-500" />
            <div className="flex-1">
              <h3 className="font-semibold text-slate-800">Completed Tasks</h3>
-             <p className="text-sm text-slate-500">History and TXT reports.</p>
+             <p className="text-sm text-slate-500">Browse and manage task history.</p>
+           </div>
+           <ChevronRight className="h-5 w-5 text-slate-400" />
+         </button>
+
+         <button
+           type="button"
+           onClick={() => dispatch({ type: 'SET_VIEW', payload: 'reports' })}
+           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+         >
+           <FileText className="h-5 w-5 text-indigo-500" />
+           <div className="flex-1">
+             <h3 className="font-semibold text-slate-800">Progress Reports</h3>
+             <p className="text-sm text-slate-500">Export completed tasks and realized Inbox ideas.</p>
            </div>
            <ChevronRight className="h-5 w-5 text-slate-400" />
          </button>

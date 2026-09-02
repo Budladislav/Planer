@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildCompletedTasksReport, getCompletedTasksForRange, getReportDateRange } from './completed-report';
-import { Task } from './types';
+import {
+  buildProgressReport,
+  getCompletedTasksForRange,
+  getRealizedCapturesForRange,
+  getReportDateRange,
+} from './completed-report';
+import { Capture, Task } from './types';
 
 const task = (id: string, completedAt: string | null, timeSpent = 0): Task => ({
   id,
@@ -13,6 +18,14 @@ const task = (id: string, completedAt: string | null, timeSpent = 0): Task => ({
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,
   timeSpent,
+});
+
+const capture = (id: string, completedAt: string | null): Capture => ({
+  id,
+  text: `Idea ${id}`,
+  createdAt: '2026-08-10T08:00:00.000Z',
+  status: completedAt ? 'completed' : 'new',
+  completedAt,
 });
 
 describe('completed task report', () => {
@@ -40,18 +53,31 @@ describe('completed task report', () => {
     const range = { start: '2026-08-10', end: '2026-08-16' };
 
     expect(getCompletedTasksForRange(tasks, range).map(item => item.id)).toEqual(['inside']);
+    expect(getRealizedCapturesForRange([
+      capture('inside', '2026-08-15T12:00:00.000Z'),
+      capture('outside', '2026-08-20T12:00:00.000Z'),
+      capture('active', null),
+    ], range).map(item => item.id)).toEqual(['inside']);
   });
 
-  it('creates a compact LLM-friendly text report', () => {
-    const report = buildCompletedTasksReport(
+  it('creates a compact report with clearly separated task and Inbox sections', () => {
+    const report = buildProgressReport(
       [task('one', '2026-08-16T12:00:00.000Z', 90)],
+      [capture('one', '2026-08-15T12:00:00.000Z')],
       { start: '2026-08-10', end: '2026-08-16' },
       new Date('2026-08-16T14:00:00.000Z'),
     );
 
-    expect(report).toContain('tasks_count: 1');
+    expect(report).toContain('completed_tasks_count: 1');
+    expect(report).toContain('realized_inbox_count: 1');
     expect(report).toContain('total_focus_seconds: 90');
+    expect(report).toContain('=== COMPLETED TASKS ===');
     expect(report).toContain('title: Task one');
     expect(report).toContain('focus_seconds: 90');
+    expect(report).toContain('=== REALIZED INBOX IDEAS ===');
+    expect(report).toContain('created_at: 2026-08-10');
+    expect(report).toContain('realized_at: 2026-08-15');
+    expect(report).toContain('elapsed_days: 5');
+    expect(report).toContain('title: Idea one');
   });
 });

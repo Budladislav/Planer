@@ -1,4 +1,4 @@
-export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done';
+export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports';
 
 export type WorkShift = 1 | 2;
 

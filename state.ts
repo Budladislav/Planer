@@ -67,7 +67,7 @@ export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
   const today = getTodayString();
-  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done'];
+  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done', 'reports'];
   const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
   const lastActiveView = allowedViews.includes(requestedView as ViewState)
     ? requestedView as ViewState
