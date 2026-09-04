@@ -371,20 +371,20 @@ export const MonthView: React.FC = () => {
     const tasks = tasksByWeek[week] ?? [];
     return (
       <section key={week} className="rounded-lg border border-slate-200 bg-white p-2">
-        <div className="mb-1 flex items-center gap-2 px-1">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-slate-700">{t('Week {week}', { week: week.split('-W')[1] })}</h3>
-            <div className="text-xs text-slate-400">{range.start}–{range.end}</div>
-          </div>
-          <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add task to {week}', { week })}>
+        <div className="mb-1 flex min-w-0 items-center gap-2 px-1">
+          <h3 className="flex-shrink-0 text-sm font-semibold text-slate-700">{t('Week {week}', { week: week.split('-W')[1] })}</h3>
+          <span className="flex-shrink-0 text-xs text-slate-400">{range.start}–{range.end}</span>
+          <WeekMetaBadges
+            week={week}
+            onEdit={() => setNotesEditorWeek(week)}
+            maxNotes={1}
+            compact
+            className="min-w-0 flex-1"
+          />
+          <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add task to {week}', { week })}>
             <Plus className="h-4 w-4" />
           </button>
         </div>
-        <WeekMetaBadges
-          week={week}
-          onEdit={() => setNotesEditorWeek(week)}
-          className="mb-1 px-1"
-        />
         <TaskContainer id={weekContainer(week)} tasks={tasks} emptyText={t('Drop a month task into this week')}>
           {tasks.map(task => renderTask(task, weekContainer(week)))}
         </TaskContainer>

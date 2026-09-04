@@ -20,6 +20,8 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Today task editing now uses a compact pencil beside the completion control.
 - Only the date number marks today in the calendar. Dates sit in the upper-left corner with compact event counts and note indicators.
 - Weekly Plan keeps each day note on the same line as its date instead of increasing the header height.
+- Month Plan keeps shift and week-note metadata beside the week number and date range in one compact row.
+- Event-calendar date numbers are pinned to the upper-left corner of their cells.
 - Shift labels are shortened to `1. shift` / `2. shift` and «1. смена» / «2. смена».
 
 ### Fixed

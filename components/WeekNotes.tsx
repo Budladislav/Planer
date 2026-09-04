@@ -10,6 +10,7 @@ interface WeekMetaBadgesProps {
   week: string;
   onEdit?: () => void;
   maxNotes?: number;
+  compact?: boolean;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
   week,
   onEdit,
   maxNotes = 2,
+  compact = false,
   className = '',
 }) => {
   const { state } = useAppStore();
@@ -27,9 +29,9 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
   const hiddenCount = Math.max(0, notes.length - visibleNotes.length);
 
   return (
-    <div className={`flex min-w-0 flex-wrap items-center gap-1.5 ${className}`}>
+    <div className={`flex min-w-0 items-center gap-1.5 ${compact ? 'flex-nowrap overflow-hidden' : 'flex-wrap'} ${className}`}>
       {shift && (
-        <span className="flex-shrink-0 rounded bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700">
+        <span className={`flex-shrink-0 rounded bg-indigo-50 font-semibold text-indigo-700 ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}>
           {formatWorkShift(shift, language)}
         </span>
       )}
@@ -38,7 +40,9 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
           key={note.id}
           type="button"
           onClick={onEdit}
-          className="inline-flex max-w-[12rem] items-center gap-1 rounded bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800 hover:bg-amber-100"
+          className={`inline-flex min-w-0 items-center gap-1 rounded bg-amber-50 font-semibold text-amber-800 hover:bg-amber-100 ${
+            compact ? 'max-w-[10rem] px-1.5 py-0.5 text-[9px]' : 'max-w-[12rem] px-2 py-1 text-[10px]'
+          }`}
           title={note.text}
         >
           <NotebookPen className="h-3 w-3 flex-shrink-0" />
@@ -49,7 +53,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
         <button
           type="button"
           onClick={onEdit}
-          className="rounded bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800 hover:bg-amber-200"
+          className={`flex-shrink-0 rounded bg-amber-100 font-semibold text-amber-800 hover:bg-amber-200 ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}
           title={t('Show {count} more week notes', { count: hiddenCount })}
         >
           +{hiddenCount}
@@ -59,11 +63,13 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-amber-700 hover:bg-amber-50"
+          className={`flex flex-shrink-0 items-center justify-center rounded text-amber-700 hover:bg-amber-50 ${compact ? 'h-6 w-6' : 'h-7 w-7'}`}
           title={notes.length ? t('Edit week notes') : t('Add week note')}
           aria-label={notes.length ? t('Edit week notes') : t('Add week note')}
         >
-          {notes.length ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-4 w-4" />}
+          {notes.length
+            ? <Pencil className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+            : <Plus className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />}
         </button>
       )}
     </div>

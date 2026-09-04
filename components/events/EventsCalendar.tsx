@@ -98,7 +98,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
               type="button"
               onClick={() => setSelectedDate(day.date)}
               aria-current={isToday ? 'date' : undefined}
-              className={`min-h-20 min-w-0 border-r border-slate-100 p-0.5 text-left align-top last:border-r-0 hover:brightness-[0.98] sm:min-h-28 sm:p-1 ${background}`}
+              className={`flex min-h-20 min-w-0 flex-col items-stretch justify-start border-r border-slate-100 p-0.5 text-left last:border-r-0 hover:brightness-[0.98] sm:min-h-28 sm:p-1 ${background}`}
               title={`${isToday ? t('Today · ') : ''}${dayEvents.length ? t('{count} events', { count: dayEvents.length }) : t('No events')}${dayNotes.length ? ` · ${t('{count} notes', { count: dayNotes.length })}` : ''}`}
             >
               <div className="flex items-start justify-between gap-0.5">
