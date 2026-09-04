@@ -318,6 +318,20 @@ describe('appReducer task completion', () => {
   });
 });
 
+describe('appReducer task ordering', () => {
+  it('ignores an unchanged empty day order', () => {
+    const state: AppState = {
+      ...INITIAL_STATE,
+      taskOrderByDay: { '2026-08-15': [] },
+    };
+
+    expect(appReducer(state, {
+      type: 'UPDATE_TASK_ORDER',
+      payload: { day: '2026-08-15', order: [] },
+    })).toBe(state);
+  });
+});
+
 describe('appReducer week notes and UI preferences', () => {
   it('adds, updates and deletes a week note', () => {
     vi.useFakeTimers();

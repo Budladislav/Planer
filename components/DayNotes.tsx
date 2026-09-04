@@ -52,15 +52,19 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
           +{hiddenCount}
         </button>
       )}
-      {onEdit && !compact && (
+      {onEdit && (
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-sky-700 hover:bg-sky-50"
+          className={`flex flex-shrink-0 items-center justify-center rounded text-sky-700 hover:bg-sky-50 ${
+            compact ? 'h-6 w-6' : 'h-7 w-7'
+          }`}
           title={notes.length ? t('Edit day notes') : t('Add day note')}
           aria-label={notes.length ? t('Edit day notes') : t('Add day note')}
         >
-          {notes.length ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-4 w-4" />}
+          {notes.length
+            ? <Pencil className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+            : <Plus className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />}
         </button>
       )}
     </div>

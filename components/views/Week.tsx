@@ -743,8 +743,9 @@ export const WeekView: React.FC = () => {
             },
           });
         });
-        // Clear any saved order for this past day
-        if (state.taskOrderByDay[day.date]) {
+        // Clear a populated saved order once. An empty array is still truthy,
+        // so dispatching for it on every render would create an update loop.
+        if (state.taskOrderByDay[day.date]?.length) {
           dispatch({
             type: 'UPDATE_TASK_ORDER',
             payload: { day: day.date, order: [] },
@@ -1085,17 +1086,18 @@ export const WeekView: React.FC = () => {
       <div key={day.date} className={`rounded-lg border bg-white transition-colors ${isPast ? 'border-slate-200/80' : 'border-slate-200'}`}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                 <span className={`font-semibold ${isPast ? 'text-slate-500' : 'text-slate-800'}`}>{day.weekday}</span>
-                <span className="text-xs text-slate-500">{day.label}</span>
+                <span className="flex-shrink-0 text-xs text-slate-500">{day.label}</span>
+                <DayMetaBadges
+                  date={day.date}
+                  onEdit={() => setNotesEditorDate(day.date)}
+                  maxNotes={1}
+                  compact
+                  className="min-w-0 flex-1 flex-nowrap overflow-hidden"
+                />
               </div>
-              <DayMetaBadges
-                date={day.date}
-                onEdit={() => setNotesEditorDate(day.date)}
-                maxNotes={2}
-                className="mt-1.5"
-              />
             </div>
             <div className="flex items-center gap-2">
               {canPlanDay && (

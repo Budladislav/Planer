@@ -125,6 +125,11 @@ const removeTaskFromOrderMap = (
   Object.entries(orderMap).map(([key, order]) => [key, order.filter(id => id !== taskId)]),
 );
 
+const hasSameOrder = (current: string[] | undefined, next: string[]): boolean => {
+  const existing = current ?? [];
+  return existing.length === next.length && existing.every((id, index) => id === next[index]);
+};
+
 export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
@@ -493,6 +498,7 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         activeTaskStartedAt: action.payload.id ? action.payload.startedAt ?? Date.now() : null,
       };
     case 'UPDATE_TASK_ORDER':
+      if (hasSameOrder(state.taskOrderByDay[action.payload.day], action.payload.order)) return state;
       return {
         ...state,
         taskOrderByDay: { ...state.taskOrderByDay, [action.payload.day]: action.payload.order },
