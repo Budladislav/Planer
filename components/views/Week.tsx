@@ -1128,7 +1128,7 @@ export const WeekView: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="mb-3 px-12 text-center lg:px-0">
-        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Weekly Plan')}</h2>
+        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Week')}</h2>
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}

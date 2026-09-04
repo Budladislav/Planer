@@ -22,6 +22,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Weekly Plan keeps each day note on the same line as its date instead of increasing the header height.
 - Month Plan keeps shift and week-note metadata beside the week number and date range in one compact row.
 - Event-calendar date numbers are pinned to the upper-left corner of their cells.
+- Events is now Calendar, the calendar appears above the event lists, and Month Plan / Weekly Plan are shortened to Month / Week.
 - Shift labels are shortened to `1. shift` / `2. shift` and «1. смена» / «2. смена».
 
 ### Fixed

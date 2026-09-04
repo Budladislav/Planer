@@ -395,7 +395,7 @@ export const MonthView: React.FC = () => {
   return (
     <div className="mx-auto max-w-3xl pb-20">
       <div className="mb-3 text-center">
-        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Month Plan')}</h2>
+        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Month')}</h2>
         <p className="mt-1 text-sm text-slate-400">{t('{count} planned tasks', { count: todoTasks.length })}</p>
       </div>
 

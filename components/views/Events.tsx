@@ -192,11 +192,18 @@ export const EventsView: React.FC = () => {
     <>
       <div className="mx-auto max-w-3xl">
         <div className="hidden text-center lg:mb-3 lg:block">
-          <h2 className="text-3xl font-bold text-slate-900">{t('Events')}</h2>
+          <h2 className="text-3xl font-bold text-slate-900">{t('Calendar')}</h2>
           <p className="text-slate-500">{t('Events create a linked task on the corresponding day')}</p>
         </div>
 
         <div className="space-y-3 pb-48 lg:pb-6">
+          <EventsCalendar
+            events={state.events}
+            month={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            onEditEvent={handleStartEdit}
+          />
+
           <section>
             <div className="mb-1.5 flex items-center justify-between pl-1 pr-12 lg:pr-1">
               <h3 className="text-sm font-semibold text-slate-600">{t('Current and next month')}</h3>
@@ -222,13 +229,6 @@ export const EventsView: React.FC = () => {
             onToggle={() => updatePreference({ eventsDistantExpanded: !state.uiPreferences.eventsDistantExpanded })}
             onEdit={handleStartEdit}
             onDelete={id => setDeleteConfirm({ isOpen: true, eventId: id })}
-          />
-
-          <EventsCalendar
-            events={state.events}
-            month={calendarMonth}
-            onMonthChange={setCalendarMonth}
-            onEditEvent={handleStartEdit}
           />
 
           <CollapsibleEventSection

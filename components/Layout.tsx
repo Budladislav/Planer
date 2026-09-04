@@ -23,9 +23,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   }, [language]);
 
   const navItems: Array<{ view: ViewState; icon: LucideIcon; label: string }> = [
-    { view: 'events', icon: Calendar, label: t('Events') },
-    { view: 'month', icon: CalendarDays, label: t('Month Plan') },
-    { view: 'week', icon: List, label: t('Weekly Plan') },
+    { view: 'events', icon: Calendar, label: t('Calendar') },
+    { view: 'month', icon: CalendarDays, label: t('Month') },
+    { view: 'week', icon: List, label: t('Week') },
     { view: 'today', icon: Target, label: t('Today') },
   ];
 

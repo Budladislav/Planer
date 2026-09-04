@@ -5,9 +5,9 @@ import { AppLanguage } from './types';
 type TranslationParams = Record<string, string | number>;
 
 const RU: Record<string, string> = {
-  'Events': 'События',
-  'Month Plan': 'План месяца',
-  'Weekly Plan': 'План недели',
+  'Calendar': 'Календарь',
+  'Month': 'Месяц',
+  'Week': 'Неделя',
   'Today': 'Сегодня',
   'Settings': 'Настройки',
   'I wish': 'Я хочу',
@@ -167,8 +167,6 @@ const RU: Record<string, string> = {
   "What's on your mind?": 'Чего вам хочется?',
   'Process wish': 'Обработка желания',
   'Save and close (Ctrl+Enter)': 'Сохранить и закрыть (Ctrl+Enter)',
-  'Week': 'Неделя',
-  'Month': 'Месяц',
   'Custom': 'Свой период',
   'Confirm Task': 'Создать задачу',
   'Delete wish': 'Удаление желания',
