@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../store';
 import { ViewState } from '../types';
 import {
-  Target, Calendar, CalendarDays, List, Settings, type LucideIcon,
+  Target, Calendar, CalendarDays, Heart, List, Settings, type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 
@@ -23,8 +23,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   }, [language]);
 
   const navItems: Array<{ view: ViewState; icon: LucideIcon; label: string }> = [
-    { view: 'events', icon: Calendar, label: t('Calendar') },
+    { view: 'inbox', icon: Heart, label: t('Wish') },
     { view: 'month', icon: CalendarDays, label: t('Month') },
+    { view: 'events', icon: Calendar, label: t('Calendar') },
     { view: 'week', icon: List, label: t('Week') },
     { view: 'today', icon: Target, label: t('Today') },
   ];
@@ -35,6 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         case 'today': return 'text-indigo-600';
         case 'week': return 'text-indigo-500';
         case 'month': return 'text-violet-600';
+        case 'inbox': return 'text-rose-600';
         case 'events': return 'text-amber-600';
         case 'settings': return 'text-slate-600';
         default: return 'text-slate-600';
@@ -44,6 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         case 'today': return 'text-indigo-400';
         case 'week': return 'text-indigo-400';
         case 'month': return 'text-violet-500';
+        case 'inbox': return 'text-rose-400';
         case 'events': return 'text-amber-500';
         case 'settings': return 'text-slate-400';
         default: return 'text-slate-400';

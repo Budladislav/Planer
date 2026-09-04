@@ -8,6 +8,7 @@ const RU: Record<string, string> = {
   'Calendar': 'Календарь',
   'Month': 'Месяц',
   'Week': 'Неделя',
+  'Wish': 'Хочу',
   'Today': 'Сегодня',
   'Settings': 'Настройки',
   'I wish': 'Я хочу',

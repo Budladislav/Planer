@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
-import { generateId, getDateString, getTodayString, getWeekString, getWeekRange, getWeekDateRange, getISOWeeksInYear, getWeekDates } from '../../utils';
+import { getDateString, getTodayString } from '../../utils';
 import {
-  CalendarDays,
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Inbox,
   Pencil,
   Plus,
@@ -15,7 +12,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
-import { getMonthForWeek } from '../../month-planning';
 import { useI18n } from '../../i18n';
 
 const toDateInputValue = (timestamp: string): string => {
@@ -46,12 +42,11 @@ const replaceLocalDate = (timestamp: string, dateString: string): string | null 
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
-  const { language, t } = useI18n();
+  const { t } = useI18n();
   const [captureInput, setCaptureInput] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [completedExpanded, setCompletedExpanded] = useState(false);
-  const [editingCompletedId, setEditingCompletedId] = useState<string | null>(null);
-  const [editingCompletedText, setEditingCompletedText] = useState('');
+  const [editingCaptureId, setEditingCaptureId] = useState<string | null>(null);
+  const [editingCaptureText, setEditingCaptureText] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; captureId: string | null }>({
     isOpen: false,
     captureId: null,
@@ -80,258 +75,93 @@ export const InboxView: React.FC = () => {
     }
   };
 
-  const startEditingCompleted = (item: Capture) => {
-    setEditingCompletedId(item.id);
-    setEditingCompletedText(item.text);
+  const startEditingCapture = (item: Capture) => {
+    setEditingCaptureId(item.id);
+    setEditingCaptureText(item.text);
   };
 
-  const saveCompletedTitle = (item: Capture) => {
-    const text = editingCompletedText.trim();
+  const saveCaptureTitle = (item: Capture) => {
+    const text = editingCaptureText.trim();
     if (text && text !== item.text) {
       dispatch({ type: 'UPDATE_CAPTURE', payload: { id: item.id, text } });
     }
     if (text) {
-      setEditingCompletedId(null);
-      setEditingCompletedText('');
+      setEditingCaptureId(null);
+      setEditingCaptureText('');
     }
   };
 
-  // --- Processing Component ---
-  const ProcessItem: React.FC<{ item: Capture }> = ({ item }) => {
-    // Form States
-    const [captureText, setCaptureText] = useState(item.text);
-    const [taskType, setTaskType] = useState<'today' | 'week'>('today');
-    const [selectedWeek, setSelectedWeek] = useState(getWeekString());
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-    // Sync captureText with item.text when item changes
-    useEffect(() => {
-      setCaptureText(item.text);
-    }, [item.text]);
-
-    // Auto-resize textarea
-    useEffect(() => {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      }
-    }, [captureText]);
-
-    const changeWeek = (delta: number) => {
-      const [yearStr, weekStr] = selectedWeek.split('-W');
-      let year = parseInt(yearStr);
-      let week = parseInt(weekStr) + delta;
-      
-      if (week > getISOWeeksInYear(year)) { year++; week = 1; }
-      if (week < 1) { year--; week = getISOWeeksInYear(year); }
-      
-      const newWeek = `${year}-W${week.toString().padStart(2, '0')}`;
-      if (getWeekDates(newWeek)[0] >= getWeekDates(getWeekString())[0]) {
-        setSelectedWeek(newWeek);
-      }
-    };
-
-    const handleSaveAndClose = () => {
-      if (captureText.trim() && captureText.trim() !== item.text) {
-        const trimmedText = captureText.trim();
-        dispatch({ type: 'UPDATE_CAPTURE', payload: { id: item.id, text: trimmedText } });
-      }
-      setProcessingId(null);
-    };
-
-    const handleConvertToTask = () => {
-      if (!captureText.trim()) return;
-      
-      const today = getTodayString();
-      
-      // Determine plan.day and plan.week
-      let planDay: string | null = null;
-      let planWeek: string | null = null;
-      
-      if (taskType === 'today') {
-        planDay = today;
-        planWeek = getWeekString(today); // Set week for consistency with Week View
-      } else {
-        planWeek = selectedWeek;
-      }
-      
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          id: generateId(),
-          title: captureText.trim(),
-          status: 'todo',
-          plan: {
-            day: planDay,
-            week: planWeek,
-            month: planDay?.slice(0, 7) ?? (planWeek ? getMonthForWeek(planWeek) : null),
-          },
-          projectId: null,
-          eventId: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          completedAt: null,
-        }
-      });
-      dispatch({ type: 'PROCESS_CAPTURE', payload: { id: item.id, status: 'processed' } });
-      setProcessingId(null);
-    };
-
-    if (processingId !== item.id) {
-      return (
-        <div 
-          className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm cursor-pointer hover:bg-slate-50 transition-colors"
-          onClick={() => setProcessingId(item.id)}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-slate-700">
-                {item.text}
-              </span>
-              <label
-                className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400"
-                onClick={event => event.stopPropagation()}
-              >
-                <CalendarDays className="h-3 w-3" aria-hidden="true" />
-                <span>{t('Created')}</span>
-                <input
-                  type="date"
-                  value={toDateInputValue(item.createdAt)}
-                  max={getTodayString()}
-                  onChange={event => {
-                    const createdAt = replaceLocalDate(item.createdAt, event.target.value);
-                    if (createdAt) dispatch({ type: 'UPDATE_CAPTURE_CREATED_AT', payload: { id: item.id, createdAt } });
-                  }}
-                  aria-label={t('Creation date for {title}', { title: item.text })}
-                  className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
-                />
-              </label>
-            </div>
-            <button
-               type="button"
-               onClick={(e) => {
-                 e.stopPropagation();
-                 dispatch({ type: 'COMPLETE_CAPTURE', payload: item.id });
-                 setCompletedExpanded(true);
-               }}
-               className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors flex-shrink-0"
-               title={t('Mark as realized')}
-               aria-label={t('Mark {title} as realized', { title: item.text })}
-            >
-              <Check className="w-4 h-4" />
-            </button>
-            <button 
-               type="button"
-               onClick={(e) => {
-                 e.stopPropagation();
-                 setDeleteConfirm({ isOpen: true, captureId: item.id });
-               }}
-               className="p-1.5 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    const weekDateRange = getWeekDateRange(selectedWeek);
+  const renderActiveWish = (item: Capture) => {
+    const isEditing = editingCaptureId === item.id;
 
     return (
-      <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm space-y-3 text-sm">
-        <div className="flex justify-center items-center relative">
-           <h3 className="text-sm font-bold text-slate-900">{t('Process wish')}</h3>
-           <button 
-             onClick={handleSaveAndClose}
-             className="absolute right-0 w-8 h-8 flex items-center justify-center text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-             title={t('Save and close (Ctrl+Enter)')}
-           >
-             <Check className="w-5 h-5" />
-           </button>
-        </div>
-        
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
-            <textarea
-              ref={textareaRef}
-              value={captureText}
-              onChange={(e) => {
-                setCaptureText(e.target.value);
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = 'auto';
-                  textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  handleSaveAndClose();
-                }
-              }}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none text-sm resize-none min-h-[2.5rem] max-h-[12rem] overflow-y-auto"
-              placeholder={`${t('Title')}…`}
-              rows={1}
-            />
+      <article key={item.id} className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            {isEditing ? (
+              <input
+                type="text"
+                autoFocus
+                value={editingCaptureText}
+                onChange={event => setEditingCaptureText(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') saveCaptureTitle(item);
+                  if (event.key === 'Escape') setEditingCaptureId(null);
+                }}
+                aria-label={`${t('Edit title')}: ${item.text}`}
+                className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
+              />
+            ) : (
+              <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
+            )}
+            <label className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-400">
+              <span>{t('Created')}</span>
+              <input
+                type="date"
+                value={toDateInputValue(item.createdAt)}
+                max={getTodayString()}
+                onChange={event => {
+                  const createdAt = replaceLocalDate(item.createdAt, event.target.value);
+                  if (createdAt) dispatch({ type: 'UPDATE_CAPTURE_CREATED_AT', payload: { id: item.id, createdAt } });
+                }}
+                aria-label={t('Creation date for {title}', { title: item.text })}
+                className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+              />
+            </label>
           </div>
-
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setTaskType('today')} 
-              className={`flex-1 py-1.5 text-xs font-semibold rounded border ${
-                taskType === 'today' 
-                  ? 'bg-indigo-600 text-white border-indigo-600' 
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
-              }`}
-            >
-              {t('Today')}
-            </button>
-            <button 
-              onClick={() => setTaskType('week')} 
-              className={`flex-1 py-1.5 text-xs font-semibold rounded border ${
-                taskType === 'week' 
-                  ? 'bg-indigo-600 text-white border-indigo-600' 
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
-              }`}
-            >
-              {t('Week')}
-            </button>
-          </div>
-
-          {taskType === 'week' && (
-            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-2">
-              <button 
-                onClick={() => changeWeek(-1)} 
-                className="p-1 hover:bg-slate-100 rounded transition-colors"
-                disabled={selectedWeek === getWeekString()}
-              >
-                <ChevronLeft className={`w-3.5 h-3.5 ${selectedWeek === getWeekString() ? 'text-slate-300' : 'text-slate-600'}`} />
-              </button>
-              <div className="flex-1 text-center px-4">
-                <div className="font-mono font-medium text-slate-700 text-xs">
-                  {getWeekRange(selectedWeek, language)}
-                </div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  {weekDateRange.start} - {weekDateRange.end}
-                </div>
-              </div>
-              <button 
-                onClick={() => changeWeek(1)} 
-                className="p-1 hover:bg-slate-100 rounded transition-colors"
-              >
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-              </button>
-            </div>
-          )}
-
-          <button 
-            onClick={handleConvertToTask} 
-            className="w-full py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          <button
+            type="button"
+            onClick={() => isEditing ? saveCaptureTitle(item) : startEditingCapture(item)}
+            disabled={isEditing && !editingCaptureText.trim()}
+            className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+            title={isEditing ? t('Save title') : t('Edit title')}
+            aria-label={`${isEditing ? t('Save title') : t('Edit title')}: ${item.text}`}
           >
-            {t('Confirm Task')}
+            {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: 'COMPLETE_CAPTURE', payload: item.id });
+              setCompletedExpanded(true);
+            }}
+            className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-emerald-600"
+            title={t('Mark as realized')}
+            aria-label={t('Mark {title} as realized', { title: item.text })}
+          >
+            <Check className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteConfirm({ isOpen: true, captureId: item.id })}
+            className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-red-500"
+            title={t('Delete permanently')}
+            aria-label={t('Delete {title}', { title: item.text })}
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      </div>
+      </article>
     );
   };
 
@@ -366,7 +196,7 @@ export const InboxView: React.FC = () => {
             {completedExpanded && (
               <div className="divide-y divide-slate-100 border-t border-slate-100">
                 {completedCaptures.map(item => {
-                  const isEditing = editingCompletedId === item.id;
+                  const isEditing = editingCaptureId === item.id;
                   return (
                   <article key={item.id} className="px-3 py-3">
                     <div className="flex items-start gap-2">
@@ -375,11 +205,11 @@ export const InboxView: React.FC = () => {
                           <input
                             type="text"
                             autoFocus
-                            value={editingCompletedText}
-                            onChange={event => setEditingCompletedText(event.target.value)}
+                            value={editingCaptureText}
+                            onChange={event => setEditingCaptureText(event.target.value)}
                             onKeyDown={event => {
-                              if (event.key === 'Enter') saveCompletedTitle(item);
-                              if (event.key === 'Escape') setEditingCompletedId(null);
+                              if (event.key === 'Enter') saveCaptureTitle(item);
+                              if (event.key === 'Escape') setEditingCaptureId(null);
                             }}
                             aria-label={`${t('Edit title')}: ${item.text}`}
                             className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
@@ -434,8 +264,8 @@ export const InboxView: React.FC = () => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => isEditing ? saveCompletedTitle(item) : startEditingCompleted(item)}
-                        disabled={isEditing && !editingCompletedText.trim()}
+                        onClick={() => isEditing ? saveCaptureTitle(item) : startEditingCapture(item)}
+                        disabled={isEditing && !editingCaptureText.trim()}
                         className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
                         title={isEditing ? t('Save title') : t('Edit title')}
                         aria-label={`${isEditing ? t('Save title') : t('Edit title')}: ${item.text}`}
@@ -476,7 +306,7 @@ export const InboxView: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 space-y-3">
-            {newCaptures.map(c => <ProcessItem key={c.id} item={c} />)}
+            {newCaptures.map(renderActiveWish)}
           </div>
         )}
       </div>

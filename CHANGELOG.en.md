@@ -23,6 +23,8 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Month Plan keeps shift and week-note metadata beside the week number and date range in one compact row.
 - Event-calendar date numbers are pinned to the upper-left corner of their cells.
 - Events is now Calendar, the calendar appears above the event lists, and Month Plan / Weekly Plan are shortened to Month / Week.
+- Wish is now the first main-navigation item, followed by Month before Calendar.
+- Active wishes now use the same compact pencil editing as realized wishes; expanding a wish and converting it into a task have been removed.
 - Shift labels are shortened to `1. shift` / `2. shift` and «1. смена» / «2. смена».
 
 ### Fixed
