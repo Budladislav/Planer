@@ -1,10 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, NotebookPen, Pencil } from 'lucide-react';
 import { buildEventCalendarMonth, partitionEventCalendarWeeks } from '../../event-calendar';
 import { CalendarEvent } from '../../types';
 import { formatDateReadable, getTodayString, getWeekString } from '../../utils';
 import { Modal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
+import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
+import { useAppStore } from '../../store';
+import { isFirstToSecondTransitionDay } from '../../week-shifts';
+import { useI18n } from '../../i18n';
 
 interface EventsCalendarProps {
   events: CalendarEvent[];
@@ -13,7 +17,10 @@ interface EventsCalendarProps {
   onEditEvent: (event: CalendarEvent) => void;
 }
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAYS = {
+  en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  ru: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+};
 
 const shiftMonth = (month: string, delta: number): string => {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -27,8 +34,11 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   onMonthChange,
   onEditEvent,
 }) => {
+  const { state } = useAppStore();
+  const { language, locale, t } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingWeek, setEditingWeek] = useState<string | null>(null);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
   const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
   const today = getTodayString();
   const weeks = useMemo(() => buildEventCalendarMonth(month), [month]);
@@ -47,7 +57,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
     return grouped;
   }, [events]);
 
-  const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString('en-US', {
+  const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString(locale, {
     month: 'long',
     year: 'numeric',
   });
@@ -57,7 +67,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
     <div key={week} className="border-b border-slate-100 last:border-b-0">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50/80 px-2 py-1.5">
         <span className="flex-shrink-0 text-[10px] font-bold uppercase text-slate-400">
-          W{week.split('-W')[1]}
+          {language === 'ru' ? 'Н' : 'W'}{week.split('-W')[1]}
         </span>
         <WeekMetaBadges
           week={week}
@@ -69,21 +79,29 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
       <div className="grid grid-cols-7">
         {days.map(day => {
           const dayEvents = eventsByDate[day.date] ?? [];
+          const dayNotes = state.dayNotes[day.date] ?? [];
           const isToday = day.date === today;
+          const isTransitionDay = isFirstToSecondTransitionDay(state.workShiftSettings, day.date);
+          const highlightNotes = state.uiPreferences.calendarNoteHighlight && dayNotes.length > 0;
+          const background = !day.isInMonth
+            ? 'bg-slate-50/50 text-slate-300'
+            : highlightNotes && isTransitionDay
+              ? 'bg-gradient-to-br from-sky-50/80 to-emerald-50/70'
+              : highlightNotes
+                ? 'bg-sky-50/50'
+                : isTransitionDay
+                  ? 'bg-emerald-50/60'
+                  : 'bg-white';
           return (
             <button
               key={day.date}
               type="button"
               onClick={() => setSelectedDate(day.date)}
               aria-current={isToday ? 'date' : undefined}
-              className={`min-h-16 min-w-0 border-r border-slate-100 p-1 text-left align-top last:border-r-0 hover:bg-amber-50/50 sm:min-h-24 sm:p-1.5 ${
-                isToday
-                  ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-500'
-                  : day.isInMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'
-              }`}
-              title={`${isToday ? 'Today · ' : ''}${dayEvents.length ? `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : 'No events'}`}
+              className={`min-h-20 min-w-0 border-r border-slate-100 p-0.5 text-left align-top last:border-r-0 hover:brightness-[0.98] sm:min-h-28 sm:p-1 ${background}`}
+              title={`${isToday ? t('Today · ') : ''}${dayEvents.length ? t('{count} events', { count: dayEvents.length }) : t('No events')}${dayNotes.length ? ` · ${t('{count} notes', { count: dayNotes.length })}` : ''}`}
             >
-              <div className="flex items-center justify-between gap-0.5">
+              <div className="flex items-start justify-between gap-0.5">
                 <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold sm:text-xs ${
                   isToday
                     ? 'bg-indigo-600 text-white'
@@ -91,13 +109,25 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
                 }`}>
                   {day.dayOfMonth}
                 </span>
-                {dayEvents.length > 0 && (
-                  <span className="rounded-full bg-amber-100 px-1 text-[9px] font-bold text-amber-700 sm:hidden">
+                <span className="flex items-center gap-0.5">
+                  {dayNotes.length > 0 && (
+                    <NotebookPen className="h-2.5 w-2.5 text-sky-600 sm:hidden" aria-hidden="true" />
+                  )}
+                  {dayEvents.length > 0 && (
+                    <span className="rounded-full bg-amber-100 px-1 text-[9px] font-bold text-amber-700">
                     {dayEvents.length}
-                  </span>
-                )}
+                    </span>
+                  )}
+                </span>
               </div>
-              <div className="mt-1 space-y-0.5">
+              {dayNotes.length > 0 && (
+                <div className="mt-0.5 hidden min-w-0 items-center gap-1 rounded bg-sky-50 px-1.5 py-0.5 text-[9px] font-medium text-sky-800 sm:flex">
+                  <NotebookPen className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{dayNotes[0].text}</span>
+                  {dayNotes.length > 1 && <span className="flex-shrink-0">+{dayNotes.length - 1}</span>}
+                </div>
+              )}
+              <div className="mt-0.5 space-y-0.5">
                 {dayEvents.slice(0, 3).map(event => (
                   <div key={event.id} className="min-w-0 rounded-sm bg-amber-100 px-0.5 py-0.5 text-[8px] font-medium leading-tight text-amber-800 sm:px-1 sm:text-[9px]">
                     <span className="sm:hidden">{event.time}</span>
@@ -123,7 +153,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, -1))}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-            title="Previous month"
+            title={t('Previous month')}
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -135,14 +165,14 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, 1))}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-            title="Next month"
+            title={t('Next month')}
           >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
         <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
-          {WEEKDAYS.map(day => (
+          {WEEKDAYS[language].map(day => (
             <div key={day} className="py-1.5 text-center text-[10px] font-bold uppercase text-slate-400 sm:text-xs">
               {day}
             </div>
@@ -156,7 +186,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
             aria-expanded={pastWeeksExpanded}
             className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50/70 px-3 py-2 text-left text-xs font-semibold text-slate-500 hover:bg-slate-100"
           >
-            <span>Past weeks ({pastWeeks.length})</span>
+            <span>{t('Past weeks ({count})', { count: pastWeeks.length })}</span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${pastWeeksExpanded ? 'rotate-180' : ''}`}
               aria-hidden="true"
@@ -171,14 +201,22 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
       <Modal
         isOpen={selectedDate !== null}
         onClose={() => setSelectedDate(null)}
-        title={selectedDate ? formatDateReadable(selectedDate) : 'Day events'}
+        title={selectedDate ? formatDateReadable(selectedDate, language) : t('Day events')}
       >
-        {selectedEvents.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 px-3 py-8 text-center text-sm text-slate-400">
-            No events planned for this day.
-          </div>
-        ) : (
-          <div className="space-y-2">
+        <div className="space-y-4">
+          {selectedDate && (
+            <DayMetaBadges
+              date={selectedDate}
+              onEdit={() => setEditingDate(selectedDate)}
+              maxNotes={3}
+            />
+          )}
+          {selectedEvents.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-200 px-3 py-8 text-center text-sm text-slate-400">
+              {t('No events planned for this day.')}
+            </div>
+          ) : (
+            <div className="space-y-2">
             {selectedEvents.map(event => (
               <button
                 key={event.id}
@@ -194,11 +232,13 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
                 <Pencil className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
               </button>
             ))}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </Modal>
 
       <WeekNotesEditor week={editingWeek} onClose={() => setEditingWeek(null)} />
+      <DayNotesEditor date={editingDate} onClose={() => setEditingDate(null)} />
     </>
   );
 };

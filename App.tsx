@@ -9,6 +9,7 @@ import { EventsView } from './components/views/Events';
 import { DoneView } from './components/views/Done';
 import { SettingsView } from './components/views/Settings';
 import { ReportsView } from './components/views/Reports';
+import { GoalsView } from './components/views/Goals';
 import { ViewState } from './types';
 import { RewardsLabHost } from './features/rewards-lab/ui/RewardsLabHost';
 import { RewardsLabGateProvider } from './features/rewards-lab/ui/RewardsLabGateProvider';
@@ -30,6 +31,7 @@ const Main: React.FC = () => {
       case 'events': return <EventsView />;
       case 'done': return <DoneView />;
       case 'reports': return <ReportsView />;
+      case 'goals': return <GoalsView />;
       case 'settings': return <SettingsView />;
       default: return <TodayView />;
     }

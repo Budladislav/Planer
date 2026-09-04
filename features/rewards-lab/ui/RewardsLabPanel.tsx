@@ -36,6 +36,7 @@ import {
   getWalletBalance,
 } from '../domain';
 import { getRewardsLabRuntime } from '../runtime';
+import { useI18n } from '../../../i18n';
 
 type LabTab = 'rewards' | 'history' | 'rules';
 
@@ -64,10 +65,10 @@ const gradeStyles: Record<RewardGrade, { dot: string; badge: string }> = {
   mythic: { dot: 'bg-red-500', badge: 'border-red-200 bg-red-50 text-red-800' },
 };
 
-const formatDateTime = (value: string): string => {
+const formatDateTime = (value: string, locale: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
@@ -76,10 +77,9 @@ const formatDateTime = (value: string): string => {
   });
 };
 
-const formatCommonTasks = (cost: number): string => {
+const getCommonTaskEstimate = (cost: number): string => {
   const estimate = cost / averageCommonReward;
-  const rounded = Number.isInteger(estimate) ? estimate.toString() : estimate.toFixed(1);
-  return `≈ ${rounded} Common tasks`;
+  return Number.isInteger(estimate) ? estimate.toString() : estimate.toFixed(1);
 };
 
 const unrefundedSpendIds = (state: RewardsLabState): Set<string> => {
@@ -121,6 +121,7 @@ interface NoticeProps {
 }
 
 const Notice = ({ message, onDismiss }: NoticeProps) => {
+  const { t } = useI18n();
   if (!message) return null;
   return (
     <div
@@ -133,7 +134,7 @@ const Notice = ({ message, onDismiss }: NoticeProps) => {
         type="button"
         onClick={onDismiss}
         className="rounded p-0.5 text-indigo-600 hover:bg-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        aria-label="Dismiss message"
+        aria-label={t('Dismiss message')}
       >
         <X className="h-4 w-4" />
       </button>
@@ -147,18 +148,20 @@ interface BalanceCardProps {
 }
 
 const BalanceCard = ({ state, onRefund }: BalanceCardProps) => {
+  const { locale, t } = useI18n();
   const balance = getWalletBalance(state);
   const latestSpend = latestUnrefundedSpend(state);
+  const currencyName = state.currencyName === 'points' ? t('points') : state.currencyName;
 
   return (
     <section className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Available balance</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{t('Available balance')}</p>
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-3xl font-bold text-slate-900">
             <Coins className="h-6 w-6 text-indigo-500" aria-hidden="true" />
-            <span className="break-all">{balance.toLocaleString('en-US')}</span>
-            <span className="max-w-full break-all text-base font-medium text-slate-500">{state.currencyName}</span>
+            <span className="break-all">{balance.toLocaleString(locale)}</span>
+            <span className="max-w-full break-all text-base font-medium text-slate-500">{currencyName}</span>
           </p>
         </div>
         {latestSpend && (
@@ -166,16 +169,20 @@ const BalanceCard = ({ state, onRefund }: BalanceCardProps) => {
             type="button"
             onClick={() => onRefund(latestSpend)}
             className={secondaryButton}
-            aria-label={`Undo redemption of ${latestSpend.label}`}
+            aria-label={t('Undo redemption of {title}', { title: latestSpend.label })}
           >
             <Undo2 className="h-4 w-4" />
-            Undo last redemption
+            {t('Undo last redemption')}
           </button>
         )}
       </div>
       {latestSpend && (
         <p className="mt-3 text-xs text-slate-500">
-          Last redeemed: {latestSpend.label} · {Math.abs(latestSpend.amount)} {state.currencyName}
+          {t('Last redeemed: {title} · {amount} {currency}', {
+            title: latestSpend.label,
+            amount: Math.abs(latestSpend.amount),
+            currency: currencyName,
+          })}
         </p>
       )}
     </section>
@@ -189,6 +196,7 @@ interface RewardFormProps {
 }
 
 const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
+  const { t } = useI18n();
   const [title, setTitle] = useState(reward?.title ?? '');
   const [cost, setCost] = useState(reward?.cost.toString() ?? '');
   const [note, setNote] = useState(reward?.note ?? '');
@@ -200,11 +208,11 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim()) {
-      setError('Give the reward a title.');
+      setError(t('Give the reward a title.'));
       return;
     }
     if (!validCost) {
-      setError('Cost must be a whole number greater than zero.');
+      setError(t('Cost must be a whole number greater than zero.'));
       return;
     }
     const saved = onSubmit({
@@ -214,18 +222,18 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
       repeatable,
       active: reward?.active ?? true,
     });
-    if (!saved) setError('The reward could not be saved. Your planner data is unaffected.');
+    if (!saved) setError(t('The reward could not be saved. Your planner data is unaffected.'));
   };
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="font-semibold text-slate-900">{reward ? 'Edit reward' : 'New reward'}</h3>
+        <h3 className="font-semibold text-slate-900">{reward ? t('Edit reward') : t('New reward')}</h3>
         <button
           type="button"
           onClick={onCancel}
           className="rounded-lg p-1.5 text-slate-500 hover:bg-white hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          aria-label="Close reward form"
+          aria-label={t('Close reward form')}
         >
           <X className="h-4 w-4" />
         </button>
@@ -233,7 +241,7 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
 
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
         <label className="text-sm font-medium text-slate-700">
-          Title
+          {t('Title')}
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
@@ -244,7 +252,7 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
           />
         </label>
         <label className="text-sm font-medium text-slate-700">
-          Cost
+          {t('Cost')}
           <input
             value={cost}
             onChange={(event) => setCost(event.target.value)}
@@ -258,10 +266,10 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
         </label>
       </div>
       {validCost && (
-        <p className="mt-1 text-right text-xs text-slate-500">{formatCommonTasks(numericCost)}</p>
+        <p className="mt-1 text-right text-xs text-slate-500">{t('≈ {count} Common tasks', { count: getCommonTaskEstimate(numericCost) })}</p>
       )}
       <label className="mt-4 block text-sm font-medium text-slate-700">
-        Note <span className="font-normal text-slate-400">(optional)</span>
+        {t('Note')} <span className="font-normal text-slate-400">{t('(optional)')}</span>
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -277,18 +285,18 @@ const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
           className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
         />
         <span>
-          <span className="block font-medium">Repeatable reward</span>
+          <span className="block font-medium">{t('Repeatable reward')}</span>
           <span className="text-xs text-slate-500">
-            {repeatable ? 'Can be redeemed whenever the balance allows.' : 'Can be redeemed once unless that redemption is undone.'}
+            {repeatable ? t('Can be redeemed whenever the balance allows.') : t('Can be redeemed once unless that redemption is undone.')}
           </span>
         </span>
       </label>
       {error && <p className="mt-3 text-sm text-red-700" role="alert">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className={secondaryButton}>Cancel</button>
+        <button type="button" onClick={onCancel} className={secondaryButton}>{t('Cancel')}</button>
         <button type="submit" className={primaryButton}>
           <Save className="h-4 w-4" />
-          {reward ? 'Save changes' : 'Add reward'}
+          {reward ? t('Save changes') : t('Add reward')}
         </button>
       </div>
     </form>
@@ -304,9 +312,11 @@ interface RewardCardProps {
 }
 
 const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: RewardCardProps) => {
+  const { t } = useI18n();
   const balance = getWalletBalance(state);
   const used = isOneTimeRewardUsed(reward, state);
   const insufficient = balance < reward.cost;
+  const currencyName = state.currencyName === 'points' ? t('points') : state.currencyName;
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -315,15 +325,15 @@ const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: RewardCardPr
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="break-words font-semibold text-slate-900">{reward.title}</h3>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-              {reward.repeatable ? 'Repeatable' : 'One-time'}
+              {reward.repeatable ? t('Repeatable') : t('One-time')}
             </span>
           </div>
           {reward.note && <p className="mt-1 break-words text-sm text-slate-600">{reward.note}</p>}
-          <p className="mt-2 text-xs text-slate-500">{formatCommonTasks(reward.cost)}</p>
+          <p className="mt-2 text-xs text-slate-500">{t('≈ {count} Common tasks', { count: getCommonTaskEstimate(reward.cost) })}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-xl font-bold text-indigo-700">{reward.cost}</p>
-          <p className="max-w-24 truncate text-xs text-slate-500">{state.currencyName}</p>
+          <p className="max-w-24 truncate text-xs text-slate-500">{currencyName}</p>
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
@@ -332,7 +342,7 @@ const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: RewardCardPr
             type="button"
             onClick={() => onEdit(reward)}
             className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-            aria-label={`Edit ${reward.title}`}
+            aria-label={t('Edit {title}', { title: reward.title })}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -340,7 +350,7 @@ const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: RewardCardPr
             type="button"
             onClick={() => onArchive(reward)}
             className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-            aria-label={`Archive ${reward.title}`}
+            aria-label={t('Archive {title}', { title: reward.title })}
           >
             <Archive className="h-4 w-4" />
           </button>
@@ -350,10 +360,10 @@ const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: RewardCardPr
           onClick={() => onRedeem(reward)}
           className={primaryButton}
           disabled={insufficient || used}
-          title={insufficient ? `Need ${reward.cost - balance} more ${state.currencyName}` : undefined}
+          title={insufficient ? t('Need {count} more {currency}', { count: reward.cost - balance, currency: currencyName }) : undefined}
         >
           <Gift className="h-4 w-4" />
-          {used ? 'Redeemed' : insufficient ? `Need ${reward.cost - balance} more` : 'Redeem'}
+          {used ? t('Redeemed') : insufficient ? t('Need {count} more', { count: reward.cost - balance }) : t('Redeem')}
         </button>
       </div>
     </article>
@@ -367,6 +377,7 @@ interface RewardsTabProps {
 }
 
 const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
+  const { t } = useI18n();
   const runtime = useMemo(() => getRewardsLabRuntime(), []);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RewardDefinition | null>(null);
@@ -391,7 +402,7 @@ const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
     if (!saved) return false;
     setFormOpen(false);
     setEditing(null);
-    onNotice(editing ? 'Reward updated.' : 'Reward added to your catalog.');
+    onNotice(editing ? t('Reward updated.') : t('Reward added to your catalog.'));
     return true;
   };
 
@@ -412,12 +423,12 @@ const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
       ) : (
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-slate-900">Your rewards</h2>
-            <p className="text-xs text-slate-500">Choose real-life treats worth saving for.</p>
+            <h2 className="font-semibold text-slate-900">{t('Your rewards')}</h2>
+            <p className="text-xs text-slate-500">{t('Choose real-life treats worth saving for.')}</p>
           </div>
           <button type="button" onClick={openNew} className={secondaryButton}>
             <Plus className="h-4 w-4" />
-            Add reward
+            {t('Add reward')}
           </button>
         </div>
       )}
@@ -425,11 +436,11 @@ const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
       {activeRewards.length === 0 && !formOpen ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
           <Gift className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
-          <p className="mt-3 font-medium text-slate-700">No rewards yet</p>
-          <p className="mt-1 text-sm text-slate-500">Add something small that feels genuinely rewarding.</p>
+          <p className="mt-3 font-medium text-slate-700">{t('No rewards yet')}</p>
+          <p className="mt-1 text-sm text-slate-500">{t('Add something small that feels genuinely rewarding.')}</p>
           <button type="button" onClick={openNew} className={`${primaryButton} mt-4`}>
             <Plus className="h-4 w-4" />
-            Create first reward
+            {t('Create first reward')}
           </button>
         </div>
       ) : (
@@ -455,7 +466,7 @@ const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
             className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-expanded={showArchived}
           >
-            Archived rewards ({archivedRewards.length})
+            {t('Archived rewards ({count})', { count: archivedRewards.length })}
             {showArchived ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
           {showArchived && (
@@ -470,12 +481,12 @@ const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
                     type="button"
                     onClick={() => {
                       const restored = runtime.updateReward(reward.id, { ...reward, active: true });
-                      if (restored) onNotice(`${reward.title} restored.`);
+                      if (restored) onNotice(t('{title} restored.', { title: reward.title }));
                     }}
                     className={secondaryButton}
                   >
                     <RotateCcw className="h-4 w-4" />
-                    Restore
+                    {t('Restore')}
                   </button>
                 </div>
               ))}
@@ -502,6 +513,7 @@ interface HistoryTabProps {
 }
 
 const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
+  const { locale, t } = useI18n();
   const spendIds = unrefundedSpendIds(state);
   const newestFirst = state.ledger
     .map((transaction, index) => ({ transaction, index }))
@@ -515,14 +527,14 @@ const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
         <History className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
-        <p className="mt-3 font-medium text-slate-700">No wallet activity yet</p>
-        <p className="mt-1 text-sm text-slate-500">Complete a task to make the first fair-bag draw.</p>
+        <p className="mt-3 font-medium text-slate-700">{t('No wallet activity yet')}</p>
+        <p className="mt-1 text-sm text-slate-500">{t('Complete a task to make the first fair-bag draw.')}</p>
       </div>
     );
   }
 
   return (
-    <section aria-label="Wallet history">
+    <section aria-label={t('Wallet history')}>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {newestFirst.map(({ transaction }) => {
           const positive = transaction.amount > 0;
@@ -535,7 +547,7 @@ const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm font-medium text-slate-800">{transaction.label}</p>
                 <p className="text-xs text-slate-500">
-                  {transactionKindLabel[transaction.kind]} · {formatDateTime(transaction.occurredAt)}
+                  {t(transactionKindLabel[transaction.kind])} · {formatDateTime(transaction.occurredAt, locale)}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -549,7 +561,7 @@ const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                   type="button"
                   onClick={() => onConfirm({ kind: 'refund', transaction })}
                   className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                  aria-label={`Undo redemption of ${transaction.label}`}
+                  aria-label={t('Undo redemption of {title}', { title: transaction.label })}
                 >
                   <Undo2 className="h-4 w-4" />
                 </button>
@@ -567,12 +579,13 @@ interface GradeRuleProps {
 }
 
 const GradeRule = ({ grade }: GradeRuleProps) => {
+  const { t } = useI18n();
   const definition = REWARD_GRADES[grade];
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
       <span className="flex items-center gap-2 font-medium text-slate-700">
         <span className={`h-2.5 w-2.5 rotate-45 rounded-[2px] ${gradeStyles[grade].dot}`} aria-hidden="true" />
-        {definition.label}
+        {t(definition.label)}
       </span>
       <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${gradeStyles[grade].badge}`}>
         ×{definition.multiplier}
@@ -588,6 +601,7 @@ interface RulesTabProps {
 }
 
 const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
+  const { locale, t } = useI18n();
   const runtime = useMemo(() => getRewardsLabRuntime(), []);
   const [currency, setCurrency] = useState(state.currencyName);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -614,28 +628,28 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
   const saveCurrency = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!currency.trim()) return;
-    if (runtime.updateCurrency(currency)) onNotice('Currency name updated.');
+    if (runtime.updateCurrency(currency)) onNotice(t('Currency name updated.'));
   };
 
   const submitAdjustment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amount = Number(adjustment);
     if (!Number.isInteger(amount) || amount === 0) {
-      setAdjustmentError('Enter a non-zero whole number. Use a minus sign to subtract.');
+      setAdjustmentError(t('Enter a non-zero whole number. Use a minus sign to subtract.'));
       return;
     }
     if (!adjustmentReason.trim()) {
-      setAdjustmentError('Add a short reason so the history stays understandable.');
+      setAdjustmentError(t('Add a short reason so the history stays understandable.'));
       return;
     }
     if (!runtime.adjustBalance(amount, adjustmentReason)) {
-      setAdjustmentError('The adjustment could not be saved.');
+      setAdjustmentError(t('The adjustment could not be saved.'));
       return;
     }
     setAdjustment('');
     setAdjustmentReason('');
     setAdjustmentError(null);
-    onNotice('Balance adjustment recorded in history.');
+    onNotice(t('Balance adjustment recorded in history.'));
   };
 
   return (
@@ -644,9 +658,9 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         <div className="flex gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
           <div>
-            <h2 className="font-semibold text-amber-950">An isolated, device-local experiment</h2>
+            <h2 className="font-semibold text-amber-950">{t('An isolated, device-local experiment')}</h2>
             <p className="mt-1 text-sm leading-relaxed text-amber-900/80">
-              Rewards Lab is stored separately from planner tasks. It is not included in planner backups or sync, and disabling it never changes your task data.
+              {t('Rewards Lab is stored separately from planner tasks. It is not included in planner backups or sync, and disabling it never changes your task data.')}
             </p>
           </div>
         </div>
@@ -656,9 +670,9 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         <div className="flex items-start gap-3">
           <Dice5 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <h2 className="font-semibold text-slate-900">Fair-bag rewards</h2>
+            <h2 className="font-semibold text-slate-900">{t('Fair-bag rewards')}</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
-              Every cycle contains three 2s, three 3s, and three 4s in a shuffled bag. Each completed task draws one value, so short-term surprise stays fair over every nine draws. There are no zeroes, penalties, or weekly caps.
+              {t('Every cycle contains three 2s, three 3s, and three 4s in a shuffled bag. Each completed task draws one value, so short-term surprise stays fair over every nine draws. There are no zeroes, penalties, or weekly caps.')}
             </p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {(Object.keys(REWARD_GRADES) as RewardGrade[]).map((grade) => (
@@ -666,55 +680,55 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
               ))}
             </ul>
             <p className="mt-3 text-xs text-slate-500">
-              Undoing a task reverses its reward. Completing it again restores the original result instead of rerolling.
+              {t('Undoing a task reverses its reward. Completing it again restores the original result instead of rerolling.')}
             </p>
           </div>
         </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="font-semibold text-slate-900">Pilot snapshot</h2>
+        <h2 className="font-semibold text-slate-900">{t('Pilot snapshot')}</h2>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Claims</p>
+            <p className="text-xs text-slate-500">{t('Claims')}</p>
             <p className="mt-1 text-xl font-semibold text-slate-800">{Object.keys(state.claims).length}</p>
           </div>
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Earned</p>
+            <p className="text-xs text-slate-500">{t('Earned')}</p>
             <p className="mt-1 text-xl font-semibold text-slate-800">{earned}</p>
           </div>
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Spent now</p>
+            <p className="text-xs text-slate-500">{t('Spent now')}</p>
             <p className="mt-1 text-xl font-semibold text-slate-800">{spentNet}</p>
           </div>
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Redemptions</p>
+            <p className="text-xs text-slate-500">{t('Redemptions')}</p>
             <p className="mt-1 text-xl font-semibold text-slate-800">{state.metrics.redemptionCount}</p>
           </div>
         </div>
         {Object.keys(state.claims).length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2" aria-label="Completed task grade distribution">
+          <div className="mt-3 flex flex-wrap gap-2" aria-label={t('Completed task grade distribution')}>
             {(Object.keys(REWARD_GRADES) as RewardGrade[]).map((grade) => (
               <span key={grade} className={`rounded-full border px-2 py-1 text-xs ${gradeStyles[grade].badge}`}>
-                {REWARD_GRADES[grade].label}: {gradeCounts[grade]}
+                {t(REWARD_GRADES[grade].label)}: {gradeCounts[grade]}
               </span>
             ))}
           </div>
         )}
         <p className="mt-3 text-xs text-slate-500">
-          Lab opened {state.metrics.labOpenCount} times
-          {state.metrics.lastOpenedAt ? ` · last ${formatDateTime(state.metrics.lastOpenedAt)}` : ''}
+          {t('Lab opened {count} times', { count: state.metrics.labOpenCount })}
+          {state.metrics.lastOpenedAt ? ` · ${t('last {date}', { date: formatDateTime(state.metrics.lastOpenedAt, locale) })}` : ''}
         </p>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex items-center gap-2">
           <Settings2 className="h-5 w-5 text-slate-500" aria-hidden="true" />
-          <h2 className="font-semibold text-slate-900">Preferences</h2>
+          <h2 className="font-semibold text-slate-900">{t('Preferences')}</h2>
         </div>
         <form onSubmit={saveCurrency} className="mt-4 flex items-end gap-2">
           <label className="min-w-0 flex-1 text-sm font-medium text-slate-700">
-            Currency name
+            {t('Currency name')}
             <input
               value={currency}
               onChange={(event) => setCurrency(event.target.value)}
@@ -724,13 +738,13 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
             />
           </label>
           <button type="submit" className={secondaryButton} disabled={!currency.trim() || currency.trim() === state.currencyName}>
-            Save
+            {t('Save')}
           </button>
         </form>
         <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-3">
           <span>
-            <span className="block text-sm font-medium text-slate-800">Reward animation</span>
-            <span className="block text-xs text-slate-500">A brief result reveal after task completion.</span>
+            <span className="block text-sm font-medium text-slate-800">{t('Reward animation')}</span>
+            <span className="block text-xs text-slate-500">{t('A brief result reveal after task completion.')}</span>
           </span>
           <input
             type="checkbox"
@@ -749,19 +763,19 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
           aria-expanded={advancedOpen}
         >
           <span>
-            <span className="block font-semibold text-slate-900">Advanced</span>
-            <span className="block text-xs text-slate-500">Balance correction and experiment controls</span>
+            <span className="block font-semibold text-slate-900">{t('Advanced')}</span>
+            <span className="block text-xs text-slate-500">{t('Balance correction and experiment controls')}</span>
           </span>
           {advancedOpen ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
         </button>
         {advancedOpen && (
           <div className="space-y-5 border-t border-slate-200 p-4">
             <form onSubmit={submitAdjustment}>
-              <h3 className="text-sm font-semibold text-slate-800">Manual balance adjustment</h3>
-              <p className="mt-1 text-xs text-slate-500">Every correction is recorded in wallet history.</p>
+              <h3 className="text-sm font-semibold text-slate-800">{t('Manual balance adjustment')}</h3>
+              <p className="mt-1 text-xs text-slate-500">{t('Every correction is recorded in wallet history.')}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-end">
                 <label className="text-sm font-medium text-slate-700">
-                  Amount
+                  {t('Amount')}
                   <input
                     value={adjustment}
                     onChange={(event) => setAdjustment(event.target.value)}
@@ -773,33 +787,33 @@ const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
                   />
                 </label>
                 <label className="text-sm font-medium text-slate-700">
-                  Reason
+                  {t('Reason')}
                   <input
                     value={adjustmentReason}
                     onChange={(event) => setAdjustmentReason(event.target.value)}
                     className={`${fieldClass} mt-1`}
                     maxLength={100}
-                    placeholder="Why is this needed?"
+                    placeholder={t('Why is this needed?')}
                   />
                 </label>
-                <button type="submit" className={secondaryButton}>Record</button>
+                <button type="submit" className={secondaryButton}>{t('Record')}</button>
               </div>
               {adjustmentError && <p className="mt-2 text-sm text-red-700" role="alert">{adjustmentError}</p>}
             </form>
 
             <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">Experiment controls</h3>
+              <h3 className="text-sm font-semibold text-slate-800">{t('Experiment controls')}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onConfirm({ kind: 'disable' })} className={secondaryButton}>
-                  Disable, keep data
+                  {t('Disable, keep data')}
                 </button>
                 <button type="button" onClick={() => onConfirm({ kind: 'reset' })} className={dangerButton}>
                   <RotateCcw className="h-4 w-4" />
-                  Reset experiment
+                  {t('Reset experiment')}
                 </button>
                 <button type="button" onClick={() => onConfirm({ kind: 'erase' })} className={dangerButton}>
                   <Trash2 className="h-4 w-4" />
-                  Disable & erase
+                  {t('Disable & erase')}
                 </button>
               </div>
             </div>
@@ -818,36 +832,38 @@ interface ConfirmationDialogProps {
 }
 
 const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onConfirm }: ConfirmationDialogProps) => {
+  const { t } = useI18n();
   const dialogRef = useRef<HTMLDivElement>(null);
   const destructive = confirmation.kind === 'reset' || confirmation.kind === 'erase';
+  const displayCurrency = currencyName === 'points' ? t('points') : currencyName;
   let title = '';
   let message = '';
-  let confirmLabel = 'Confirm';
+  let confirmLabel = t('Confirm');
 
   if (confirmation.kind === 'redeem') {
-    title = `Redeem ${confirmation.reward.title}?`;
-    message = `${confirmation.reward.cost} ${currencyName} will be deducted from your balance.`;
-    confirmLabel = 'Redeem';
+    title = t('Redeem {title}?', { title: confirmation.reward.title });
+    message = t('{amount} {currency} will be deducted from your balance.', { amount: confirmation.reward.cost, currency: displayCurrency });
+    confirmLabel = t('Redeem');
   } else if (confirmation.kind === 'refund') {
-    title = 'Undo this redemption?';
-    message = `${Math.abs(confirmation.transaction.amount)} ${currencyName} will be returned to your balance.`;
-    confirmLabel = 'Undo redemption';
+    title = t('Undo this redemption?');
+    message = t('{amount} {currency} will be returned to your balance.', { amount: Math.abs(confirmation.transaction.amount), currency: displayCurrency });
+    confirmLabel = t('Undo redemption');
   } else if (confirmation.kind === 'archive') {
-    title = `Archive ${confirmation.reward.title}?`;
-    message = 'It will leave the active catalog, but its wallet history will remain. You can restore it later.';
-    confirmLabel = 'Archive';
+    title = t('Archive {title}?', { title: confirmation.reward.title });
+    message = t('It will leave the active catalog, but its wallet history will remain. You can restore it later.');
+    confirmLabel = t('Archive');
   } else if (confirmation.kind === 'disable') {
-    title = 'Disable Rewards Lab?';
-    message = 'The experiment will disappear from the planner, but all grades, rewards, and wallet history will stay on this device.';
-    confirmLabel = 'Disable, keep data';
+    title = t('Disable Rewards Lab?');
+    message = t('The experiment will disappear from the planner, but all grades, rewards, and wallet history will stay on this device.');
+    confirmLabel = t('Disable, keep data');
   } else if (confirmation.kind === 'reset') {
-    title = 'Reset the experiment?';
-    message = 'This permanently clears task grades, wallet history, claims, rewards, and settings. Rewards Lab will stay enabled. Planner tasks are not affected.';
-    confirmLabel = 'Reset Rewards Lab';
+    title = t('Reset the experiment?');
+    message = t('This permanently clears task grades, wallet history, claims, rewards, and settings. Rewards Lab will stay enabled. Planner tasks are not affected.');
+    confirmLabel = t('Reset Rewards Lab');
   } else {
-    title = 'Disable and erase Rewards Lab?';
-    message = 'This permanently removes all experimental data from this device and turns the feature off. Planner tasks are not affected.';
-    confirmLabel = 'Disable & erase';
+    title = t('Disable and erase Rewards Lab?');
+    message = t('This permanently removes all experimental data from this device and turns the feature off. Planner tasks are not affected.');
+    confirmLabel = t('Disable & erase');
   }
 
   const trapDialogFocus = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -888,7 +904,7 @@ const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onConfirm }:
         </div>
         <p id="rewards-confirm-description" className="px-4 py-4 text-sm leading-relaxed text-slate-700">{message}</p>
         <div className="flex justify-end gap-2 bg-slate-50 px-4 py-3">
-          <button type="button" onClick={onCancel} className={secondaryButton} autoFocus>Cancel</button>
+          <button type="button" onClick={onCancel} className={secondaryButton} autoFocus>{t('Cancel')}</button>
           <button type="button" onClick={onConfirm} className={destructive ? `${buttonBase} bg-red-600 text-white hover:bg-red-700` : primaryButton}>
             {confirmLabel}
           </button>
@@ -905,6 +921,7 @@ const tabs: Array<{ id: LabTab; label: string; icon: typeof Gift }> = [
 ];
 
 const RewardsLabPanel = () => {
+  const { t } = useI18n();
   const runtime = useMemo(() => getRewardsLabRuntime(), []);
   const subscribe = useMemo(() => (listener: () => void) => runtime.subscribe(listener), [runtime]);
   const getSnapshot = useMemo(() => () => runtime.getSnapshot(), [runtime]);
@@ -980,21 +997,21 @@ const RewardsLabPanel = () => {
     if (!confirmation) return;
     if (confirmation.kind === 'redeem') {
       const outcome = runtime.redeem(confirmation.reward.id);
-      if (outcome === 'redeemed') setNotice(`${confirmation.reward.title} redeemed.`);
-      else if (outcome === 'insufficient-balance') setNotice('The balance is no longer sufficient for that reward.');
-      else if (outcome === 'already-redeemed') setNotice('That one-time reward was already redeemed.');
-      else setNotice('The reward could not be redeemed.');
+      if (outcome === 'redeemed') setNotice(t('{title} redeemed.', { title: confirmation.reward.title }));
+      else if (outcome === 'insufficient-balance') setNotice(t('The balance is no longer sufficient for that reward.'));
+      else if (outcome === 'already-redeemed') setNotice(t('That one-time reward was already redeemed.'));
+      else setNotice(t('The reward could not be redeemed.'));
     } else if (confirmation.kind === 'refund') {
       const outcome = runtime.refund(confirmation.transaction.id);
-      setNotice(outcome === 'refunded' ? 'Redemption undone and balance restored.' : 'That redemption was already handled.');
+      setNotice(outcome === 'refunded' ? t('Redemption undone and balance restored.') : t('That redemption was already handled.'));
     } else if (confirmation.kind === 'archive') {
-      if (runtime.archiveReward(confirmation.reward.id)) setNotice(`${confirmation.reward.title} archived.`);
+      if (runtime.archiveReward(confirmation.reward.id)) setNotice(t('{title} archived.', { title: confirmation.reward.title }));
     } else if (confirmation.kind === 'disable') {
       runtime.disableKeepData();
     } else if (confirmation.kind === 'reset') {
       if (runtime.resetDataKeepingEnabled()) {
         setActiveTab('rewards');
-        setNotice('Rewards Lab reset. Planner tasks were not changed.');
+        setNotice(t('Rewards Lab reset. Planner tasks were not changed.'));
       }
     } else {
       runtime.disableAndErase();
@@ -1024,13 +1041,13 @@ const RewardsLabPanel = () => {
                   <Dice5 className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <h1 id="rewards-lab-title" className="truncate text-lg font-bold text-slate-900">Rewards Lab</h1>
-                  <p className="text-xs text-slate-500">Optional gamification experiment</p>
+                  <h1 id="rewards-lab-title" className="truncate text-lg font-bold text-slate-900">{t('Rewards Lab')}</h1>
+                  <p className="text-xs text-slate-500">{t('Optional gamification experiment')}</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden max-w-48 truncate rounded-full bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-800 sm:block" aria-label={`Balance: ${balance} ${state.currencyName}`}>
+              <div className="hidden max-w-48 truncate rounded-full bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-800 sm:block" aria-label={t('Balance: {balance} {currency}', { balance, currency: state.currencyName === 'points' ? t('points') : state.currencyName })}>
                 {balance} {state.currencyName}
               </div>
               <button
@@ -1038,14 +1055,14 @@ const RewardsLabPanel = () => {
                 type="button"
                 onClick={() => runtime.closeLab()}
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                aria-label="Close Rewards Lab"
+                aria-label={t('Close Rewards Lab')}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-1" role="tablist" aria-label="Rewards Lab sections">
+          <div className="mt-4 grid grid-cols-3 gap-1" role="tablist" aria-label={t('Rewards Lab sections')}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
@@ -1061,7 +1078,7 @@ const RewardsLabPanel = () => {
                   className={`flex min-h-11 items-center justify-center gap-2 rounded-t-lg border-b-2 px-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${selected ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700' : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
-                  {tab.label}
+                  {t(tab.label)}
                 </button>
               );
             })}
@@ -1071,7 +1088,7 @@ const RewardsLabPanel = () => {
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           {snapshot.lastError && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
-              Rewards Lab recovered from a local storage problem. Your planner continued normally.
+              {t('Rewards Lab recovered from a local storage problem. Your planner continued normally.')}
             </div>
           )}
           <Notice message={notice} onDismiss={() => setNotice(null)} />

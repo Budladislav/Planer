@@ -1,6 +1,7 @@
 import React from 'react';
 import { getTaskGrade, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
+import { useI18n } from '../../../i18n';
 
 const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
   common: { dot: 'bg-slate-300', selected: 'ring-slate-500' },
@@ -13,6 +14,7 @@ const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
 
 export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const { t } = useI18n();
   const { snapshot } = useRewardsLab();
   if (!snapshot.enabled || !snapshot.state) return null;
   const grade = snapshot.state.claims[taskId]?.grade ?? getTaskGrade(snapshot.state, taskId);
@@ -23,13 +25,14 @@ export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }
     <span
       className={`h-2.5 w-2.5 flex-shrink-0 rotate-45 rounded-[2px] ${GRADE_STYLES[grade].dot}`}
       role="img"
-      aria-label={`${meta.label} reward grade, multiplier ${meta.multiplier}`}
-      title={`${meta.label} · ×${meta.multiplier}`}
+      aria-label={t('{grade} reward grade, multiplier {multiplier}', { grade: t(meta.label), multiplier: meta.multiplier })}
+      title={`${t(meta.label)} · ×${meta.multiplier}`}
     />
   );
 };
 
 export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean }> = ({ taskId, compact = false }) => {
+  const { t } = useI18n();
   const { runtime, snapshot } = useRewardsLab();
   if (!snapshot.enabled || !snapshot.state) return null;
 
@@ -43,8 +46,8 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
       onClick={event => event.stopPropagation()}
       onPointerDown={event => event.stopPropagation()}
     >
-      <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Grade</span>
-      <div className="flex items-center gap-1" role="group" aria-label="Task reward grade">
+      <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('Grade')}</span>
+      <div className="flex items-center gap-1" role="group" aria-label={t('Task reward grade')}>
         {GRADES.map(option => {
           const meta = REWARD_GRADES[option];
           const selected = option === grade;
@@ -60,9 +63,9 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
               className={`flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70 ${
                 selected ? `ring-2 ring-offset-1 ${GRADE_STYLES[option].selected}` : ''
               }`}
-              aria-label={`${meta.label}, reward multiplier ${meta.multiplier}`}
+              aria-label={t('{grade}, reward multiplier {multiplier}', { grade: t(meta.label), multiplier: meta.multiplier })}
               aria-pressed={selected}
-              title={`${meta.label} · ×${meta.multiplier}${claim ? ' · locked after first completion' : ''}`}
+              title={`${t(meta.label)} · ×${meta.multiplier}${claim ? ` · ${t('locked after first completion')}` : ''}`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${GRADE_STYLES[option].dot}`} />
             </button>
@@ -70,7 +73,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
         })}
       </div>
       <span className="min-w-0 flex-1 truncate text-right text-[11px] font-medium text-slate-600">
-        {selectedMeta.label} ×{selectedMeta.multiplier}{claim ? ' · locked' : ''}
+        {t(selectedMeta.label)} ×{selectedMeta.multiplier}{claim ? ` · ${t('locked')}` : ''}
       </span>
     </div>
   );

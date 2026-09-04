@@ -7,6 +7,7 @@ import { CalendarEvent } from '../../types';
 import { formatDateShort, formatEventTitle, generateId, getTodayString, getWeekString } from '../../utils';
 import { EventsCalendar } from '../events/EventsCalendar';
 import { ConfirmModal, Modal } from '../Modal';
+import { useI18n } from '../../i18n';
 
 interface EventItemProps {
   event: CalendarEvent;
@@ -15,6 +16,7 @@ interface EventItemProps {
 }
 
 const EventItem: React.FC<EventItemProps> = ({ event, onStartEdit, onDelete }) => {
+  const { t } = useI18n();
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -43,14 +45,14 @@ const EventItem: React.FC<EventItemProps> = ({ event, onStartEdit, onDelete }) =
           onClick={() => onDelete(event.id)}
           className="rounded bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
         >
-          Delete
+          {t('Delete')}
         </button>
         <button
           type="button"
           onClick={() => onStartEdit(event)}
           className="rounded bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200"
         >
-          Edit
+          {t('Edit')}
         </button>
       </div>
     </div>
@@ -73,7 +75,9 @@ const CollapsibleEventSection: React.FC<CollapsibleEventSectionProps> = ({
   onToggle,
   onEdit,
   onDelete,
-}) => (
+}) => {
+  const { t } = useI18n();
+  return (
   <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
     <button
       type="button"
@@ -87,17 +91,19 @@ const CollapsibleEventSection: React.FC<CollapsibleEventSectionProps> = ({
     {expanded && (
       <div className="space-y-1 border-t border-slate-100 px-2 py-2">
         {events.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm italic text-slate-400">No events in this section.</p>
+          <p className="px-2 py-4 text-center text-sm italic text-slate-400">{t('No events in this section.')}</p>
         ) : events.map(event => (
           <EventItem key={event.id} event={event} onStartEdit={onEdit} onDelete={onDelete} />
         ))}
       </div>
     )}
   </section>
-);
+  );
+};
 
 export const EventsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const { t } = useI18n();
   const today = getTodayString();
   const [calendarMonth, setCalendarMonth] = useState(today.slice(0, 7));
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; eventId: string | null }>({
@@ -186,19 +192,19 @@ export const EventsView: React.FC = () => {
     <>
       <div className="mx-auto max-w-3xl">
         <div className="hidden text-center lg:mb-3 lg:block">
-          <h2 className="text-3xl font-bold text-slate-900">Events</h2>
-          <p className="text-slate-500">Events create a linked task on the corresponding day</p>
+          <h2 className="text-3xl font-bold text-slate-900">{t('Events')}</h2>
+          <p className="text-slate-500">{t('Events create a linked task on the corresponding day')}</p>
         </div>
 
         <div className="space-y-3 pb-48 lg:pb-6">
           <section>
             <div className="mb-1.5 flex items-center justify-between pl-1 pr-12 lg:pr-1">
-              <h3 className="text-sm font-semibold text-slate-600">Current and next month</h3>
+              <h3 className="text-sm font-semibold text-slate-600">{t('Current and next month')}</h3>
               <span className="text-xs text-slate-400">{nearEvents.length}</span>
             </div>
             {nearEvents.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-6 text-center text-sm italic text-slate-400">
-                No upcoming events in the current or next month.
+                {t('No upcoming events in the current or next month.')}
               </div>
             ) : (
               <div className="space-y-1">
@@ -210,7 +216,7 @@ export const EventsView: React.FC = () => {
           </section>
 
           <CollapsibleEventSection
-            title="Distant events"
+            title={t('Distant events')}
             events={distantEvents}
             expanded={state.uiPreferences.eventsDistantExpanded}
             onToggle={() => updatePreference({ eventsDistantExpanded: !state.uiPreferences.eventsDistantExpanded })}
@@ -226,7 +232,7 @@ export const EventsView: React.FC = () => {
           />
 
           <CollapsibleEventSection
-            title="Past events"
+            title={t('Past events')}
             events={pastEvents}
             expanded={state.uiPreferences.eventsPastExpanded}
             onToggle={() => updatePreference({ eventsPastExpanded: !state.uiPreferences.eventsPastExpanded })}
@@ -242,8 +248,8 @@ export const EventsView: React.FC = () => {
               <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div className="flex items-center gap-3">
-              <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder="Event title" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-              <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title="Add event">
+              <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title={t('Add event')}>
                 <Plus className="h-6 w-6" />
               </button>
             </div>
@@ -256,15 +262,15 @@ export const EventsView: React.FC = () => {
             <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
           </div>
           <div className="flex items-center gap-3">
-            <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder="Event title" className="min-w-0 flex-1 rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title="Add event">
+            <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="min-w-0 flex-1 rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title={t('Add event')}>
               <Plus className="h-6 w-6" />
             </button>
           </div>
         </form>
       </div>
 
-      <Modal isOpen={editingId !== null} onClose={handleCancelEdit} title="Edit event" hideFooter>
+      <Modal isOpen={editingId !== null} onClose={handleCancelEdit} title={t('Edit event')} hideFooter>
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <label className="block text-xs font-bold uppercase text-slate-500">
             Title
@@ -285,17 +291,17 @@ export const EventsView: React.FC = () => {
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="text-xs font-bold uppercase text-slate-500">
-              Date
+              {t('Date')}
               <input type="date" required value={editDate} onChange={event => setEditDate(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case outline-none focus:border-indigo-500" />
             </label>
             <label className="text-xs font-bold uppercase text-slate-500">
-              Time
+              {t('Time')}
               <input type="time" required value={editTime} onChange={event => setEditTime(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case outline-none focus:border-indigo-500" />
             </label>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={handleCancelEdit} className="rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">Cancel</button>
-            <button type="submit" className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Save</button>
+            <button type="button" onClick={handleCancelEdit} className="rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">{t('Cancel')}</button>
+            <button type="submit" className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t('Save')}</button>
           </div>
         </form>
       </Modal>
@@ -311,10 +317,10 @@ export const EventsView: React.FC = () => {
           }
           setDeleteConfirm({ isOpen: false, eventId: null });
         }}
-        title="Delete Event"
-        message="Delete this event? (The corresponding task will also be deleted)"
+        title={t('Delete Event')}
+        message={t('Delete this event? (The corresponding task will also be deleted)')}
         variant="danger"
-        confirmText="Delete"
+        confirmText={t('Delete')}
       />
     </>
   );

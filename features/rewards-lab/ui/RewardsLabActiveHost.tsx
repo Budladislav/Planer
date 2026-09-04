@@ -3,11 +3,13 @@ import { Dice5 } from 'lucide-react';
 import { REWARD_GRADES } from '../domain';
 import { rewardsLabGate } from '../gate';
 import { useRewardsLab } from './useRewardsLab';
+import { useI18n } from '../../../i18n';
 
 const RewardsLabPanel = lazy(() => import('./RewardsLabPanel'));
 
 const RewardsLabActiveHost: React.FC = () => {
   const { runtime, snapshot } = useRewardsLab();
+  const { t } = useI18n();
 
   useEffect(() => {
     rewardsLabGate.refresh();
@@ -21,11 +23,11 @@ const RewardsLabActiveHost: React.FC = () => {
 
   const toast = snapshot.toast;
   const grade = toast ? REWARD_GRADES[toast.grade] : null;
-  const toastTitle = toast?.kind === 'restored' ? 'Reward restored' : 'Task reward';
+  const toastTitle = toast?.kind === 'restored' ? t('Reward restored') : t('Task reward');
   const toastDescription = toast && grade
     ? toast.kind === 'restored'
-      ? `${grade.label} · original result restored`
-      : `${toast.roll} × ${grade.label} ${toast.multiplier} = +${toast.amount} ${toast.currencyName}`
+      ? `${t(grade.label)} · ${t('original result restored')}`
+      : `${toast.roll} × ${t(grade.label)} ${toast.multiplier} = +${toast.amount} ${toast.currencyName}`
     : '';
 
   return (
@@ -56,14 +58,14 @@ const RewardsLabActiveHost: React.FC = () => {
 
       {toast && grade && (
         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {toastTitle}. {toastDescription}. Balance increased by {toast.amount} {toast.currencyName}.
+          {toastTitle}. {toastDescription}. {t('Balance increased by {amount} {currency}.', { amount: toast.amount, currency: toast.currencyName })}
         </span>
       )}
 
       {snapshot.isOpen && snapshot.enabled && (
         <Suspense fallback={(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="status">
-            <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-xl">Opening Rewards Lab…</div>
+            <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-xl">{t('Opening Rewards Lab…')}</div>
           </div>
         )}>
           <RewardsLabPanel />

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { WorkShiftSettings } from './types';
-import { formatWorkShift, getWorkShiftForWeek } from './week-shifts';
+import { formatWorkShift, getWorkShiftForWeek, isFirstToSecondTransitionDay } from './week-shifts';
 
 const settings: WorkShiftSettings = {
   baseWeek: '2026-W52',
   baseShift: 1,
   overrides: {},
+  transitionHighlight: 'off',
 };
 
 describe('getWorkShiftForWeek', () => {
@@ -21,12 +22,27 @@ describe('getWorkShiftForWeek', () => {
   });
 
   it('returns null until a base week and shift are configured', () => {
-    expect(getWorkShiftForWeek({ baseWeek: null, baseShift: null, overrides: {} }, '2026-W33')).toBeNull();
+    expect(getWorkShiftForWeek({ baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'off' }, '2026-W33')).toBeNull();
   });
 
   it('does not expose a placeholder label before shifts are configured', () => {
     expect(formatWorkShift(null)).toBe('');
-    expect(formatWorkShift(1)).toBe('First shift');
-    expect(formatWorkShift(2)).toBe('Second shift');
+    expect(formatWorkShift(1)).toBe('1. shift');
+    expect(formatWorkShift(2)).toBe('2. shift');
+  });
+
+  it('highlights only the configured 1-to-2 shift transition days', () => {
+    const extended = { ...settings, transitionHighlight: 'extended' as const };
+    expect(isFirstToSecondTransitionDay(extended, '2026-12-25')).toBe(true);
+    expect(isFirstToSecondTransitionDay(extended, '2026-12-26')).toBe(true);
+    expect(isFirstToSecondTransitionDay(extended, '2026-12-27')).toBe(true);
+    expect(isFirstToSecondTransitionDay(extended, '2026-12-28')).toBe(true);
+    expect(isFirstToSecondTransitionDay(extended, '2026-12-29')).toBe(false);
+
+    const weekend = { ...settings, transitionHighlight: 'weekend' as const };
+    expect(isFirstToSecondTransitionDay(weekend, '2026-12-25')).toBe(false);
+    expect(isFirstToSecondTransitionDay(weekend, '2026-12-26')).toBe(true);
+    expect(isFirstToSecondTransitionDay(weekend, '2026-12-27')).toBe(true);
+    expect(isFirstToSecondTransitionDay(weekend, '2026-12-28')).toBe(false);
   });
 });

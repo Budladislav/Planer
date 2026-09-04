@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
-import { Check, ChevronDown, Pause, Play, Plus, RotateCcw } from 'lucide-react';
-import { getTodayString, generateId, formatDateReadable, formatTime, getWeekString } from '../../utils';
+import { CalendarArrowDown, Check, ChevronDown, Pause, Pencil, Play, Plus, RotateCcw } from 'lucide-react';
+import { getDateString, getTodayString, generateId, formatDateReadable, formatTime, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
   getLocalDateFromTimestamp,
@@ -31,6 +31,8 @@ import { Task } from '../../types';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
 import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
+import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
+import { useI18n } from '../../i18n';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -38,10 +40,12 @@ const SortableTaskItem: React.FC<{
   onSetActive: (id: string) => void;
   onComplete: (id: string) => void;
   onCompleteYesterday: (id: string) => void;
+  onMoveTomorrow: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
   isFirst?: boolean;
-}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onUpdate, onDeleteConfirm, isFirst = false }) => {
+}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm, isFirst = false }) => {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [showActions, setShowActions] = useState(false);
@@ -93,7 +97,7 @@ const SortableTaskItem: React.FC<{
     return (
       <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
             ref={textareaRef}
             required
@@ -116,10 +120,10 @@ const SortableTaskItem: React.FC<{
               onClick={handleCancelEdit}
               className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
+              {t('Save')}
             </button>
         </div>
       </form>
@@ -153,20 +157,40 @@ const SortableTaskItem: React.FC<{
             <span className="text-xs text-slate-500 flex-shrink-0">({formatTime(task.timeSpent)})</span>
           )}
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onComplete(task.id);
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          className={`-my-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-green-700 ${showActions ? 'mt-0' : ''}`}
-          title="Mark as done"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-green-50 transition-colors hover:bg-green-100">
-            <Check className="h-4 w-4" />
-          </span>
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {showActions && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              className="-my-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-600"
+              title={t('Edit task')}
+              aria-label={t('Edit task')}
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 transition-colors hover:bg-slate-200">
+                <Pencil className="h-4 w-4" />
+              </span>
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onComplete(task.id);
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className={`-my-1 flex h-10 w-10 items-center justify-center rounded-lg text-green-700 ${showActions ? 'mt-0' : ''}`}
+            title={t('Mark as done')}
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-green-50 transition-colors hover:bg-green-100">
+              <Check className="h-4 w-4" />
+            </span>
+          </button>
+        </div>
       </div>
 
       <div
@@ -183,24 +207,25 @@ const SortableTaskItem: React.FC<{
         <button
           onClick={() => onDeleteConfirm(task.id)}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
-          title="Delete task"
+          title={t('Delete task')}
         >
-          Delete
+          {t('Delete')}
         </button>
         <div className="flex items-center gap-2 flex-1 justify-center">
           <button
-            onClick={() => setIsEditing(true)}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors"
-            title="Edit task"
+            onClick={() => onMoveTomorrow(task.id)}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 transition-colors hover:bg-sky-100"
+            title={t('Move this task to tomorrow')}
           >
-            Edit
+            <CalendarArrowDown className="h-3.5 w-3.5" />
+            {t('Tomorrow')}
           </button>
           <button
             onClick={() => onCompleteYesterday(task.id)}
             className="whitespace-nowrap rounded bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100"
-            title="Record this task as completed yesterday"
+            title={t('Record this task as completed yesterday')}
           >
-            Done yesterday
+            {t('Done yesterday')}
           </button>
         </div>
         <button
@@ -209,10 +234,10 @@ const SortableTaskItem: React.FC<{
             onSetActive(task.id);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
-          title="Start focus"
+          title={t('Start focus')}
         >
           <Play className="w-3.5 h-3.5 fill-current" />
-          Focus
+          {t('Focus')}
         </button>
       </div>
     </div>
@@ -222,7 +247,9 @@ const SortableTaskItem: React.FC<{
 
 export const TodayView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const { language, locale, t } = useI18n();
   const [quickAdd, setQuickAdd] = useState('');
+  const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
   const todayStr = getTodayString();
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
@@ -448,6 +475,19 @@ export const TodayView: React.FC = () => {
     });
   };
 
+  const handleMoveTomorrow = (id: string) => {
+    const tomorrow = new Date(`${todayStr}T12:00:00`);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getDateString(tomorrow);
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id,
+        plan: { day: tomorrowStr, week: getWeekString(tomorrowStr), month: tomorrowStr.slice(0, 7) },
+      },
+    });
+  };
+
   const handleUndoComplete = (id: string) => {
     const task = state.tasks.find(candidate => candidate.id === id);
     if (!task) return;
@@ -501,7 +541,7 @@ export const TodayView: React.FC = () => {
                     className={`flex items-center gap-2 px-10 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 ${isCompleting ? 'animate-pulse scale-110' : ''}`}
                   >
                     <Check className={`w-6 h-6 ${isCompleting ? 'animate-spin' : ''}`} />
-                    Mark Done
+                    {t('Mark Done')}
                   </button>
                   <button
                     onClick={handleUnfocus}
@@ -509,7 +549,7 @@ export const TodayView: React.FC = () => {
                     className="flex items-center gap-2 px-8 py-4 bg-white/80 border-2 border-slate-200 text-slate-600 rounded-xl hover:border-slate-300 hover:bg-white transition-all font-medium disabled:opacity-50"
                   >
                     <Pause className="w-5 h-5" />
-                    Pause
+                    {t('Pause')}
                   </button>
                 </div>
               </div>
@@ -521,11 +561,17 @@ export const TodayView: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           {/* Today Section - Header */}
           <div className="text-center mb-3">
-            <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Today</h2>
-            <p className="text-slate-500">{formatDateReadable(todayStr)}</p>
+            <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Today')}</h2>
+            <p className="text-slate-500">{formatDateReadable(todayStr, language)}</p>
+            <DayMetaBadges
+              date={todayStr}
+              onEdit={() => setNotesEditorDate(todayStr)}
+              maxNotes={2}
+              className="mt-1 justify-center"
+            />
             <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
               <p className="text-sm text-slate-400">
-                {todoTasks.length} left • {completedTodayTasks.length} done
+                {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
                 {completedTodayTime > 0 && (
                   <span className="font-medium text-indigo-600">
                     {' • '}
@@ -548,7 +594,7 @@ export const TodayView: React.FC = () => {
                 {todayTasks.length === 0 ? (
                   <div className="flex items-center justify-center">
                     <div className="text-center py-8 text-slate-400 italic border border-dashed border-slate-200 rounded-lg w-full">
-                      No pending tasks for today. Check your Week plan?
+                      {t('No pending tasks for today. Check your Week plan?')}
                     </div>
                   </div>
                 ) : (
@@ -562,6 +608,7 @@ export const TodayView: React.FC = () => {
                           onSetActive={handleSetActive}
                           onComplete={handleComplete}
                           onCompleteYesterday={handleCompleteYesterday}
+                          onMoveTomorrow={handleMoveTomorrow}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}
                           isFirst={index === 0}
@@ -585,7 +632,7 @@ export const TodayView: React.FC = () => {
                   <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-50 text-green-700">
                     <Check className="h-3.5 w-3.5" />
                   </span>
-                  Completed today ({completedTodayTasks.length})
+                  {t('Completed today ({count})', { count: completedTodayTasks.length })}
                 </span>
                 <span className="flex flex-shrink-0 items-center gap-2 text-xs text-slate-500">
                   {completedTodayTime > 0 && formatTime(completedTodayTime)}
@@ -596,13 +643,13 @@ export const TodayView: React.FC = () => {
               {state.uiPreferences.todayCompletedExpanded && (
                 <div className="divide-y divide-slate-100 border-t border-slate-100">
                   {completedTodayTasks.length === 0 ? (
-                    <p className="px-3 py-4 text-center text-sm italic text-slate-400">No tasks completed today yet.</p>
+                    <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
                   ) : completedTodayTasks.map(task => (
                     <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">
-                          {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                           {task.timeSpent && task.timeSpent > 0 ? ` • ${formatTime(task.timeSpent)}` : ''}
                         </div>
                       </div>
@@ -610,10 +657,10 @@ export const TodayView: React.FC = () => {
                         type="button"
                         onClick={() => handleUndoComplete(task.id)}
                         className="flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200"
-                        title="Return task to today's list"
+                        title={t("Return task to today's list")}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        Undo
+                        {t('Undo')}
                       </button>
                     </div>
                   ))}
@@ -629,18 +676,19 @@ export const TodayView: React.FC = () => {
                 type="text" 
                 value={quickAdd}
                 onChange={e => setQuickAdd(e.target.value)}
-                placeholder="Add a task for today..."
+                placeholder={t('Add a task for today...')}
                 className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
               />
               <button 
                 type="submit" 
                 className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-                title="Add task"
+                title={t('Add task')}
               >
                 <Plus className="w-6 h-6" />
               </button>
             </div>
           </form>
+          <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
 
           {/* Add Form - Desktop */}
           <form onSubmit={handleQuickAdd} className="hidden lg:flex items-center gap-3">
@@ -648,13 +696,13 @@ export const TodayView: React.FC = () => {
               type="text" 
               value={quickAdd}
               onChange={e => setQuickAdd(e.target.value)}
-              placeholder="Add a task for today..."
+              placeholder={t('Add a task for today...')}
               className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
             />
             <button 
               type="submit" 
               className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-              title="Add task"
+              title={t('Add task')}
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -671,10 +719,10 @@ export const TodayView: React.FC = () => {
             setDeleteConfirm({ isOpen: false, taskId: null });
           }
         }}
-        title="Delete Task"
-        message="Delete this task permanently?"
+        title={t('Delete Task')}
+        message={t('Delete this task permanently?')}
         variant="danger"
-        confirmText="Delete"
+        confirmText={t('Delete')}
       />
     </>
   );

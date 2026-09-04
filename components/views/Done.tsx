@@ -5,9 +5,11 @@ import { generateId, getDateString, getTodayString, formatTime } from '../../uti
 import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
+import { useI18n } from '../../i18n';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const { locale, t } = useI18n();
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
     taskId: null,
@@ -87,8 +89,8 @@ export const DoneView: React.FC = () => {
 
   const formatDateWithYear = (dateStr: string): string => {
     const date = new Date(dateStr);
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const weekday = date.toLocaleDateString(locale, { weekday: 'long' });
+    const month = date.toLocaleDateString(locale, { month: 'short' });
     const day = date.getDate();
     const year = date.getFullYear();
     return `${weekday}, ${month} ${day}, ${year}`;
@@ -126,7 +128,7 @@ export const DoneView: React.FC = () => {
       return (
         <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
             <input
               type="text"
               required
@@ -142,10 +144,10 @@ export const DoneView: React.FC = () => {
               onClick={handleCancelEdit}
               className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
+              {t('Save')}
             </button>
           </div>
         </form>
@@ -174,9 +176,9 @@ export const DoneView: React.FC = () => {
               setIsEditing(true);
             }}
             className="px-2 py-1 bg-slate-100 text-slate-600 font-semibold rounded hover:bg-slate-200 text-xs flex-shrink-0"
-            title="Edit"
+            title={t('Edit')}
           >
-            Edit
+            {t('Edit')}
           </button>
         </div>
 
@@ -189,17 +191,17 @@ export const DoneView: React.FC = () => {
           <button
             onClick={() => handleDelete(task.id)}
             className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
-            title="Delete"
+            title={t('Delete')}
           >
-            Delete
+            {t('Delete')}
           </button>
           {canUndo && (
             <button
               onClick={() => handleUndo(task.id)}
               className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100"
-              title="Mark as todo"
+              title={t('Mark as todo')}
             >
-              Undone
+              {t('Undone')}
             </button>
           )}
         </div>
@@ -212,9 +214,9 @@ export const DoneView: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="text-center mb-3">
-        <h2 className="text-3xl font-bold text-slate-900">Done</h2>
+        <h2 className="text-3xl font-bold text-slate-900">{t('Completed Tasks')}</h2>
         <p className="text-slate-500">
-          Completed tasks: {doneTasks.length}
+          {t('Completed tasks: {count}', { count: doneTasks.length })}
         </p>
       </div>
 
@@ -223,7 +225,7 @@ export const DoneView: React.FC = () => {
         {doneTasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">
-              <p className="text-slate-400 font-medium">No completed tasks yet</p>
+              <p className="text-slate-400 font-medium">{t('No completed tasks yet')}</p>
             </div>
           </div>
         ) : (
@@ -252,7 +254,7 @@ export const DoneView: React.FC = () => {
                           </h3>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs text-slate-500">
-                              {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                              {t('Tasks: {count}', { count: tasks.length })}
                             </span>
                             {totalTime > 0 && (
                               <>
@@ -287,13 +289,13 @@ export const DoneView: React.FC = () => {
             type="text" 
             value={quickAdd}
             onChange={e => setQuickAdd(e.target.value)}
-            placeholder="Add a completed task..."
+            placeholder={t('Add a completed task...')}
             className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
           />
           <button 
             type="submit" 
             className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-            title="Add task"
+            title={t('Add task')}
           >
             <Plus className="w-6 h-6" />
           </button>
@@ -306,13 +308,13 @@ export const DoneView: React.FC = () => {
           type="text" 
           value={quickAdd}
           onChange={e => setQuickAdd(e.target.value)}
-          placeholder="Add a completed task..."
+          placeholder={t('Add a completed task...')}
           className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
         />
         <button 
           type="submit" 
           className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-          title="Add task"
+          title={t('Add task')}
         >
           <Plus className="w-6 h-6" />
         </button>
@@ -323,10 +325,10 @@ export const DoneView: React.FC = () => {
       isOpen={deleteConfirm.isOpen}
       onClose={() => setDeleteConfirm({ isOpen: false, taskId: null })}
       onConfirm={handleDeleteConfirm}
-      title="Delete Task"
-      message="Delete this task permanently?"
+      title={t('Delete Task')}
+      message={t('Delete this task permanently?')}
       variant="danger"
-      confirmText="Delete"
+      confirmText={t('Delete')}
     />
     </>
   );

@@ -30,9 +30,9 @@ export const getWeekString = (dateString?: string): string => {
   return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
 };
 
-export const formatDateReadable = (dateStr: string): string => {
+export const formatDateReadable = (dateStr: string, language: AppLanguage = 'en'): string => {
   const date = parseLocalDate(dateStr);
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 };
 
 export const formatDateShort = (dateStr: string): string => {
@@ -43,9 +43,11 @@ export const formatDateShort = (dateStr: string): string => {
   return `${day}.${month}.${year}`;
 };
 
-export const getWeekRange = (weekStr: string) => {
+export const getWeekRange = (weekStr: string, language: AppLanguage = 'en') => {
   // Simple parser for YYYY-Www display
-  return `Week ${weekStr.split('-W')[1]}, ${weekStr.split('-W')[0]}`;
+  return language === 'ru'
+    ? `Неделя ${weekStr.split('-W')[1]}, ${weekStr.split('-W')[0]}`
+    : `Week ${weekStr.split('-W')[1]}, ${weekStr.split('-W')[0]}`;
 };
 
 export const getISOWeeksInYear = (year: number): number => {
@@ -129,3 +131,4 @@ export const parseEventTitle = (title: string): { time: string; plain: string } 
 export const formatEventTitle = (time: string, plain: string): string => {
   return `${time} ${plain.trim()}`;
 };
+import type { AppLanguage } from './types';

@@ -98,6 +98,7 @@ describe('migrateAppState', () => {
       baseWeek: '2026-W33',
       baseShift: 2,
       overrides: { '2026-W34': 1 },
+      transitionHighlight: 'extended',
     });
   });
 
@@ -122,17 +123,21 @@ describe('migrateAppState', () => {
       workShiftSettings: { baseWeek: '2026-W33', baseShift: 1, overrides: {} },
     });
 
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.tasks).toHaveLength(1);
     expect(migrated.captures).toHaveLength(1);
     expect(migrated.events).toHaveLength(1);
     expect(migrated.taskOrderByMonthBucket).toEqual({ '2026-08': ['task-1'] });
     expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
     expect(migrated.weekNotes).toEqual({});
+    expect(migrated.dayNotes).toEqual({});
+    expect(migrated.goals).toEqual([]);
     expect(migrated.uiPreferences).toEqual({
       todayCompletedExpanded: false,
       eventsDistantExpanded: false,
       eventsPastExpanded: false,
+      language: 'ru',
+      calendarNoteHighlight: true,
     });
   });
 
@@ -167,6 +172,8 @@ describe('migrateAppState', () => {
       todayCompletedExpanded: true,
       eventsDistantExpanded: false,
       eventsPastExpanded: true,
+      language: 'ru',
+      calendarNoteHighlight: true,
     });
   });
 });
@@ -210,7 +217,13 @@ describe('appReducer Inbox captures', () => {
       completedAt: '2026-09-02T12:30:00.000Z',
     });
 
-    const redated = appReducer(completed, {
+    const recreated = appReducer(completed, {
+      type: 'UPDATE_CAPTURE_CREATED_AT',
+      payload: { id: 'capture-1', createdAt: '2026-08-18T07:00:00.000Z' },
+    });
+    expect(recreated.captures[0].createdAt).toBe('2026-08-18T07:00:00.000Z');
+
+    const redated = appReducer(recreated, {
       type: 'UPDATE_CAPTURE_COMPLETED_AT',
       payload: { id: 'capture-1', completedAt: '2026-08-28T12:00:00.000Z' },
     });
@@ -238,6 +251,19 @@ describe('appReducer Inbox captures', () => {
       completedAt: '2026-09-02T12:30:00.000Z',
     });
   });
+
+  it('preserves disabled shift-transition highlighting', () => {
+    const migrated = migrateAppState({
+      ...INITIAL_STATE,
+      workShiftSettings: {
+        ...INITIAL_STATE.workShiftSettings,
+        transitionHighlight: 'off',
+      },
+    });
+
+    expect(migrated.workShiftSettings.transitionHighlight).toBe('off');
+  });
+
 });
 
 describe('appReducer task completion', () => {
@@ -339,6 +365,8 @@ describe('appReducer week notes and UI preferences', () => {
       todayCompletedExpanded: false,
       eventsDistantExpanded: false,
       eventsPastExpanded: true,
+      language: INITIAL_STATE.uiPreferences.language,
+      calendarNoteHighlight: true,
     });
   });
 });
@@ -363,5 +391,85 @@ describe('appReducer task planning', () => {
     expect(moved.taskOrderByWeekBucket['2026-W33']).toEqual([]);
     expect(moved.taskOrderByMonthBucket['2026-08']).toEqual([]);
     expect(moved.taskOrderByMonthWeek['2026-08|2026-W33']).toEqual([]);
+  });
+});
+
+describe('appReducer day notes and long-term goals', () => {
+  it('adds, edits, and removes multiple notes for one day', () => {
+    const first = appReducer(INITIAL_STATE, {
+      type: 'ADD_DAY_NOTE',
+      payload: { date: '2026-09-04', text: '  Book tickets  ' },
+    });
+    const second = appReducer(first, {
+      type: 'ADD_DAY_NOTE',
+      payload: { date: '2026-09-04', text: 'Pack a bag' },
+    });
+    expect(second.dayNotes['2026-09-04']).toHaveLength(2);
+    const note = second.dayNotes['2026-09-04'][0];
+    expect(note.text).toBe('Book tickets');
+
+    const updated = appReducer(second, {
+      type: 'UPDATE_DAY_NOTE',
+      payload: { date: '2026-09-04', id: note.id, text: 'Buy train tickets' },
+    });
+    expect(updated.dayNotes['2026-09-04'][0].text).toBe('Buy train tickets');
+
+    const deleted = appReducer(updated, {
+      type: 'DELETE_DAY_NOTE',
+      payload: { date: '2026-09-04', id: note.id },
+    });
+    expect(deleted.dayNotes['2026-09-04'].map(item => item.text)).toEqual(['Pack a bag']);
+  });
+
+  it('keeps the complete long-term goal lifecycle and its progress notes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
+    const added = appReducer(INITIAL_STATE, { type: 'ADD_GOAL', payload: { title: '  Renew permit  ' } });
+    const goal = added.goals[0];
+    expect(goal).toEqual(expect.objectContaining({ title: 'Renew permit', status: 'active', notes: [] }));
+
+    const detailed = appReducer(added, {
+      type: 'UPDATE_GOAL',
+      payload: { id: goal.id, currentState: 'Documents collected', nextStep: 'Book appointment' },
+    });
+    const noted = appReducer(detailed, {
+      type: 'ADD_GOAL_NOTE',
+      payload: { goalId: goal.id, text: '  Photos are ready  ' },
+    });
+    expect(noted.goals[0].notes[0].text).toBe('Photos are ready');
+
+    const completed = appReducer(noted, { type: 'COMPLETE_GOAL', payload: goal.id });
+    expect(completed.goals[0]).toEqual(expect.objectContaining({ status: 'completed', completedAt: '2026-09-04T10:00:00.000Z' }));
+    const reopened = appReducer(completed, { type: 'REOPEN_GOAL', payload: goal.id });
+    expect(reopened.goals[0]).toEqual(expect.objectContaining({ status: 'active', completedAt: null }));
+    const archived = appReducer(reopened, { type: 'ARCHIVE_GOAL', payload: goal.id });
+    expect(archived.goals[0].status).toBe('archived');
+    vi.useRealTimers();
+  });
+
+  it('migrates valid day notes and goals while discarding malformed entries', () => {
+    const migrated = migrateAppState({
+      tasks: [], captures: [], events: [],
+      dayNotes: {
+        '2026-09-04': [{ id: 'day-note', text: '  Remember this  ', createdAt: '2026-09-01T10:00:00.000Z' }],
+        '2026-02-31': [{ id: 'invalid-date', text: 'Discard' }],
+      },
+      goals: [{
+        id: 'goal-1',
+        title: '  Emergency fund  ',
+        status: 'completed',
+        createdAt: '2026-01-01T10:00:00.000Z',
+        completedAt: '2026-09-01T10:00:00.000Z',
+        currentState: 'Done',
+        nextStep: '',
+        notes: [{ id: 'note-1', text: '  Final transfer  ' }],
+      }, { id: 'bad-goal', title: '   ' }],
+    });
+
+    expect(migrated.dayNotes['2026-09-04'][0].text).toBe('Remember this');
+    expect(migrated.dayNotes['2026-02-31']).toBeUndefined();
+    expect(migrated.goals).toHaveLength(1);
+    expect(migrated.goals[0]).toEqual(expect.objectContaining({ title: 'Emergency fund', status: 'completed' }));
+    expect(migrated.goals[0].notes[0].text).toBe('Final transfer');
   });
 });

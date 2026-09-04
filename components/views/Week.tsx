@@ -8,8 +8,10 @@ import { planTaskForWeek } from '../../task-planning';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
+import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
 import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { useI18n } from '../../i18n';
 import {
   DndContext,
   closestCenter,
@@ -44,6 +46,7 @@ type DayTaskItemProps = {
 };
 
 const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
+  const { t } = useI18n();
   const [wasDragging, setWasDragging] = useState(false);
   
   // Track if we just finished dragging to prevent onClick
@@ -97,7 +100,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
     return (
       <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3 text-sm">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
             ref={textareaRef}
             required
@@ -115,7 +118,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1 mt-2">Week</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1 mt-2">{t('Week')}</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -132,7 +135,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                 }
               }}
               className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-              placeholder="Year"
+              placeholder={t('Year')}
             />
             <span className="self-center text-slate-400">-W</span>
             <input
@@ -157,7 +160,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                 setEditWeek(`${year}-W${week}`);
               }}
               className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-              placeholder="Week"
+              placeholder={t('Week')}
             />
           </div>
         </div>
@@ -167,10 +170,10 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
               onClick={handleCancelEdit}
               className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
+              {t('Save')}
             </button>
         </div>
       </form>
@@ -233,9 +236,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
             showActions ? 'mt-0' : ''
           }`}
-          title="Move"
+          title={t('Move')}
         >
-          Move
+          {t('Move')}
         </button>
       </div>
 
@@ -256,9 +259,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             onDeleteConfirm(task.id);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
-          title="Delete"
+          title={t('Delete')}
         >
-          Delete
+          {t('Delete')}
         </button>
         <button
           onClick={(e) => {
@@ -266,9 +269,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             setIsEditing(true);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
-          title="Edit"
+          title={t('Edit')}
         >
-          Edit
+          {t('Edit')}
         </button>
         <button
           onClick={(e) => {
@@ -278,9 +281,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             });
           }}
           className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
-          title="Mark Done"
+          title={t('Mark Done')}
         >
-          Done
+          {t('Done')}
         </button>
       </div>
     </div>
@@ -325,6 +328,7 @@ type BucketTaskItemProps = {
 };
 
 const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, dispatch, onMove, onDeleteConfirm, dragListeners, isDragging = false }) => {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editWeek, setEditWeek] = useState(task.plan.week || currentWeek);
@@ -379,7 +383,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
     return (
       <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
             ref={textareaRef}
             required
@@ -397,7 +401,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Week</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Week')}</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -414,7 +418,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                 }
               }}
               className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-              placeholder="Year"
+              placeholder={t('Year')}
             />
             <span className="self-center text-slate-400">-W</span>
             <input
@@ -439,7 +443,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                 setEditWeek(`${year}-W${week}`);
               }}
               className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
-              placeholder="Week"
+              placeholder={t('Week')}
             />
           </div>
         </div>
@@ -449,10 +453,10 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
               onClick={handleCancelEdit}
               className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              Save
+              {t('Save')}
             </button>
         </div>
       </form>
@@ -519,9 +523,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           className={`px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
             showActions ? 'mt-0' : ''
           }`}
-          title="Move"
+          title={t('Move')}
         >
-          Move
+          {t('Move')}
         </button>
       </div>
 
@@ -542,9 +546,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             onDeleteConfirm(task.id);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
-          title="Delete"
+          title={t('Delete')}
         >
-          Delete
+          {t('Delete')}
         </button>
         <button
           onClick={(e) => {
@@ -552,9 +556,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             setIsEditing(true);
           }}
           className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
-          title="Edit"
+          title={t('Edit')}
         >
-          Edit
+          {t('Edit')}
         </button>
         <button
           onClick={() => {
@@ -563,9 +567,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             });
           }}
           className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
-          title="Mark Done"
+          title={t('Mark Done')}
         >
-          Done
+          {t('Done')}
         </button>
       </div>
     </div>
@@ -624,9 +628,11 @@ const WeekTaskDropZone: React.FC<{
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const { language, locale, t } = useI18n();
   const [currentWeek, setCurrentWeek] = useState(getWeekString());
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
+  const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
   const [pastDaysExpanded, setPastDaysExpanded] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
@@ -692,11 +698,11 @@ export const WeekView: React.FC = () => {
       const mm = (d.getUTCMonth() + 1).toString().padStart(2, '0');
       const yyyy = d.getUTCFullYear();
       const label = `${dd}.${mm}.${yyyy}`;
-      const weekday = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+      const weekday = d.toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' });
       days.push({ label, date: iso, weekday });
     }
     return days;
-  }, [currentWeek]);
+  }, [currentWeek, locale]);
 
   const { pastDays, currentAndFutureDays } = useMemo(
     () => partitionWeekDays(weekDays, todayStr),
@@ -1032,7 +1038,7 @@ export const WeekView: React.FC = () => {
     const content = (
       <>
         {canPlanDay && tasks.length === 0 && completedTasks.length === 0 && (
-          <div className="text-sm italic text-slate-400">Drag a task here from the week list or another day</div>
+          <div className="text-sm italic text-slate-400">{t('Drag a task here from the week list or another day')}</div>
         )}
         {tasks.map(task => (
           <SortableDayTaskItem
@@ -1061,8 +1067,8 @@ export const WeekView: React.FC = () => {
                 type="button"
                 onClick={() => reopenTask(dispatch, task)}
                 className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white hover:text-indigo-600"
-                title="Return task to work"
-                aria-label={`Return ${task.title} to work`}
+                title={t('Return task to work')}
+                aria-label={t('Return {title} to work', { title: task.title })}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>
@@ -1070,26 +1076,34 @@ export const WeekView: React.FC = () => {
           );
         })}
         {!canPlanDay && completedTasks.length === 0 && (
-          <div className="text-sm italic text-slate-400">No completed tasks</div>
+          <div className="text-sm italic text-slate-400">{t('No completed tasks')}</div>
         )}
       </>
     );
 
     return (
       <div key={day.date} className={`rounded-lg border bg-white transition-colors ${isPast ? 'border-slate-200/80' : 'border-slate-200'}`}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex flex-1 items-center justify-between text-left">
-            <div className="flex items-center gap-2">
-              <span className={`font-semibold ${isPast ? 'text-slate-500' : 'text-slate-800'}`}>{day.weekday}</span>
-              <span className="text-xs text-slate-500">{day.label}</span>
+        <div className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`font-semibold ${isPast ? 'text-slate-500' : 'text-slate-800'}`}>{day.weekday}</span>
+                <span className="text-xs text-slate-500">{day.label}</span>
+              </div>
+              <DayMetaBadges
+                date={day.date}
+                onEdit={() => setNotesEditorDate(day.date)}
+                maxNotes={2}
+                className="mt-1.5"
+              />
             </div>
             <div className="flex items-center gap-2">
               {canPlanDay && (
-                <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title="Add task to this day">
+                <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add task to this day')}>
                   <Plus className="h-4 w-4" />
                 </button>
               )}
-              <span className="text-sm text-slate-500">{taskCount === 0 ? 'No tasks' : taskCount}</span>
+              <span className="text-sm text-slate-500">{taskCount === 0 ? t('No tasks') : taskCount}</span>
             </div>
           </div>
         </div>
@@ -1112,14 +1126,14 @@ export const WeekView: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="mb-3 px-12 text-center lg:px-0">
-        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">Weekly Plan</h2>
+        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Weekly Plan')}</h2>
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}
           className="mt-1 justify-center"
         />
         <p className="text-slate-400 text-sm mt-1">
-          {todoWeekTasks.length} left • {doneWeekTasks.length} done
+          {t('{todo} left • {done} done', { todo: todoWeekTasks.length, done: doneWeekTasks.length })}
           {(() => {
             const totalTime = doneWeekTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
             return totalTime > 0 ? (
@@ -1140,9 +1154,9 @@ export const WeekView: React.FC = () => {
             tasks={weekTasks}
             className="flex-1 space-y-2 rounded-lg border border-dashed border-slate-200 p-2"
           >
-            <div className="text-center text-sm font-semibold text-slate-600">Week tasks (no date)</div>
+            <div className="text-center text-sm font-semibold text-slate-600">{t('Week tasks (no date)')}</div>
             {weekTasks.length === 0 ? (
-              <div className="text-sm italic text-slate-400">No tasks in week bucket. Drag a task here from a specific day.</div>
+              <div className="text-sm italic text-slate-400">{t('No tasks in week bucket. Drag a task here from a specific day.')}</div>
             ) : (
               <div className="grid gap-2">
                 {weekTasks.map(task => (
@@ -1158,7 +1172,7 @@ export const WeekView: React.FC = () => {
               </div>
             )}
             {isTouch && weekTasks.length > 0 && (
-              <div className="text-xs text-slate-400">Long-press and drag, or use Move as an alternative.</div>
+              <div className="text-xs text-slate-400">{t('Long-press and drag, or use Move as an alternative.')}</div>
             )}
           </WeekTaskDropZone>
 
@@ -1171,7 +1185,7 @@ export const WeekView: React.FC = () => {
                   onClick={() => setPastDaysExpanded(value => !value)}
                   className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
                 >
-                  <span>Past days ({pastDays.length})</span>
+                  <span>{t('Past days ({count})', { count: pastDays.length })}</span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${pastDaysExpanded ? 'rotate-180' : ''}`} />
                 </button>
                 {pastDaysExpanded && (
@@ -1194,15 +1208,15 @@ export const WeekView: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <div className="font-semibold text-slate-800">Where to move task?</div>
-              <button onClick={() => setMoveTaskId(null)} className="text-slate-400 hover:text-slate-600 text-sm">Close</button>
+              <div className="font-semibold text-slate-800">{t('Where to move task?')}</div>
+              <button onClick={() => setMoveTaskId(null)} className="text-slate-400 hover:text-slate-600 text-sm">{t('Close')}</button>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => moveTask(moveTaskId, null)}
                 className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
               >
-                Week bucket (no date)
+                {t('Week bucket (no date)')}
               </button>
               {weekDays
                 .filter(day => currentWeek !== thisWeek || day.date >= todayStr)
@@ -1239,12 +1253,12 @@ export const WeekView: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-slate-800">
-                  Add task to {selectedDay?.weekday} {selectedDay?.label}
+                  {t('Add task to {day} {date}', { day: selectedDay?.weekday ?? '', date: selectedDay?.label ?? '' })}
                 </div>
                 <button onClick={() => {
                   setQuickAddDay(null);
                   setQuickAddTitle('');
-                }} className="text-slate-400 hover:text-slate-600 text-sm">Close</button>
+                }} className="text-slate-400 hover:text-slate-600 text-sm">{t('Close')}</button>
               </div>
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -1253,7 +1267,7 @@ export const WeekView: React.FC = () => {
                 setQuickAddDay(null);
               }} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
                   <input
                     type="text"
                     required
@@ -1261,7 +1275,7 @@ export const WeekView: React.FC = () => {
                     onChange={(e) => setQuickAddTitle(e.target.value)}
                     className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
                     autoFocus
-                    placeholder="Task title..."
+                    placeholder={t('Task title...')}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -1273,13 +1287,13 @@ export const WeekView: React.FC = () => {
                     }}
                     className="flex-1 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </button>
                   <button
                     type="submit"
                     className="flex-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
-                    Add
+                    {t('Add')}
                   </button>
                 </div>
               </form>
@@ -1297,13 +1311,14 @@ export const WeekView: React.FC = () => {
             setDeleteConfirm({ isOpen: false, taskId: null });
           }
         }}
-        title="Delete Task"
-        message="Delete this task permanently?"
+        title={t('Delete Task')}
+        message={t('Delete this task permanently?')}
         variant="danger"
-        confirmText="Delete"
+        confirmText={t('Delete')}
       />
 
       <WeekNotesEditor week={notesEditorWeek} onClose={() => setNotesEditorWeek(null)} />
+      <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
 
       {/* Week Selector - Fixed at bottom (mobile) */}
       <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">
@@ -1317,7 +1332,7 @@ export const WeekView: React.FC = () => {
             </button>
             <div className="flex-1 text-center px-4">
               <div className="font-mono font-medium text-slate-700 text-sm">
-                {getWeekRange(currentWeek)}
+                {getWeekRange(currentWeek, language)}
               </div>
               <div className="text-xs text-slate-500 mt-1">
                 {weekDateRange.start} - {weekDateRange.end}
@@ -1340,13 +1355,13 @@ export const WeekView: React.FC = () => {
             type="text" 
             value={quickAdd}
             onChange={e => setQuickAdd(e.target.value)}
-            placeholder={`Add task to ${getWeekRange(currentWeek)}...`}
+            placeholder={t('Add task to {week}...', { week: getWeekRange(currentWeek, language) })}
             className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
           />
           <button 
             type="submit" 
             className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-            title="Add task"
+            title={t('Add task')}
           >
             <Plus className="w-6 h-6" />
           </button>
@@ -1359,13 +1374,13 @@ export const WeekView: React.FC = () => {
           type="text" 
           value={quickAdd}
           onChange={e => setQuickAdd(e.target.value)}
-          placeholder={`Add task to ${getWeekRange(currentWeek)}...`}
+          placeholder={t('Add task to {week}...', { week: getWeekRange(currentWeek, language) })}
           className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
         />
         <button 
           type="submit" 
           className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-          title="Add task"
+          title={t('Add task')}
         >
           <Plus className="w-6 h-6" />
         </button>
@@ -1382,7 +1397,7 @@ export const WeekView: React.FC = () => {
           </button>
           <div className="flex-1 text-center px-4">
             <div className="font-mono font-medium text-slate-700">
-              {getWeekRange(currentWeek)}
+              {getWeekRange(currentWeek, language)}
             </div>
             <div className="text-sm text-slate-500 mt-1">
               {weekDateRange.start} - {weekDateRange.end}

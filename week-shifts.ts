@@ -1,5 +1,5 @@
-import { WorkShift, WorkShiftSettings } from './types';
-import { getWeekDates, isValidWeekString } from './utils';
+import { AppLanguage, WorkShift, WorkShiftSettings } from './types';
+import { getWeekDates, getWeekString, isValidWeekString, shiftWeekString } from './utils';
 
 const weekIndex = (week: string): number | null => {
   if (!isValidWeekString(week)) return null;
@@ -23,6 +23,28 @@ export const getWorkShiftForWeek = (
   return alternates ? (settings.baseShift === 1 ? 2 : 1) : settings.baseShift;
 };
 
-export const formatWorkShift = (shift: WorkShift | null): string => {
-  return shift === null ? '' : `${shift === 1 ? 'First' : 'Second'} shift`;
+export const formatWorkShift = (shift: WorkShift | null, language: AppLanguage = 'en'): string => {
+  if (shift === null) return '';
+  return language === 'ru' ? `${shift}. смена` : `${shift}. shift`;
+};
+
+export const isFirstToSecondTransitionDay = (
+  settings: WorkShiftSettings,
+  date: string,
+): boolean => {
+  if (settings.transitionHighlight === 'off') return false;
+
+  const day = new Date(`${date}T12:00:00`).getDay();
+  const week = getWeekString(date);
+  const previousWeek = shiftWeekString(week, -1);
+  const nextWeek = shiftWeekString(week, 1);
+  const transitionAtEndOfWeek = getWorkShiftForWeek(settings, week) === 1
+    && getWorkShiftForWeek(settings, nextWeek) === 2;
+  const transitionAtStartOfWeek = getWorkShiftForWeek(settings, previousWeek) === 1
+    && getWorkShiftForWeek(settings, week) === 2;
+
+  if (day === 6 || day === 0) return transitionAtEndOfWeek;
+  if (settings.transitionHighlight === 'extended' && day === 5) return transitionAtEndOfWeek;
+  if (settings.transitionHighlight === 'extended' && day === 1) return transitionAtStartOfWeek;
+  return false;
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 type ModalType = 'info' | 'success' | 'error' | 'warning';
 
@@ -15,6 +16,7 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, children, type = 'info', wide = false, hideFooter = false }) => {
+  const { t } = useI18n();
   if (!isOpen) return null;
 
   const iconConfig = {
@@ -44,6 +46,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, c
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors"
+            title={t('Close')}
+            aria-label={t('Close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -83,10 +87,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   variant = 'default',
 }) => {
+  const { t } = useI18n();
   if (!isOpen) return null;
 
   const handleConfirm = () => {
@@ -110,6 +115,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors"
+            title={t('Close')}
+            aria-label={t('Close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -122,7 +129,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors"
           >
-            {cancelText}
+            {cancelText ?? t('Cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -132,7 +139,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
           >
-            {confirmText}
+            {confirmText ?? t('Confirm')}
           </button>
         </div>
       </div>

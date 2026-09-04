@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppStore } from '../store';
 import { ViewState } from '../types';
-import { 
+import {
   Target, Calendar, CalendarDays, List, Settings, type LucideIcon,
 } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,13 +14,19 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate }) => {
   const { state } = useAppStore();
+  const { language, t } = useI18n();
   const isFocusMode = currentView === 'today' && state.activeTaskId !== null;
 
+  React.useEffect(() => {
+    document.documentElement.lang = language;
+    document.title = language === 'ru' ? 'Планировщик MonoFocus' : 'MonoFocus Planner';
+  }, [language]);
+
   const navItems: Array<{ view: ViewState; icon: LucideIcon; label: string }> = [
-    { view: 'events', icon: Calendar, label: 'Events' },
-    { view: 'month', icon: CalendarDays, label: 'Month Plan' },
-    { view: 'week', icon: List, label: 'Weekly Plan' },
-    { view: 'today', icon: Target, label: 'Today' },
+    { view: 'events', icon: Calendar, label: t('Events') },
+    { view: 'month', icon: CalendarDays, label: t('Month Plan') },
+    { view: 'week', icon: List, label: t('Weekly Plan') },
+    { view: 'today', icon: Target, label: t('Today') },
   ];
 
   const getIconColor = (view: ViewState, isActive: boolean) => {
@@ -99,7 +106,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
             ))}
           </nav>
           <div className="border-t border-slate-100 p-4">
-            <NavItem view="settings" icon={Settings} label="Settings" />
+            <NavItem view="settings" icon={Settings} label={t('Settings')} />
           </div>
         </aside>
       )}
@@ -121,7 +128,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
                 ? 'border-slate-400 text-slate-800'
                 : 'border-slate-200 text-slate-500'
             }`}
-            title="Settings"
+            title={t('Settings')}
+            aria-label={t('Settings')}
           >
             <Settings className="h-5 w-5" />
           </button>

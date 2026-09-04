@@ -1,8 +1,22 @@
-import { AppState, CalendarEvent, Capture, INITIAL_STATE, Task, ViewState, WeekNote, WorkShift } from './types';
-import { formatEventTitle, generateId, getTodayString, getWeekString, isValidWeekString } from './utils';
+import {
+  AppState,
+  AppLanguage,
+  CalendarEvent,
+  Capture,
+  DayNote,
+  GoalNote,
+  INITIAL_STATE,
+  LongTermGoal,
+  ShiftTransitionHighlight,
+  Task,
+  ViewState,
+  WeekNote,
+  WorkShift,
+} from './types';
+import { formatEventTitle, generateId, getDateString, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -29,14 +43,18 @@ const migrateOrderMap = (value: unknown): Record<string, string[]> => {
   );
 };
 
-const migrateWeekNotes = (value: unknown, now: string): Record<string, WeekNote[]> => {
+const migrateNotesByKey = <T extends WeekNote | DayNote>(
+  value: unknown,
+  now: string,
+  isValidKey: (key: string) => boolean,
+): Record<string, T[]> => {
   if (!isRecord(value)) return {};
 
   return Object.fromEntries(
-    Object.entries(value).flatMap(([week, notes]): [string, WeekNote[]][] => {
-      if (!isValidWeekString(week) || !Array.isArray(notes)) return [];
+    Object.entries(value).flatMap(([key, notes]): [string, T[]][] => {
+      if (!isValidKey(key) || !Array.isArray(notes)) return [];
 
-      const migratedNotes = notes.flatMap((note): WeekNote[] => {
+      const migratedNotes = notes.flatMap((note): T[] => {
         if (!isRecord(note) || typeof note.text !== 'string') return [];
 
         const text = note.text.trim();
@@ -48,12 +66,56 @@ const migrateWeekNotes = (value: unknown, now: string): Record<string, WeekNote[
           text,
           createdAt,
           updatedAt: asString(note.updatedAt, createdAt),
-        }];
+        } as T];
       });
 
-      return migratedNotes.length > 0 ? [[week, migratedNotes]] : [];
+      return migratedNotes.length > 0 ? [[key, migratedNotes]] : [];
     }),
   );
+};
+
+const isValidDateKey = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00`);
+  return !Number.isNaN(date.getTime()) && getDateString(date) === value;
+};
+
+const migrateGoalNotes = (value: unknown, now: string): GoalNote[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((note): GoalNote[] => {
+    if (!isRecord(note) || typeof note.text !== 'string') return [];
+    const text = note.text.trim();
+    if (!text) return [];
+    const createdAt = asString(note.createdAt, now);
+    return [{
+      id: asString(note.id, generateId()),
+      text,
+      createdAt,
+      updatedAt: asString(note.updatedAt, createdAt),
+    }];
+  });
+};
+
+const migrateGoals = (value: unknown, now: string): LongTermGoal[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((goal): LongTermGoal[] => {
+    if (!isRecord(goal) || typeof goal.title !== 'string' || !goal.title.trim()) return [];
+    const status: LongTermGoal['status'] = goal.status === 'completed' || goal.status === 'archived'
+      ? goal.status
+      : 'active';
+    const createdAt = asString(goal.createdAt, now);
+    return [{
+      id: asString(goal.id, generateId()),
+      title: goal.title.trim(),
+      status,
+      createdAt,
+      updatedAt: asString(goal.updatedAt, createdAt),
+      completedAt: status === 'completed' ? asString(goal.completedAt, now) : null,
+      currentState: asString(goal.currentState, ''),
+      nextStep: asString(goal.nextStep, ''),
+      notes: migrateGoalNotes(goal.notes, now),
+    }];
+  });
 };
 
 const removeTaskFromOrderMap = (
@@ -67,7 +129,7 @@ export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
   const today = getTodayString();
-  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done', 'reports'];
+  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done', 'reports', 'goals'];
   const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
   const lastActiveView = allowedViews.includes(requestedView as ViewState)
     ? requestedView as ViewState
@@ -162,6 +224,12 @@ export const migrateAppState = (value: unknown): AppState => {
     ),
   );
   const rawUiPreferences = isRecord(parsed.uiPreferences) ? parsed.uiPreferences : {};
+  const requestedLanguage: AppLanguage = rawUiPreferences.language === 'en' ? 'en' : 'ru';
+  const requestedTransitionHighlight: ShiftTransitionHighlight = rawShiftSettings.transitionHighlight === 'off'
+    || rawShiftSettings.transitionHighlight === 'weekend'
+    || rawShiftSettings.transitionHighlight === 'extended'
+    ? rawShiftSettings.transitionHighlight
+    : 'extended';
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -181,12 +249,17 @@ export const migrateAppState = (value: unknown): AppState => {
       baseWeek: baseWeekCandidate && isValidWeekString(baseWeekCandidate) ? baseWeekCandidate : null,
       baseShift: baseShiftCandidate === 1 || baseShiftCandidate === 2 ? baseShiftCandidate : null,
       overrides,
+      transitionHighlight: requestedTransitionHighlight,
     },
-    weekNotes: migrateWeekNotes(parsed.weekNotes, now),
+    weekNotes: migrateNotesByKey<WeekNote>(parsed.weekNotes, now, isValidWeekString),
+    dayNotes: migrateNotesByKey<DayNote>(parsed.dayNotes, now, isValidDateKey),
+    goals: migrateGoals(parsed.goals, now),
     uiPreferences: {
       todayCompletedExpanded: rawUiPreferences.todayCompletedExpanded === true,
       eventsDistantExpanded: rawUiPreferences.eventsDistantExpanded === true,
       eventsPastExpanded: rawUiPreferences.eventsPastExpanded === true,
+      language: requestedLanguage,
+      calendarNoteHighlight: rawUiPreferences.calendarNoteHighlight !== false,
     },
   };
 };
@@ -196,6 +269,7 @@ export type Action =
   | { type: 'SET_VIEW'; payload: ViewState }
   | { type: 'ADD_CAPTURE'; payload: string }
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
+  | { type: 'UPDATE_CAPTURE_CREATED_AT'; payload: { id: string; createdAt: string } }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
   | { type: 'COMPLETE_CAPTURE'; payload: string }
   | { type: 'UPDATE_CAPTURE_COMPLETED_AT'; payload: { id: string; completedAt: string } }
@@ -216,6 +290,18 @@ export type Action =
   | { type: 'ADD_WEEK_NOTE'; payload: { week: string; text: string } }
   | { type: 'UPDATE_WEEK_NOTE'; payload: { week: string; id: string; text: string } }
   | { type: 'DELETE_WEEK_NOTE'; payload: { week: string; id: string } }
+  | { type: 'ADD_DAY_NOTE'; payload: { date: string; text: string } }
+  | { type: 'UPDATE_DAY_NOTE'; payload: { date: string; id: string; text: string } }
+  | { type: 'DELETE_DAY_NOTE'; payload: { date: string; id: string } }
+  | { type: 'ADD_GOAL'; payload: { title: string } }
+  | { type: 'UPDATE_GOAL'; payload: Partial<Omit<LongTermGoal, 'id' | 'notes'>> & { id: string } }
+  | { type: 'COMPLETE_GOAL'; payload: string }
+  | { type: 'REOPEN_GOAL'; payload: string }
+  | { type: 'ARCHIVE_GOAL'; payload: string }
+  | { type: 'DELETE_GOAL'; payload: string }
+  | { type: 'ADD_GOAL_NOTE'; payload: { goalId: string; text: string } }
+  | { type: 'UPDATE_GOAL_NOTE'; payload: { goalId: string; noteId: string; text: string } }
+  | { type: 'DELETE_GOAL_NOTE'; payload: { goalId: string; noteId: string } }
   | { type: 'UPDATE_UI_PREFERENCES'; payload: Partial<AppState['uiPreferences']> }
   | { type: 'IMPORT_DATA'; payload: unknown }
   | { type: 'RESET_DATA' };
@@ -252,6 +338,13 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         captures: state.captures.map(c => c.id === action.payload.id
           ? { ...c, status: action.payload.status }
+          : c),
+      };
+    case 'UPDATE_CAPTURE_CREATED_AT':
+      return {
+        ...state,
+        captures: state.captures.map(c => c.id === action.payload.id
+          ? { ...c, createdAt: action.payload.createdAt }
           : c),
       };
     case 'COMPLETE_CAPTURE':
@@ -480,6 +573,131 @@ export const appReducer = (state: AppState, action: Action): AppState => {
 
       return { ...state, weekNotes };
     }
+    case 'ADD_DAY_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text || !isValidDateKey(action.payload.date)) return state;
+      const now = new Date().toISOString();
+      const note: DayNote = { id: generateId(), text, createdAt: now, updatedAt: now };
+      return {
+        ...state,
+        dayNotes: {
+          ...state.dayNotes,
+          [action.payload.date]: [...(state.dayNotes[action.payload.date] ?? []), note],
+        },
+      };
+    }
+    case 'UPDATE_DAY_NOTE': {
+      const text = action.payload.text.trim();
+      const notes = state.dayNotes[action.payload.date];
+      if (!text || !notes || !isValidDateKey(action.payload.date)) return state;
+      return {
+        ...state,
+        dayNotes: {
+          ...state.dayNotes,
+          [action.payload.date]: notes.map(note => note.id === action.payload.id
+            ? { ...note, text, updatedAt: new Date().toISOString() }
+            : note),
+        },
+      };
+    }
+    case 'DELETE_DAY_NOTE': {
+      const notes = state.dayNotes[action.payload.date];
+      if (!notes) return state;
+      const remainingNotes = notes.filter(note => note.id !== action.payload.id);
+      const dayNotes = { ...state.dayNotes };
+      if (remainingNotes.length > 0) dayNotes[action.payload.date] = remainingNotes;
+      else delete dayNotes[action.payload.date];
+      return { ...state, dayNotes };
+    }
+    case 'ADD_GOAL': {
+      const title = action.payload.title.trim();
+      if (!title) return state;
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        goals: [{
+          id: generateId(),
+          title,
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+          completedAt: null,
+          currentState: '',
+          nextStep: '',
+          notes: [],
+        }, ...state.goals],
+      };
+    }
+    case 'UPDATE_GOAL':
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload.id
+          ? { ...goal, ...action.payload, updatedAt: new Date().toISOString() }
+          : goal),
+      };
+    case 'COMPLETE_GOAL':
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload
+          ? { ...goal, status: 'completed', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+          : goal),
+      };
+    case 'REOPEN_GOAL':
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload
+          ? { ...goal, status: 'active', completedAt: null, updatedAt: new Date().toISOString() }
+          : goal),
+      };
+    case 'ARCHIVE_GOAL':
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload
+          ? { ...goal, status: 'archived', completedAt: null, updatedAt: new Date().toISOString() }
+          : goal),
+      };
+    case 'DELETE_GOAL':
+      return { ...state, goals: state.goals.filter(goal => goal.id !== action.payload) };
+    case 'ADD_GOAL_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text) return state;
+      const now = new Date().toISOString();
+      const note: GoalNote = { id: generateId(), text, createdAt: now, updatedAt: now };
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload.goalId
+          ? { ...goal, notes: [...goal.notes, note], updatedAt: now }
+          : goal),
+      };
+    }
+    case 'UPDATE_GOAL_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text) return state;
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload.goalId
+          ? {
+              ...goal,
+              notes: goal.notes.map(note => note.id === action.payload.noteId
+                ? { ...note, text, updatedAt: now }
+                : note),
+              updatedAt: now,
+            }
+          : goal),
+      };
+    }
+    case 'DELETE_GOAL_NOTE':
+      return {
+        ...state,
+        goals: state.goals.map(goal => goal.id === action.payload.goalId
+          ? {
+              ...goal,
+              notes: goal.notes.filter(note => note.id !== action.payload.noteId),
+              updatedAt: new Date().toISOString(),
+            }
+          : goal),
+      };
     case 'UPDATE_UI_PREFERENCES':
       return {
         ...state,

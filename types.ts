@@ -1,4 +1,7 @@
-export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports';
+export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
+
+export type AppLanguage = 'ru' | 'en';
+export type ShiftTransitionHighlight = 'off' | 'weekend' | 'extended';
 
 export type WorkShift = 1 | 2;
 
@@ -6,6 +9,7 @@ export interface WorkShiftSettings {
   baseWeek: string | null;
   baseShift: WorkShift | null;
   overrides: Record<string, WorkShift>;
+  transitionHighlight: ShiftTransitionHighlight;
 }
 
 export interface WeekNote {
@@ -15,10 +19,38 @@ export interface WeekNote {
   updatedAt: string;
 }
 
+export interface DayNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LongTermGoal {
+  id: string;
+  title: string;
+  status: 'active' | 'completed' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  currentState: string;
+  nextStep: string;
+  notes: GoalNote[];
+}
+
 export interface UiPreferences {
   todayCompletedExpanded: boolean;
   eventsDistantExpanded: boolean;
   eventsPastExpanded: boolean;
+  language: AppLanguage;
+  calendarNoteHighlight: boolean;
 }
 
 export interface Capture {
@@ -68,11 +100,18 @@ export interface AppState {
   taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
   workShiftSettings: WorkShiftSettings;
   weekNotes: Record<string, WeekNote[]>; // Maps ISO week (YYYY-Www) to user-authored notes
+  dayNotes: Record<string, DayNote[]>; // Maps date (YYYY-MM-DD) to user-authored notes
+  goals: LongTermGoal[];
   uiPreferences: UiPreferences;
 }
 
+const getDeviceLanguage = (): AppLanguage => {
+  if (typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('ru')) return 'ru';
+  return 'en';
+};
+
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   captures: [],
   tasks: [],
   events: [],
@@ -83,11 +122,15 @@ export const INITIAL_STATE: AppState = {
   taskOrderByWeekBucket: {},
   taskOrderByMonthBucket: {},
   taskOrderByMonthWeek: {},
-  workShiftSettings: { baseWeek: null, baseShift: null, overrides: {} },
+  workShiftSettings: { baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'extended' },
   weekNotes: {},
+  dayNotes: {},
+  goals: [],
   uiPreferences: {
     todayCompletedExpanded: false,
     eventsDistantExpanded: false,
     eventsPastExpanded: false,
+    language: getDeviceLanguage(),
+    calendarNoteHighlight: true,
   },
 };

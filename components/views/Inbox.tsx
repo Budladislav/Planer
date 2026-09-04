@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek } from '../../month-planning';
+import { useI18n } from '../../i18n';
 
 const toDateInputValue = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -45,6 +46,7 @@ const replaceLocalDate = (timestamp: string, dateString: string): string | null 
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
+  const { language, t } = useI18n();
   const [captureInput, setCaptureInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [completedExpanded, setCompletedExpanded] = useState(false);
@@ -61,24 +63,13 @@ export const InboxView: React.FC = () => {
     .filter(c => c.status === 'completed' && c.completedAt)
     .sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!));
 
-  const formatCaptureDate = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Creation date unavailable';
-
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   const formatElapsed = (createdAt: string, completedAt: string) => {
     const elapsedMs = Date.parse(completedAt) - Date.parse(createdAt);
-    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return 'Period unavailable';
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return t('Period unavailable');
 
     const days = Math.floor(elapsedMs / 86_400_000);
-    if (days === 0) return 'Realized the same day';
-    return `Realized after ${days} day${days === 1 ? '' : 's'}`;
+    if (days === 0) return t('Realized the same day');
+    return t('Realized after {days} days', { days });
   };
 
   const handleCapture = (e: React.FormEvent) => {
@@ -197,13 +188,24 @@ export const InboxView: React.FC = () => {
               <span className="block truncate text-sm font-medium text-slate-700">
                 {item.text}
               </span>
-              <time
-                dateTime={item.createdAt}
+              <label
                 className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400"
+                onClick={event => event.stopPropagation()}
               >
                 <CalendarDays className="h-3 w-3" aria-hidden="true" />
-                {formatCaptureDate(item.createdAt)}
-              </time>
+                <span>{t('Created')}</span>
+                <input
+                  type="date"
+                  value={toDateInputValue(item.createdAt)}
+                  max={getTodayString()}
+                  onChange={event => {
+                    const createdAt = replaceLocalDate(item.createdAt, event.target.value);
+                    if (createdAt) dispatch({ type: 'UPDATE_CAPTURE_CREATED_AT', payload: { id: item.id, createdAt } });
+                  }}
+                  aria-label={t('Creation date for {title}', { title: item.text })}
+                  className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                />
+              </label>
             </div>
             <button
                type="button"
@@ -213,8 +215,8 @@ export const InboxView: React.FC = () => {
                  setCompletedExpanded(true);
                }}
                className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors flex-shrink-0"
-               title="Mark as realized"
-               aria-label={`Mark ${item.text} as realized`}
+               title={t('Mark as realized')}
+               aria-label={t('Mark {title} as realized', { title: item.text })}
             >
               <Check className="w-4 h-4" />
             </button>
@@ -238,11 +240,11 @@ export const InboxView: React.FC = () => {
     return (
       <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm space-y-3 text-sm">
         <div className="flex justify-center items-center relative">
-           <h3 className="text-sm font-bold text-slate-900">Process capture</h3>
+           <h3 className="text-sm font-bold text-slate-900">{t('Process wish')}</h3>
            <button 
              onClick={handleSaveAndClose}
              className="absolute right-0 w-8 h-8 flex items-center justify-center text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-             title="Save and close (Ctrl+Enter)"
+             title={t('Save and close (Ctrl+Enter)')}
            >
              <Check className="w-5 h-5" />
            </button>
@@ -250,7 +252,7 @@ export const InboxView: React.FC = () => {
         
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
             <textarea
               ref={textareaRef}
               value={captureText}
@@ -268,7 +270,7 @@ export const InboxView: React.FC = () => {
                 }
               }}
               className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none text-sm resize-none min-h-[2.5rem] max-h-[12rem] overflow-y-auto"
-              placeholder="Title..."
+              placeholder={`${t('Title')}…`}
               rows={1}
             />
           </div>
@@ -282,7 +284,7 @@ export const InboxView: React.FC = () => {
                   : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
               }`}
             >
-              Today
+              {t('Today')}
             </button>
             <button 
               onClick={() => setTaskType('week')} 
@@ -292,7 +294,7 @@ export const InboxView: React.FC = () => {
                   : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
               }`}
             >
-              Week
+              {t('Week')}
             </button>
           </div>
 
@@ -307,7 +309,7 @@ export const InboxView: React.FC = () => {
               </button>
               <div className="flex-1 text-center px-4">
                 <div className="font-mono font-medium text-slate-700 text-xs">
-                  {getWeekRange(selectedWeek)}
+                  {getWeekRange(selectedWeek, language)}
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5">
                   {weekDateRange.start} - {weekDateRange.end}
@@ -326,7 +328,7 @@ export const InboxView: React.FC = () => {
             onClick={handleConvertToTask} 
             className="w-full py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded hover:bg-indigo-700"
           >
-            Confirm Task
+            {t('Confirm Task')}
           </button>
         </div>
       </div>
@@ -337,8 +339,8 @@ export const InboxView: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       {/* Header - Centered */}
       <div className="text-center mb-3">
-        <h2 className="text-3xl font-bold text-slate-900">Inbox</h2>
-        <p className="text-slate-500">Capture everything. Process later.</p>
+        <h2 className="text-3xl font-bold text-slate-900">{t('I wish')}</h2>
+        <p className="text-slate-500">{t('Capture everything. Process later.')}</p>
       </div>
 
       {/* Content - with bottom padding for fixed form */}
@@ -353,7 +355,7 @@ export const InboxView: React.FC = () => {
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                Realized ({completedCaptures.length})
+                {t('Realized ({count})', { count: completedCaptures.length })}
               </span>
               <ChevronDown
                 className={`h-4 w-4 text-slate-400 transition-transform ${completedExpanded ? 'rotate-180' : ''}`}
@@ -379,16 +381,34 @@ export const InboxView: React.FC = () => {
                               if (event.key === 'Enter') saveCompletedTitle(item);
                               if (event.key === 'Escape') setEditingCompletedId(null);
                             }}
-                            aria-label={`Edit title for ${item.text}`}
+                            aria-label={`${t('Edit title')}: ${item.text}`}
                             className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
                           />
                         ) : (
                           <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
                         )}
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-slate-400">
-                          <span>Created {formatCaptureDate(item.createdAt)}</span>
                           <label className="flex items-center gap-1">
-                            <span>Realized</span>
+                            <span>{t('Created')}</span>
+                            <input
+                              type="date"
+                              value={toDateInputValue(item.createdAt)}
+                              max={toDateInputValue(item.completedAt!)}
+                              onChange={event => {
+                                const createdAt = replaceLocalDate(item.createdAt, event.target.value);
+                                if (createdAt) {
+                                  dispatch({
+                                    type: 'UPDATE_CAPTURE_CREATED_AT',
+                                    payload: { id: item.id, createdAt },
+                                  });
+                                }
+                              }}
+                              aria-label={t('Creation date for {title}', { title: item.text })}
+                              className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                            />
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <span>{t('Realized')}</span>
                             <input
                               type="date"
                               value={toDateInputValue(item.completedAt!)}
@@ -403,7 +423,7 @@ export const InboxView: React.FC = () => {
                                   });
                                 }
                               }}
-                              aria-label={`Realized date for ${item.text}`}
+                              aria-label={t('Realized date for {title}', { title: item.text })}
                               className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
                             />
                           </label>
@@ -417,8 +437,8 @@ export const InboxView: React.FC = () => {
                         onClick={() => isEditing ? saveCompletedTitle(item) : startEditingCompleted(item)}
                         disabled={isEditing && !editingCompletedText.trim()}
                         className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        title={isEditing ? 'Save title' : 'Edit title'}
-                        aria-label={isEditing ? `Save title for ${item.text}` : `Edit title for ${item.text}`}
+                        title={isEditing ? t('Save title') : t('Edit title')}
+                        aria-label={`${isEditing ? t('Save title') : t('Edit title')}: ${item.text}`}
                       >
                         {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                       </button>
@@ -426,8 +446,8 @@ export const InboxView: React.FC = () => {
                         type="button"
                         onClick={() => dispatch({ type: 'REOPEN_CAPTURE', payload: item.id })}
                         className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-indigo-600"
-                        title="Return to Inbox"
-                        aria-label={`Return ${item.text} to Inbox`}
+                        title={t('Return to I wish')}
+                        aria-label={t('Return {title} to I wish', { title: item.text })}
                       >
                         <RotateCcw className="h-4 w-4" />
                       </button>
@@ -435,8 +455,8 @@ export const InboxView: React.FC = () => {
                         type="button"
                         onClick={() => setDeleteConfirm({ isOpen: true, captureId: item.id })}
                         className="flex-shrink-0 p-1.5 text-slate-400 transition-colors hover:text-red-500"
-                        title="Delete permanently"
-                        aria-label={`Delete ${item.text}`}
+                        title={t('Delete permanently')}
+                        aria-label={t('Delete {title}', { title: item.text })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -452,7 +472,7 @@ export const InboxView: React.FC = () => {
         {newCaptures.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
             <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-            <p className="text-slate-400 font-medium">No ideas waiting to be processed</p>
+            <p className="text-slate-400 font-medium">{t('No ideas waiting to be processed')}</p>
           </div>
         ) : (
           <div className="flex-1 space-y-3">
@@ -468,13 +488,13 @@ export const InboxView: React.FC = () => {
             type="text"
             value={captureInput}
             onChange={(e) => setCaptureInput(e.target.value)}
-            placeholder="What's on your mind?"
+            placeholder={t("What's on your mind?")}
             className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
           />
           <button 
             type="submit"
             className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-            title="Add capture"
+            title={t('Add wish')}
           >
             <Plus className="w-6 h-6" />
           </button>
@@ -487,13 +507,13 @@ export const InboxView: React.FC = () => {
           type="text"
           value={captureInput}
           onChange={(e) => setCaptureInput(e.target.value)}
-          placeholder="What's on your mind?"
+          placeholder={t("What's on your mind?")}
           className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
         />
         <button 
           type="submit"
           className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
-          title="Add capture"
+          title={t('Add wish')}
         >
           <Plus className="w-6 h-6" />
         </button>
@@ -508,10 +528,10 @@ export const InboxView: React.FC = () => {
             setDeleteConfirm({ isOpen: false, captureId: null });
           }
         }}
-        title="Delete Capture"
-        message="Delete this capture permanently?"
+        title={t('Delete wish')}
+        message={t('Delete this wish permanently?')}
         variant="danger"
-        confirmText="Delete"
+        confirmText={t('Delete')}
       />
     </div>
   );
