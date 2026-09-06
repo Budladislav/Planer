@@ -19,7 +19,6 @@ import {
   Confirmation,
   dangerButton,
   fieldClass,
-  formatDateTime,
   gradeStyles,
   secondaryButton,
 } from './RewardsLabPanel.shared';
@@ -61,19 +60,11 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
 
   useEffect(() => setCurrency(state.currencyName), [state.currencyName]);
 
-  const gradeCounts = Object.keys(REWARD_GRADES).reduce<Record<RewardGrade, number>>(
-    (counts, grade) => ({ ...counts, [grade]: 0 }),
-    { common: 0, uncommon: 0, rare: 0, legendary: 0, mythic: 0 },
-  );
-  Object.values(state.claims).forEach((claim) => {
-    gradeCounts[claim.grade] += 1;
+  const economyDate = new Date(state.economyActivatedAt).toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
-  const earned = state.ledger
-    .filter((item) => item.kind === 'earn')
-    .reduce((total, item) => total + item.amount, 0);
-  const spentNet = Math.abs(state.ledger
-    .filter((item) => item.kind === 'spend' || item.kind === 'refund')
-    .reduce((total, item) => total + item.amount, 0));
 
   const saveCurrency = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,9 +111,14 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         <div className="flex items-start gap-3">
           <Dice5 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <h2 className="font-semibold text-slate-900">{t('Fair-bag rewards')}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-semibold text-slate-900">{t('Fair-bag rewards')}</h2>
+              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                {t('Economy v{version} · since {date}', { version: state.economyVersion, date: economyDate })}
+              </span>
+            </div>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
-              {t('Every cycle contains three 2s, three 3s, and three 4s in a shuffled bag. Each completed task draws one value, so short-term surprise stays fair over every nine draws. There are no zeroes, penalties, or weekly caps.')}
+              {t('Every cycle shuffles nine unique hidden luck slots. The same slot maps into the selected grade corridor, so a higher grade always pays more than any lower grade while the result stays varied and fair over nine draws.')}
             </p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {(Object.keys(REWARD_GRADES) as RewardGrade[]).map((grade) => (
@@ -130,45 +126,10 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
               ))}
             </ul>
             <p className="mt-3 text-xs text-slate-500">
-              {t('Undoing a task reverses its reward. Completing it again restores the original result instead of rerolling.')}
+              {t('Undoing a task reverses its reward and unlocks its grade. You may correct the grade while it is undone; completing it again keeps the original luck and restores the corrected amount without a reroll.')}
             </p>
           </div>
         </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="font-semibold text-slate-900">{t('Pilot snapshot')}</h2>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">{t('Claims')}</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{Object.keys(state.claims).length}</p>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">{t('Earned')}</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{earned}</p>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">{t('Spent now')}</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{spentNet}</p>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">{t('Redemptions')}</p>
-            <p className="mt-1 text-xl font-semibold text-slate-800">{state.metrics.redemptionCount}</p>
-          </div>
-        </div>
-        {Object.keys(state.claims).length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2" aria-label={t('Completed task grade distribution')}>
-            {(Object.keys(REWARD_GRADES) as RewardGrade[]).map((grade) => (
-              <span key={grade} className={`rounded-full border px-2 py-1 text-xs ${gradeStyles[grade].badge}`}>
-                {t(REWARD_GRADES[grade].label)}: {gradeCounts[grade]}
-              </span>
-            ))}
-          </div>
-        )}
-        <p className="mt-3 text-xs text-slate-500">
-          {t('Lab opened {count} times', { count: state.metrics.labOpenCount })}
-          {state.metrics.lastOpenedAt ? ` · ${t('last {date}', { date: formatDateTime(state.metrics.lastOpenedAt, locale) })}` : ''}
-        </p>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">

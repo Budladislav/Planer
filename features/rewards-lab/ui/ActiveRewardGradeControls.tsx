@@ -11,22 +11,46 @@ const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
   mythic: { dot: 'bg-rose-500', selected: 'ring-rose-600' },
 };
 
+const GRADE_SURFACES: Record<Exclude<RewardGrade, 'common'>, string> = {
+  uncommon: 'border-l-emerald-400 bg-emerald-50/40',
+  rare: 'border-l-blue-400 bg-blue-50/40',
+  legendary: 'border-l-amber-400 bg-amber-50/45',
+  mythic: 'border-l-rose-400 bg-rose-50/40',
+};
+
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
 
 export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => {
   const { t } = useI18n();
   const { snapshot } = useRewardsLab();
   if (!snapshot.enabled || !snapshot.state) return null;
-  const grade = snapshot.state.claims[taskId]?.grade ?? getTaskGrade(snapshot.state, taskId);
+  const claim = snapshot.state.claims[taskId];
+  const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   if (grade === 'common') return null;
   const meta = REWARD_GRADES[grade];
+  const rule = claim?.economyVersion === 1
+    ? `×${meta.legacyMultiplier}`
+    : `${meta.min}–${meta.max}`;
 
   return (
     <span
       className={`h-2.5 w-2.5 flex-shrink-0 rotate-45 rounded-[2px] ${GRADE_STYLES[grade].dot}`}
       role="img"
-      aria-label={t('{grade} reward grade, reward {min}–{max}', { grade: t(meta.label), min: meta.min, max: meta.max })}
-      title={`${t(meta.label)} · ${meta.min}–${meta.max}`}
+      aria-label={t('{grade} reward grade, rule {rule}', { grade: t(meta.label), rule })}
+      title={`${t(meta.label)} · ${rule}`}
+    />
+  );
+};
+
+export const ActiveRewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const { snapshot } = useRewardsLab();
+  if (!snapshot.enabled || !snapshot.state) return null;
+  const grade = snapshot.state.claims[taskId]?.grade ?? getTaskGrade(snapshot.state, taskId);
+  if (grade === 'common') return null;
+  return (
+    <span
+      className={`pointer-events-none absolute inset-0 rounded-[inherit] border-l-[3px] ${GRADE_SURFACES[grade]}`}
+      aria-hidden="true"
     />
   );
 };

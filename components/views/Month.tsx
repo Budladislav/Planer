@@ -33,7 +33,7 @@ import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -76,9 +76,10 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
         transition,
         opacity: isDragging ? 0.45 : 1,
       }}
-      className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm shadow-sm"
+      className="relative rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm shadow-sm"
       onClick={() => setShowActions(value => !value)}
     >
+      <RewardGradeSurface taskId={task.id} />
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"

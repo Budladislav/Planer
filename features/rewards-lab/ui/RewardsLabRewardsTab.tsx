@@ -13,11 +13,16 @@ import {
 } from 'lucide-react';
 import { FormEvent, useMemo, useState } from 'react';
 import {
+  REWARD_GRADES,
   RewardDefinition,
   RewardDefinitionInput,
+  RewardPeriodSummary,
   RewardsLabState,
   WalletTransaction,
+  getCurrentRewardResults,
+  getEarnedTaskRewards,
   getWalletBalance,
+  rewardGrades,
 } from '../domain';
 import { getRewardsLabRuntime } from '../runtime';
 import { useI18n } from '../../../i18n';
@@ -25,6 +30,7 @@ import {
   Confirmation,
   fieldClass,
   getCommonTaskEstimate,
+  gradeStyles,
   isOneTimeRewardUsed,
   latestUnrefundedSpend,
   primaryButton,
@@ -41,6 +47,10 @@ const BalanceCard = ({ state, onRefund }: BalanceCardProps) => {
   const balance = getWalletBalance(state);
   const latestSpend = latestUnrefundedSpend(state);
   const currencyName = state.currencyName === 'points' ? t('points') : state.currencyName;
+  const earned = getEarnedTaskRewards(state);
+  const spent = Math.abs(state.ledger
+    .filter(item => item.kind === 'spend' || item.kind === 'refund')
+    .reduce((total, item) => total + item.amount, 0));
 
   return (
     <section className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4">
@@ -74,6 +84,61 @@ const BalanceCard = ({ state, onRefund }: BalanceCardProps) => {
           })}
         </p>
       )}
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-indigo-100 pt-3">
+        <div>
+          <p className="text-[11px] text-slate-500">{t('Earned total')}</p>
+          <p className="mt-0.5 font-semibold tabular-nums text-slate-800">{earned.toLocaleString(locale)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-slate-500">{t('Spent')}</p>
+          <p className="mt-0.5 font-semibold tabular-nums text-slate-800">{spent.toLocaleString(locale)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-slate-500">{t('Rewards received')}</p>
+          <p className="mt-0.5 font-semibold tabular-nums text-slate-800">{state.metrics.redemptionCount.toLocaleString(locale)}</p>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ResultPeriod = ({ label, summary, currencyName }: {
+  label: string;
+  summary: RewardPeriodSummary;
+  currencyName: string;
+}) => {
+  const { t } = useI18n();
+  return (
+    <div className="rounded-lg bg-white p-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs font-semibold text-slate-600">{label}</p>
+        <p className="text-lg font-bold tabular-nums text-slate-900">+{summary.amount} <span className="text-xs font-medium text-slate-400">{currencyName}</span></p>
+      </div>
+      <p className="mt-0.5 text-xs text-slate-500">{t('{count} completed tasks', { count: summary.taskCount })}</p>
+      {summary.taskCount > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {rewardGrades.filter(grade => summary.gradeCounts[grade] > 0).map(grade => (
+            <span key={grade} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${gradeStyles[grade].badge}`}>
+              {t(REWARD_GRADES[grade].label)}: {summary.gradeCounts[grade]}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CurrentResults = ({ state }: { state: RewardsLabState }) => {
+  const { t } = useI18n();
+  const results = getCurrentRewardResults(state);
+  const currencyName = state.currencyName === 'points' ? t('points') : state.currencyName;
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <h2 className="px-1 text-sm font-semibold text-slate-800">{t('Current results')}</h2>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <ResultPeriod label={t('This week')} summary={results.week} currencyName={currencyName} />
+        <ResultPeriod label={t('This month')} summary={results.month} currencyName={currencyName} />
+      </div>
     </section>
   );
 };
@@ -298,6 +363,7 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
   return (
     <div className="space-y-4">
       <BalanceCard state={state} onRefund={(transaction) => onConfirm({ kind: 'refund', transaction })} />
+      <CurrentResults state={state} />
 
       {formOpen ? (
         <RewardForm
@@ -386,4 +452,3 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
     </div>
   );
 };
-

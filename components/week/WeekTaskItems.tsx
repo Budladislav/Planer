@@ -11,7 +11,7 @@ import { Task } from '../../types';
 import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
 import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
-import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 
@@ -162,7 +162,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
 
   return (
     <div
-      className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      className="relative px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -170,6 +170,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         }
       }}
     >
+      <RewardGradeSurface taskId={task.id} />
       <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
         <div 
           className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
@@ -445,7 +446,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
 
   return (
     <div
-      className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+      className="relative px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -453,6 +454,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         }
       }}
     >
+      <RewardGradeSurface taskId={task.id} />
       <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'} min-w-0`}>
         <div 
           className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}

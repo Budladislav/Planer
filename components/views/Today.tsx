@@ -29,7 +29,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
-import { RewardGradeMarker, RewardGradeSelector } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
@@ -134,13 +134,14 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`px-3 py-2 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
+      className={`relative px-3 py-2 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
         isFirst
           ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
           : 'bg-white border border-slate-200 hover:border-slate-300'
       }`}
       onClick={() => setShowActions((prev) => !prev)}
     >
+      <RewardGradeSurface taskId={task.id} />
       <div
         {...attributes}
         {...listeners}
@@ -522,6 +523,7 @@ export const TodayView: React.FC = () => {
               <div className={`relative bg-white/95 backdrop-blur-sm rounded-2xl p-12 shadow-2xl border border-white/50 transition-all duration-500 overflow-hidden ${
                 isCompleting ? 'scale-110 rotate-3' : ''
               }`}>
+                <RewardGradeSurface taskId={activeTask.id} />
                 <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center break-words overflow-hidden max-w-full px-4">
                   {activeTask.title}
                 </h3>
@@ -646,6 +648,7 @@ export const TodayView: React.FC = () => {
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
                   ) : completedTodayTasks.map(task => (
                     <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <RewardGradeMarker taskId={task.id} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">

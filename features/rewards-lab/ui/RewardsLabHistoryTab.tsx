@@ -1,5 +1,5 @@
-import { Coins, Gift, History, Undo2 } from 'lucide-react';
-import { RewardsLabState, WalletTransaction } from '../domain';
+import { Coins, Gift, History, Pencil, Undo2 } from 'lucide-react';
+import { REWARD_GRADES, RewardGradeCorrection, RewardsLabState, WalletTransaction } from '../domain';
 import { useI18n } from '../../../i18n';
 import {
   Confirmation,
@@ -24,11 +24,17 @@ interface HistoryTabProps {
 export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
   const { locale, t } = useI18n();
   const spendIds = unrefundedSpendIds(state);
-  const newestFirst = state.ledger
-    .map((transaction, index) => ({ transaction, index }))
+  const newestFirst = [
+    ...state.ledger.map((transaction, index) => ({ kind: 'transaction' as const, item: transaction, index })),
+    ...state.gradeCorrections.map((correction, index) => ({
+      kind: 'correction' as const,
+      item: correction,
+      index: state.ledger.length + index,
+    })),
+  ]
     .sort((left, right) => {
-      const dateDifference = new Date(right.transaction.occurredAt).getTime()
-        - new Date(left.transaction.occurredAt).getTime();
+      const dateDifference = new Date(right.item.occurredAt).getTime()
+        - new Date(left.item.occurredAt).getTime();
       return dateDifference || right.index - left.index;
     });
 
@@ -45,9 +51,35 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
   return (
     <section aria-label={t('Wallet history')}>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {newestFirst.map(({ transaction }) => {
+        {newestFirst.map(historyItem => {
+          if (historyItem.kind === 'correction') {
+            const correction = historyItem.item as RewardGradeCorrection;
+            return (
+              <article key={correction.id} className="flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 sm:px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700">
+                  <Pencil className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-medium text-slate-800">{t('Task grade corrected')}</p>
+                  <p className="text-xs text-slate-500">
+                    {t(REWARD_GRADES[correction.fromGrade].label)} → {t(REWARD_GRADES[correction.toGrade].label)} · {formatDateTime(correction.occurredAt, locale)} · v{correction.economyVersion}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-semibold tabular-nums text-indigo-700">{correction.previousAmount} → {correction.amount}</p>
+                  <p className="max-w-20 truncate text-[11px] text-slate-400">{state.currencyName}</p>
+                </div>
+              </article>
+            );
+          }
+
+          const transaction = historyItem.item as WalletTransaction;
           const positive = transaction.amount > 0;
           const refundable = transaction.kind === 'spend' && spendIds.has(transaction.id);
+          const claimVersion = transaction.claimId
+            ? Object.values(state.claims).find(claim => claim.id === transaction.claimId)?.economyVersion
+            : undefined;
+          const economyVersion = transaction.economyVersion ?? claimVersion;
           return (
             <article key={transaction.id} className="flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 sm:px-4">
               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -57,6 +89,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                 <p className="break-words text-sm font-medium text-slate-800">{transaction.label}</p>
                 <p className="text-xs text-slate-500">
                   {t(transactionKindLabel[transaction.kind])} · {formatDateTime(transaction.occurredAt, locale)}
+                  {economyVersion ? ` · v${economyVersion}` : ''}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -82,4 +115,3 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
     </section>
   );
 };
-

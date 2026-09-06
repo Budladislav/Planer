@@ -8,6 +8,9 @@ const ActiveRewardGradeMarker = lazy(() => import('./ActiveRewardGradeControls')
 const ActiveRewardGradeSelector = lazy(() => import('./ActiveRewardGradeControls').then(module => ({
   default: module.ActiveRewardGradeSelector,
 })));
+const ActiveRewardGradeSurface = lazy(() => import('./ActiveRewardGradeControls').then(module => ({
+  default: module.ActiveRewardGradeSurface,
+})));
 
 const GateAwareMarker: React.FC<{ taskId: string }> = ({ taskId }) => {
   const gate = useRewardsLabGate();
@@ -29,6 +32,16 @@ const GateAwareSelector: React.FC<{ taskId: string; compact?: boolean }> = ({ ta
   );
 };
 
+const GateAwareSurface: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const gate = useRewardsLabGate();
+  if (!gate.enabled) return null;
+  return (
+    <Suspense fallback={null}>
+      <ActiveRewardGradeSurface taskId={taskId} />
+    </Suspense>
+  );
+};
+
 export const RewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => (
   <RewardsErrorBoundary>
     <GateAwareMarker taskId={taskId} />
@@ -38,5 +51,11 @@ export const RewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => (
 export const RewardGradeSelector: React.FC<{ taskId: string; compact?: boolean }> = ({ taskId, compact }) => (
   <RewardsErrorBoundary>
     <GateAwareSelector taskId={taskId} compact={compact} />
+  </RewardsErrorBoundary>
+);
+
+export const RewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId }) => (
+  <RewardsErrorBoundary>
+    <GateAwareSurface taskId={taskId} />
   </RewardsErrorBoundary>
 );

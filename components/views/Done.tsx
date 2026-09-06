@@ -6,6 +6,7 @@ import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
+import { RewardGradeMarker } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -161,6 +162,7 @@ export const DoneView: React.FC = () => {
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
+            <RewardGradeMarker taskId={task.id} />
             <span className="text-sm break-all line-through text-slate-500">
               {task.title}
             </span>
