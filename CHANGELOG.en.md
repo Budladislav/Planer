@@ -23,6 +23,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - Removed overlapping grade payouts that could make a difficult task pay the same as or less than a Common task.
 - Grade correction no longer needs a new random result and cannot be used with repeated Undo actions to obtain extra draws.
+- The first Today task no longer receives an unrelated purple outline; task cards now differ only through meaningful states and their selected grade.
 
 ### Safety
 

@@ -43,8 +43,7 @@ const SortableTaskItem: React.FC<{
   onMoveTomorrow: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
-  isFirst?: boolean;
-}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm, isFirst = false }) => {
+}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm }) => {
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -134,11 +133,7 @@ const SortableTaskItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative px-3 py-2 rounded-lg w-full max-w-full overflow-hidden transition-all text-sm ${
-        isFirst
-          ? 'bg-indigo-50/50 border-2 border-indigo-300 shadow-sm'
-          : 'bg-white border border-slate-200 hover:border-slate-300'
-      }`}
+      className="relative w-full max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-all hover:border-slate-300"
       onClick={() => setShowActions((prev) => !prev)}
     >
       <RewardGradeSurface taskId={task.id} />
@@ -603,7 +598,7 @@ export const TodayView: React.FC = () => {
                   <div className="flex-1">
                     <SortableContext items={todayTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-2">
-                        {todayTasks.map((task, index) => (
+                        {todayTasks.map(task => (
                         <SortableTaskItem 
                           key={task.id} 
                           task={task} 
@@ -613,7 +608,6 @@ export const TodayView: React.FC = () => {
                           onMoveTomorrow={handleMoveTomorrow}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}
-                          isFirst={index === 0}
                         />
                         ))}
                       </div>
