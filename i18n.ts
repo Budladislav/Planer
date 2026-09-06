@@ -42,6 +42,7 @@ const RU: Record<string, string> = {
   'Data stored locally in browser': 'Данные хранятся локально в браузере',
   'MonoFocus changelog': 'История изменений MonoFocus',
   'Loading release history…': 'Загружаем историю изменений…',
+  'Loading…': 'Загрузка…',
   'Release history is not available offline yet. Open it once while connected and it will be cached.': 'История изменений пока недоступна без интернета. Откройте её один раз при подключении, и она сохранится в кэше.',
   'Export Successful': 'Экспорт готов',
   'Backup exported successfully!\n\nFilename: {filename}\n\nCheck your Downloads folder.': 'Резервная копия создана.\n\nФайл: {filename}\n\nПроверьте папку загрузок.',

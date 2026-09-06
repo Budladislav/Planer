@@ -5,6 +5,9 @@ const STATIC_CACHE = 'monofocus-static-v4.0.0';
 // Файлы для кэширования (статичные ресурсы)
 // Пути должны соответствовать base path из vite.config.ts
 const BASE_PATH = '/Planer/';
+const BUILD_ASSETS = [
+  // __MONOFOCUS_BUILD_ASSETS__
+];
 const STATIC_ASSETS = [
   BASE_PATH,
   BASE_PATH + 'index.html',
@@ -12,6 +15,7 @@ const STATIC_ASSETS = [
   BASE_PATH + 'favicon.svg',
   BASE_PATH + 'icon-192.svg',
   BASE_PATH + 'icon-512.svg',
+  ...BUILD_ASSETS.map((asset) => BASE_PATH + asset),
 ];
 
 // Установка Service Worker
