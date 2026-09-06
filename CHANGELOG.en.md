@@ -2,6 +2,33 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [4.1.0] — 06.09.2026 — Rewards Economy v2 and interface performance
+
+### Added
+
+- Rewards Lab now shows current-week and current-month results: earned amount, completed-task count, and grade distribution.
+- Uncommon, Rare, Legendary, and Mythic task cards have a subtle tinted surface and side accent in Today, Week, and Month; completed-task lists retain a compact grade marker.
+- Lab history shows the economy version for task transactions and separate records for grade corrections.
+
+### Changed
+
+- Rewards Economy v2 gives each grade a strict non-overlapping corridor: Common 1–2, Uncommon 3–4, Rare 5–8, Legendary 9–15, and Mythic 16–30.
+- Randomness now uses one fair bag of nine hidden luck slots. A higher grade always pays more than every lower grade, while each full cycle uses every slot exactly once.
+- After Undo, a task grade can be corrected. The original luck is retained, no new draw occurs, and recompletion awards the corrected amount under the claim's original economy version.
+- Earned total, available balance, spent points, and rewards received are now distinct metrics; reward-price hints use Economy v2 Common-task values.
+- Settings, Completed Tasks, Progress Reports, and Long-term Goals are loaded only when first opened and remain available offline.
+- The large Week and Rewards Lab screens were split into focused components without changing their established behavior.
+
+### Fixed
+
+- Removed overlapping grade payouts that could make a difficult task pay the same as or less than a Common task.
+- Grade correction no longer needs a new random result and cannot be used with repeated Undo actions to obtain extra draws.
+
+### Safety
+
+- Every Economy v1 claim, wallet entry, catalog reward, and accumulated balance is preserved without recalculation. Economy v2 starts its own fresh fair-bag cycle.
+- Rewards Lab remains separate from the main MonoFocus state and excluded from planner JSON backups.
+
 ## [4.0.0] — 04.09.2026 — Russian localization and long-term goals
 
 ### Added
