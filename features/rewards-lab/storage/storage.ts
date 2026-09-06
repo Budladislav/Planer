@@ -8,12 +8,16 @@ import {
   RewardClaim,
   RewardDefinition,
   RewardGrade,
+  RewardGradeCorrection,
+  RewardLuckSlot,
   RewardRoll,
+  RewardsEconomyVersion,
   RewardsLabMetrics,
   RewardsLabState,
   WalletTransaction,
   WalletTransactionKind,
   createDefaultRewardsLabState,
+  getV2RewardAmount,
 } from '../domain';
 import { REWARDS_LAB_EXPERIMENT_FLAGS_KEY } from '../contracts';
 import { clearRewardsLabLifecycleOutbox } from '../outbox';
@@ -48,6 +52,12 @@ const isRewardGrade = (value: unknown): value is RewardGrade => (
 );
 
 const isRewardRoll = (value: unknown): value is RewardRoll => value === 2 || value === 3 || value === 4;
+
+const isRewardLuckSlot = (value: unknown): value is RewardLuckSlot => (
+  Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 8
+);
+
+const isEconomyVersion = (value: unknown): value is RewardsEconomyVersion => value === 1 || value === 2;
 
 const safeParse = (serialized: string | null): unknown => {
   if (serialized === null) return null;
@@ -96,16 +106,10 @@ const sanitizeTaskGrades = (value: unknown): RewardsLabState['taskGrades'] => {
 
 const sanitizeFairBag = (value: unknown): FairBagState => {
   if (!isRecord(value) || !Array.isArray(value.remaining)) return { remaining: [], cycle: 0 };
-  const remaining = value.remaining.filter(isRewardRoll);
-  const countByRoll = remaining.reduce<Record<RewardRoll, number>>(
-    (counts, roll) => ({ ...counts, [roll]: counts[roll] + 1 }),
-    { 2: 0, 3: 0, 4: 0 },
-  );
+  const remaining = value.remaining.filter(isRewardLuckSlot);
   const validBag = remaining.length === value.remaining.length
     && remaining.length <= 9
-    && countByRoll[2] <= 3
-    && countByRoll[3] <= 3
-    && countByRoll[4] <= 3;
+    && new Set(remaining).size === remaining.length;
   const cycle = Number.isInteger(value.cycle) && Number(value.cycle) >= 0 ? Number(value.cycle) : 0;
   return { remaining: validBag ? remaining : [], cycle };
 };
@@ -117,24 +121,33 @@ const sanitizeClaim = (value: unknown): RewardClaim | null => {
     || typeof value.taskTitle !== 'string'
     || !nonEmptyString(value.completedAt)
     || !isRewardGrade(value.grade)
-    || !isRewardRoll(value.roll)
-    || value.economyVersion !== REWARDS_ECONOMY_VERSION
+    || !isEconomyVersion(value.economyVersion)
     || !nonEmptyString(value.createdAt)) return null;
 
-  const multiplier = REWARD_GRADES[value.grade].multiplier;
-  const amount = Math.round(value.roll * multiplier);
-  if (value.multiplier !== multiplier || value.amount !== amount) return null;
-  return {
+  const base = {
     id: value.id,
     taskId: value.taskId,
     taskTitle: value.taskTitle,
     completedAt: value.completedAt,
     grade: value.grade,
-    multiplier,
-    roll: value.roll,
+    createdAt: value.createdAt,
+  };
+  if (value.economyVersion === 1) {
+    if (!isRewardRoll(value.roll)) return null;
+    const multiplier = REWARD_GRADES[value.grade].legacyMultiplier;
+    const amount = Math.round(value.roll * multiplier);
+    if (value.multiplier !== multiplier || value.amount !== amount) return null;
+    return { ...base, multiplier, roll: value.roll, amount, economyVersion: 1 };
+  }
+
+  if (!isRewardLuckSlot(value.luckSlot)) return null;
+  const amount = getV2RewardAmount(value.grade, value.luckSlot);
+  if (value.amount !== amount) return null;
+  return {
+    ...base,
+    luckSlot: value.luckSlot,
     amount,
     economyVersion: REWARDS_ECONOMY_VERSION,
-    createdAt: value.createdAt,
   };
 };
 
@@ -149,6 +162,49 @@ const sanitizeClaims = (value: unknown): RewardsLabState['claims'] => {
     ids.add(claim.id);
   });
   return claims;
+};
+
+const sanitizeGradeCorrection = (value: unknown): RewardGradeCorrection | null => {
+  if (!isRecord(value)
+    || !nonEmptyString(value.id)
+    || !nonEmptyString(value.claimId)
+    || !nonEmptyString(value.taskId)
+    || !isRewardGrade(value.fromGrade)
+    || !isRewardGrade(value.toGrade)
+    || !Number.isInteger(value.previousAmount)
+    || Number(value.previousAmount) <= 0
+    || !Number.isInteger(value.amount)
+    || Number(value.amount) <= 0
+    || !isEconomyVersion(value.economyVersion)
+    || !nonEmptyString(value.occurredAt)) return null;
+  return {
+    id: value.id,
+    claimId: value.claimId,
+    taskId: value.taskId,
+    fromGrade: value.fromGrade,
+    toGrade: value.toGrade,
+    previousAmount: Number(value.previousAmount),
+    amount: Number(value.amount),
+    economyVersion: value.economyVersion,
+    occurredAt: value.occurredAt,
+  };
+};
+
+const sanitizeGradeCorrections = (
+  value: unknown,
+  claims: RewardsLabState['claims'],
+): RewardGradeCorrection[] => {
+  if (!Array.isArray(value)) return [];
+  const claimIds = new Set(Object.values(claims).map(claim => claim.id));
+  const ids = new Set<string>();
+  return value.flatMap(rawCorrection => {
+    const correction = sanitizeGradeCorrection(rawCorrection);
+    if (!correction || ids.has(correction.id) || !claimIds.has(correction.claimId)) return [];
+    const claim = claims[correction.taskId];
+    if (!claim || claim.id !== correction.claimId || claim.economyVersion !== correction.economyVersion) return [];
+    ids.add(correction.id);
+    return [correction];
+  });
 };
 
 const TRANSACTION_KINDS = new Set<WalletTransactionKind>([
@@ -167,7 +223,8 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     || !optionalString(value.taskId)
     || !optionalString(value.claimId)
     || !optionalString(value.rewardId)
-    || !optionalString(value.relatedTransactionId)) return null;
+    || !optionalString(value.relatedTransactionId)
+    || (value.economyVersion !== undefined && !isEconomyVersion(value.economyVersion))) return null;
 
   return {
     id: value.id,
@@ -179,6 +236,7 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     ...(value.claimId === undefined ? {} : { claimId: value.claimId }),
     ...(value.rewardId === undefined ? {} : { rewardId: value.rewardId }),
     ...(value.relatedTransactionId === undefined ? {} : { relatedTransactionId: value.relatedTransactionId }),
+    ...(value.economyVersion === undefined ? {} : { economyVersion: value.economyVersion }),
   };
 };
 
@@ -244,16 +302,27 @@ const sanitizeMetrics = (value: unknown): RewardsLabMetrics => {
 
 export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   const defaults = createDefaultRewardsLabState();
-  if (!isRecord(value) || value.schemaVersion !== REWARDS_LAB_SCHEMA_VERSION) return defaults;
+  if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== REWARDS_LAB_SCHEMA_VERSION)) {
+    return defaults;
+  }
+  const migratingFromV1 = value.schemaVersion === 1;
+  const claims = sanitizeClaims(value.claims);
   return {
     schemaVersion: REWARDS_LAB_SCHEMA_VERSION,
+    economyVersion: REWARDS_ECONOMY_VERSION,
+    economyActivatedAt: !migratingFromV1 && nonEmptyString(value.economyActivatedAt)
+      ? value.economyActivatedAt
+      : defaults.economyActivatedAt,
     currencyName: nonEmptyString(value.currencyName) ? value.currencyName.trim().slice(0, 40) : defaults.currencyName,
     animationsEnabled: typeof value.animationsEnabled === 'boolean'
       ? value.animationsEnabled
       : defaults.animationsEnabled,
     taskGrades: sanitizeTaskGrades(value.taskGrades),
-    fairBag: sanitizeFairBag(value.fairBag),
-    claims: sanitizeClaims(value.claims),
+    // Economy v1 used a different bag. Migration deliberately starts v2 with
+    // a fresh cycle while preserving every posted claim and ledger entry.
+    fairBag: migratingFromV1 ? defaults.fairBag : sanitizeFairBag(value.fairBag),
+    claims,
+    gradeCorrections: migratingFromV1 ? [] : sanitizeGradeCorrections(value.gradeCorrections, claims),
     ledger: sanitizeLedger(value.ledger),
     rewards: sanitizeRewards(value.rewards),
     metrics: sanitizeMetrics(value.metrics),

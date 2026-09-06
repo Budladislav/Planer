@@ -6,12 +6,13 @@ import {
   RewardClaim,
   RewardDefinition,
   RewardGrade,
-  RewardRoll,
+  RewardGradeCorrection,
+  RewardLuckSlot,
   RewardsLabState,
   WalletTransaction,
 } from './types';
 
-export const FAIR_BAG_VALUES: readonly RewardRoll[] = [2, 2, 2, 3, 3, 3, 4, 4, 4];
+export const FAIR_BAG_SLOTS: readonly RewardLuckSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 const now = (runtime: EconomyRuntime): string => runtime.now?.() ?? new Date().toISOString();
 
@@ -31,8 +32,8 @@ const normalizedRandom = (random: () => number): number => {
   return value;
 };
 
-const shuffledBag = (random: () => number): RewardRoll[] => {
-  const values = [...FAIR_BAG_VALUES];
+const shuffledBag = (random: () => number): RewardLuckSlot[] => {
+  const values = [...FAIR_BAG_SLOTS];
   for (let index = values.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(normalizedRandom(random) * (index + 1));
     [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
@@ -41,7 +42,7 @@ const shuffledBag = (random: () => number): RewardRoll[] => {
 };
 
 export interface FairBagDraw {
-  roll: RewardRoll;
+  luckSlot: RewardLuckSlot;
   fairBag: FairBagState;
 }
 
@@ -51,21 +52,32 @@ export const drawFromFairBag = (
 ): FairBagDraw => {
   const startedCycle = fairBag.remaining.length === 0;
   const remaining = startedCycle ? shuffledBag(random) : [...fairBag.remaining];
-  const roll = remaining.pop();
+  const luckSlot = remaining.pop();
 
   // A valid bag can only be empty before starting a new cycle.
-  if (roll === undefined) {
-    return { roll: 2, fairBag: { remaining: [], cycle: fairBag.cycle + 1 } };
+  if (luckSlot === undefined) {
+    return { luckSlot: 0, fairBag: { remaining: [], cycle: fairBag.cycle + 1 } };
   }
 
   return {
-    roll,
+    luckSlot,
     fairBag: {
       remaining,
       cycle: fairBag.cycle + (startedCycle ? 1 : 0),
     },
   };
 };
+
+export const getV2RewardAmount = (grade: RewardGrade, luckSlot: RewardLuckSlot): number => {
+  const { min, max } = REWARD_GRADES[grade];
+  return min + Math.round((luckSlot / (FAIR_BAG_SLOTS.length - 1)) * (max - min));
+};
+
+const getClaimAmountForGrade = (claim: RewardClaim, grade: RewardGrade): number => (
+  claim.economyVersion === 1
+    ? Math.round(claim.roll * REWARD_GRADES[grade].legacyMultiplier)
+    : getV2RewardAmount(grade, claim.luckSlot)
+);
 
 export const getWalletBalance = (state: Pick<RewardsLabState, 'ledger'>): number => (
   state.ledger.reduce((total, transaction) => total + transaction.amount, 0)
@@ -90,9 +102,21 @@ export const setTaskGrade = (
   return { ...state, taskGrades };
 };
 
-const claimLedgerTotal = (state: RewardsLabState, claimId: string): number => (
+export const claimLedgerTotal = (state: RewardsLabState, claimId: string): number => (
   state.ledger.reduce(
     (total, transaction) => transaction.claimId === claimId ? total + transaction.amount : total,
+    0,
+  )
+);
+
+export const isRewardClaimActive = (state: RewardsLabState, taskId: string): boolean => {
+  const claim = state.claims[taskId];
+  return Boolean(claim && claimLedgerTotal(state, claim.id) > 0);
+};
+
+export const getEarnedTaskRewards = (state: RewardsLabState): number => (
+  state.ledger.reduce(
+    (total, item) => item.claimId ? total + item.amount : total,
     0,
   )
 );
@@ -130,16 +154,26 @@ export const claimTaskCompletion = (
       return { state, claim: existingClaim, transaction: null, outcome: 'already-posted' };
     }
 
+    const restoredClaim: RewardClaim = {
+      ...existingClaim,
+      taskTitle: input.taskTitle,
+      completedAt: input.completedAt,
+    };
     const restored = transaction(runtime, {
       kind: 'restore',
-      amount: existingClaim.amount,
-      label: `Restored reward for ${existingClaim.taskTitle}`,
-      taskId: existingClaim.taskId,
-      claimId: existingClaim.id,
+      amount: restoredClaim.amount,
+      label: `Restored reward for ${restoredClaim.taskTitle}`,
+      taskId: restoredClaim.taskId,
+      claimId: restoredClaim.id,
+      economyVersion: restoredClaim.economyVersion,
     });
     return {
-      state: { ...state, ledger: [...state.ledger, restored] },
-      claim: existingClaim,
+      state: {
+        ...state,
+        claims: { ...state.claims, [input.taskId]: restoredClaim },
+        ledger: [...state.ledger, restored],
+      },
+      claim: restoredClaim,
       transaction: restored,
       outcome: 'restored',
     };
@@ -147,16 +181,14 @@ export const claimTaskCompletion = (
 
   const draw = drawFromFairBag(state.fairBag, runtime.random);
   const grade = getTaskGrade(state, input.taskId);
-  const multiplier = REWARD_GRADES[grade].multiplier;
   const claim: RewardClaim = {
     id: createId(runtime),
     taskId: input.taskId,
     taskTitle: input.taskTitle,
     completedAt: input.completedAt,
     grade,
-    multiplier,
-    roll: draw.roll,
-    amount: Math.round(draw.roll * multiplier),
+    luckSlot: draw.luckSlot,
+    amount: getV2RewardAmount(grade, draw.luckSlot),
     economyVersion: REWARDS_ECONOMY_VERSION,
     createdAt: now(runtime),
   };
@@ -166,6 +198,7 @@ export const claimTaskCompletion = (
     label: `Reward for ${claim.taskTitle}`,
     taskId: claim.taskId,
     claimId: claim.id,
+    economyVersion: claim.economyVersion,
     occurredAt: input.completedAt,
   });
 
@@ -179,6 +212,63 @@ export const claimTaskCompletion = (
     claim,
     transaction: earned,
     outcome: 'earned',
+  };
+};
+
+export type RegradeTaskClaimOutcome = 'regraded' | 'not-claimed' | 'claim-active' | 'unchanged';
+
+export interface RegradeTaskClaimResult {
+  state: RewardsLabState;
+  claim: RewardClaim | null;
+  correction: RewardGradeCorrection | null;
+  outcome: RegradeTaskClaimOutcome;
+}
+
+export const regradeReversedTaskClaim = (
+  state: RewardsLabState,
+  taskId: string,
+  grade: RewardGrade,
+  runtime: EconomyRuntime = {},
+): RegradeTaskClaimResult => {
+  const claim = state.claims[taskId];
+  if (!claim) return { state, claim: null, correction: null, outcome: 'not-claimed' };
+  if (claimLedgerTotal(state, claim.id) > 0) {
+    return { state, claim, correction: null, outcome: 'claim-active' };
+  }
+  if (claim.grade === grade) {
+    return { state, claim, correction: null, outcome: 'unchanged' };
+  }
+
+  const amount = getClaimAmountForGrade(claim, grade);
+  const updatedClaim: RewardClaim = claim.economyVersion === 1
+    ? {
+        ...claim,
+        grade,
+        multiplier: REWARD_GRADES[grade].legacyMultiplier,
+        amount,
+      }
+    : { ...claim, grade, amount };
+  const correction: RewardGradeCorrection = {
+    id: createId(runtime),
+    claimId: claim.id,
+    taskId,
+    fromGrade: claim.grade,
+    toGrade: grade,
+    previousAmount: claim.amount,
+    amount,
+    economyVersion: claim.economyVersion,
+    occurredAt: now(runtime),
+  };
+  const stateWithGrade = setTaskGrade(state, taskId, grade);
+  return {
+    state: {
+      ...stateWithGrade,
+      claims: { ...stateWithGrade.claims, [taskId]: updatedClaim },
+      gradeCorrections: [...stateWithGrade.gradeCorrections, correction],
+    },
+    claim: updatedClaim,
+    correction,
+    outcome: 'regraded',
   };
 };
 
@@ -205,6 +295,7 @@ export const reverseTaskCompletion = (
     label: `Reversed reward for ${claim.taskTitle}`,
     taskId: claim.taskId,
     claimId: claim.id,
+    economyVersion: claim.economyVersion,
   });
   return {
     state: { ...state, ledger: [...state.ledger, reversed] },

@@ -1,9 +1,10 @@
 import {
-  FAIR_BAG_VALUES,
+  FAIR_BAG_SLOTS,
   RewardDefinition,
   RewardGrade,
   RewardsLabState,
   WalletTransaction,
+  getV2RewardAmount,
 } from '../domain';
 
 export type Confirmation =
@@ -14,8 +15,10 @@ export type Confirmation =
   | { kind: 'reset' }
   | { kind: 'erase' };
 
-const averageCommonReward = FAIR_BAG_VALUES.reduce((total, value) => total + value, 0)
-  / FAIR_BAG_VALUES.length;
+const averageCommonReward = FAIR_BAG_SLOTS.reduce<number>(
+  (total, luckSlot) => total + getV2RewardAmount('common', luckSlot),
+  0,
+) / FAIR_BAG_SLOTS.length;
 
 export const buttonBase = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 export const primaryButton = `${buttonBase} bg-indigo-600 text-white hover:bg-indigo-700`;

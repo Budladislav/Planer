@@ -215,7 +215,7 @@ describe('Rewards Lab task lifecycle', () => {
 
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
 
-    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(2);
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(1);
     expect(runtime.getSnapshot().state!.claims['task-1']).toBeDefined();
     expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(0);
   });
@@ -233,11 +233,11 @@ describe('Rewards Lab task lifecycle', () => {
 
     storage.blockedWrites.delete(REWARDS_LAB_STORAGE_KEY);
     const recoveredRuntime = createRewardsLabRuntime(storage, '', deterministicEconomy());
-    expect(getWalletBalance(recoveredRuntime.getSnapshot().state!)).toBe(2);
+    expect(getWalletBalance(recoveredRuntime.getSnapshot().state!)).toBe(1);
     expect(getRewardsLabLifecycleOutboxSize(storage)).toBe(0);
   });
 
-  it('earns once, reverses, then restores the immutable claim without rerolling', () => {
+  it('earns once, reverses, then restores the same v2 luck result without rerolling', () => {
     const storage = new MemoryStorage();
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
     expect(runtime.enable()).toBe(true);
@@ -247,10 +247,10 @@ describe('Rewards Lab task lifecycle', () => {
     const earned = runtime.getSnapshot();
     const claim = earned.state!.claims['task-1'];
     const bagAfterClaim = earned.state!.fairBag;
-    expect(claim).toMatchObject({ grade: 'rare', multiplier: 2, roll: 2, amount: 4 });
-    expect(getWalletBalance(earned.state!)).toBe(4);
+    expect(claim).toMatchObject({ grade: 'rare', luckSlot: 0, amount: 5, economyVersion: 2 });
+    expect(getWalletBalance(earned.state!)).toBe(5);
     expect(earned.toast).toMatchObject({
-      kind: 'earned', taskId: 'task-1', grade: 'rare', amount: 4, currencyName: 'Tokens',
+      kind: 'earned', taskId: 'task-1', grade: 'rare', amount: 5, currencyName: 'Tokens', economyVersion: 2,
     });
 
     runtime.handleTaskLifecycle(completedEvent({ title: 'Renamed task' }));
@@ -267,13 +267,16 @@ describe('Rewards Lab task lifecycle', () => {
     }));
     const restored = runtime.getSnapshot();
     expect(restored.toast?.kind).toBe('restored');
-    expect(restored.state!.claims['task-1']).toEqual(claim);
+    expect(restored.state!.claims['task-1']).toMatchObject({
+      id: claim.id, grade: 'rare', luckSlot: 0, amount: 5,
+      completedAt: '2026-08-29T10:00:00.000Z',
+    });
     expect(restored.state!.fairBag).toEqual(bagAfterClaim);
     expect(restored.state!.ledger).toHaveLength(3);
-    expect(getWalletBalance(restored.state!)).toBe(4);
+    expect(getWalletBalance(restored.state!)).toBe(5);
   });
 
-  it('locks grade changes forever after the first claim', () => {
+  it('unlocks grade correction after Undo without rerolling', () => {
     const storage = new MemoryStorage();
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
     runtime.enable();
@@ -281,8 +284,13 @@ describe('Rewards Lab task lifecycle', () => {
 
     expect(runtime.setTaskGrade('task-1', 'mythic')).toBe(false);
     runtime.handleTaskLifecycle(reopenedEvent());
-    expect(runtime.setTaskGrade('task-1', 'mythic')).toBe(false);
-    expect(runtime.getSnapshot().state!.claims['task-1'].grade).toBe('common');
+    expect(runtime.setTaskGrade('task-1', 'mythic')).toBe(true);
+    expect(runtime.getSnapshot().state!.claims['task-1']).toMatchObject({
+      grade: 'mythic', luckSlot: 0, amount: 16, economyVersion: 2,
+    });
+    expect(runtime.getSnapshot().state!.gradeCorrections).toHaveLength(1);
+    runtime.handleTaskLifecycle(completedEvent());
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(16);
   });
 
   it('reverses a posted completion reward when the completed task is deleted', () => {
@@ -291,13 +299,13 @@ describe('Rewards Lab task lifecycle', () => {
     runtime.enable();
 
     runtime.handleTaskLifecycle(completedEvent());
-    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(2);
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(1);
 
     runtime.handleTaskLifecycle(deletedEvent());
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(0);
     expect(runtime.getSnapshot().state!.ledger.at(-1)).toMatchObject({
       kind: 'reverse',
-      amount: -2,
+      amount: -1,
       taskId: 'task-1',
     });
   });

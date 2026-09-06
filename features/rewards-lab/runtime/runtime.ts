@@ -10,6 +10,7 @@ import {
   archiveRewardDefinition,
   claimTaskCompletion,
   createDefaultRewardsLabState,
+  regradeReversedTaskClaim,
   recordLabOpened,
   redeemReward,
   refundRedemption,
@@ -42,9 +43,10 @@ export interface RewardsLabToast {
   taskId: string;
   taskTitle: string;
   grade: RewardGrade;
-  roll: number;
-  multiplier: number;
   amount: number;
+  economyVersion: 1 | 2;
+  roll?: number;
+  multiplier?: number;
   currencyName: string;
 }
 
@@ -304,10 +306,15 @@ export const createRewardsLabRuntime = (
     setTaskGrade: (taskId, grade) => {
       try {
         if (unavailable() || !taskId || !canUseGrade(grade)) return false;
-        // A claim is an immutable audit record. Reopening never unlocks its
-        // grade because a later completion restores that exact same claim.
-        if (snapshot.state!.claims[taskId]) return false;
-        return persist(setDomainTaskGrade(snapshot.state!, taskId, grade));
+        const claim = snapshot.state!.claims[taskId];
+        if (!claim) return persist(setDomainTaskGrade(snapshot.state!, taskId, grade));
+
+        // Posted claims stay locked. After Undo the claim may be corrected while
+        // retaining its original v1 roll or v2 luck slot, so no reroll is possible.
+        const result = regradeReversedTaskClaim(snapshot.state!, taskId, grade, economyRuntime);
+        if (result.outcome === 'claim-active') return false;
+        if (result.outcome === 'unchanged') return true;
+        return result.outcome === 'regraded' ? persist(result.state) : false;
       } catch (error) {
         return fail(errorMessage(error));
       }
@@ -331,9 +338,11 @@ export const createRewardsLabRuntime = (
             taskId: result.claim.taskId,
             taskTitle: result.claim.taskTitle,
             grade: result.claim.grade,
-            roll: result.claim.roll,
-            multiplier: result.claim.multiplier,
             amount: result.claim.amount,
+            economyVersion: result.claim.economyVersion,
+            ...(result.claim.economyVersion === 1
+              ? { roll: result.claim.roll, multiplier: result.claim.multiplier }
+              : {}),
             currencyName: result.state.currencyName,
           };
           return persist(result.state, { toast });

@@ -27,7 +27,9 @@ const RewardsLabActiveHost: React.FC = () => {
   const toastDescription = toast && grade
     ? toast.kind === 'restored'
       ? `${t(grade.label)} · ${t('original result restored')}`
-      : `${toast.roll} × ${t(grade.label)} ${toast.multiplier} = +${toast.amount} ${toast.currencyName}`
+      : toast.economyVersion === 1
+        ? `${toast.roll} × ${t(grade.label)} ${toast.multiplier} = +${toast.amount} ${toast.currencyName}`
+        : `${t(grade.label)} · ${grade.min}–${grade.max} · +${toast.amount} ${toast.currencyName}`
     : '';
 
   return (

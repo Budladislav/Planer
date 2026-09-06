@@ -1,5 +1,5 @@
 import React from 'react';
-import { getTaskGrade, REWARD_GRADES, RewardGrade } from '../domain';
+import { getTaskGrade, isRewardClaimActive, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
 
@@ -25,8 +25,8 @@ export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }
     <span
       className={`h-2.5 w-2.5 flex-shrink-0 rotate-45 rounded-[2px] ${GRADE_STYLES[grade].dot}`}
       role="img"
-      aria-label={t('{grade} reward grade, multiplier {multiplier}', { grade: t(meta.label), multiplier: meta.multiplier })}
-      title={`${t(meta.label)} · ×${meta.multiplier}`}
+      aria-label={t('{grade} reward grade, reward {min}–{max}', { grade: t(meta.label), min: meta.min, max: meta.max })}
+      title={`${t(meta.label)} · ${meta.min}–${meta.max}`}
     />
   );
 };
@@ -39,6 +39,10 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
   const claim = snapshot.state.claims[taskId];
   const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   const selectedMeta = REWARD_GRADES[grade];
+  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
+  const selectedRule = claim?.economyVersion === 1
+    ? `×${selectedMeta.legacyMultiplier}`
+    : `${selectedMeta.min}–${selectedMeta.max}`;
 
   return (
     <div
@@ -55,7 +59,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
             <button
               key={option}
               type="button"
-              disabled={Boolean(claim)}
+              disabled={locked}
               onClick={event => {
                 event.stopPropagation();
                 runtime.setTaskGrade(taskId, option);
@@ -63,9 +67,9 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
               className={`flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70 ${
                 selected ? `ring-2 ring-offset-1 ${GRADE_STYLES[option].selected}` : ''
               }`}
-              aria-label={t('{grade}, reward multiplier {multiplier}', { grade: t(meta.label), multiplier: meta.multiplier })}
+              aria-label={t('{grade}, reward {min}–{max}', { grade: t(meta.label), min: meta.min, max: meta.max })}
               aria-pressed={selected}
-              title={`${t(meta.label)} · ×${meta.multiplier}${claim ? ` · ${t('locked after first completion')}` : ''}`}
+              title={`${t(meta.label)} · ${claim?.economyVersion === 1 ? `×${meta.legacyMultiplier}` : `${meta.min}–${meta.max}`}${locked ? ` · ${t('locked while completed')}` : ''}`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${GRADE_STYLES[option].dot}`} />
             </button>
@@ -73,7 +77,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
         })}
       </div>
       <span className="min-w-0 flex-1 truncate text-right text-[11px] font-medium text-slate-600">
-        {t(selectedMeta.label)} ×{selectedMeta.multiplier}{claim ? ` · ${t('locked')}` : ''}
+        {t(selectedMeta.label)} {selectedRule}{locked ? ` · ${t('locked')}` : claim ? ` · ${t('editable after Undo')}` : ''}
       </span>
     </div>
   );

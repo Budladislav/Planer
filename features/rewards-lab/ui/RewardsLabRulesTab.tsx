@@ -38,7 +38,7 @@ const GradeRule = ({ grade }: GradeRuleProps) => {
         {t(definition.label)}
       </span>
       <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${gradeStyles[grade].badge}`}>
-        ×{definition.multiplier}
+        {definition.min}–{definition.max}
       </span>
     </li>
   );

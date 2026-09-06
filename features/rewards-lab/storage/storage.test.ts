@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimTaskCompletion, createDefaultRewardsLabState, setTaskGrade } from '../domain';
+import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, setTaskGrade } from '../domain';
 import { REWARDS_LAB_LIFECYCLE_OUTBOX_KEY } from '../outbox';
 import {
   EXPERIMENT_FLAGS_STORAGE_KEY,
@@ -90,6 +90,53 @@ describe('Rewards Lab sidecar storage', () => {
 
     storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({ schemaVersion: 999, ledger: [{ amount: 1000 }] }));
     expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+  });
+
+  it('migrates v1 without recalculating claims or wallet history and starts a fresh v2 bag', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
+      schemaVersion: 1,
+      currencyName: 'Tokens',
+      animationsEnabled: false,
+      taskGrades: { 'task-1': 'rare' },
+      fairBag: { remaining: [2, 3, 4], cycle: 7 },
+      claims: {
+        'task-1': {
+          id: 'claim-1', taskId: 'task-1', taskTitle: 'Existing work',
+          completedAt: '2026-08-28T10:00:00.000Z', createdAt: '2026-08-28T10:00:00.000Z',
+          grade: 'rare', roll: 4, multiplier: 2, amount: 8, economyVersion: 1,
+        },
+      },
+      ledger: [
+        {
+          id: 'earn-1', kind: 'earn', amount: 8, occurredAt: '2026-08-28T10:00:00.000Z',
+          label: 'Reward for Existing work', taskId: 'task-1', claimId: 'claim-1',
+        },
+        {
+          id: 'adjust-1', kind: 'adjustment', amount: 224, occurredAt: '2026-08-30T10:00:00.000Z',
+          label: 'Existing balance',
+        },
+      ],
+      rewards: [{
+        id: 'reward-1', title: 'Cinema', cost: 50, note: '', active: true, repeatable: true,
+        createdAt: '2026-08-28T10:00:00.000Z', updatedAt: '2026-08-28T10:00:00.000Z',
+      }],
+      metrics: { labOpenCount: 3, redemptionCount: 0, lastOpenedAt: null, lastRedeemedAt: null },
+    }));
+
+    const migrated = loadRewardsLabState(storage);
+    expect(migrated).toMatchObject({
+      schemaVersion: 2,
+      economyVersion: 2,
+      animationsEnabled: false,
+      fairBag: { remaining: [], cycle: 0 },
+      gradeCorrections: [],
+    });
+    expect(migrated.claims['task-1']).toMatchObject({
+      economyVersion: 1, grade: 'rare', roll: 4, multiplier: 2, amount: 8,
+    });
+    expect(migrated.rewards[0]).toMatchObject({ title: 'Cinema', cost: 50 });
+    expect(getWalletBalance(migrated)).toBe(232);
   });
 
   it('sanitizes invalid nested values without importing them into the wallet', () => {
