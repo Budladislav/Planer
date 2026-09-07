@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Dice5 } from 'lucide-react';
+import { Dice5, KeyRound } from 'lucide-react';
 import { REWARD_GRADES } from '../domain';
 import { rewardsLabGate } from '../gate';
 import { useRewardsLab } from './useRewardsLab';
@@ -52,6 +52,11 @@ const RewardsLabActiveHost: React.FC = () => {
               <span className="mt-0.5 block text-xs text-slate-500">
                 {toastDescription}
               </span>
+              {toast.keyGrade && (
+                <span className="mt-1 flex items-center gap-1 text-xs font-medium text-indigo-600">
+                  <KeyRound className="h-3 w-3" /> {t('{grade} key', { grade: t(REWARD_GRADES[toast.keyGrade].label) })}
+                </span>
+              )}
             </span>
             <span className="flex-shrink-0 text-sm font-bold text-violet-700">+{toast.amount}</span>
           </span>

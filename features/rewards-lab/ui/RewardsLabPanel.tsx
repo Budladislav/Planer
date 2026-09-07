@@ -1,4 +1,4 @@
-import { Dice5, Gift, History, X } from 'lucide-react';
+import { Dice5, Gift, History, ShoppingBag, X } from 'lucide-react';
 import {
   KeyboardEvent as ReactKeyboardEvent,
   useEffect,
@@ -16,9 +16,10 @@ import { Confirmation } from './RewardsLabPanel.shared';
 import { ConfirmationDialog } from './RewardsLabConfirmationDialog';
 import { HistoryTab } from './RewardsLabHistoryTab';
 import { RewardsTab } from './RewardsLabRewardsTab';
+import { PurchasesTab } from './RewardsLabPurchasesTab';
 import { RulesTab } from './RewardsLabRulesTab';
 
-type LabTab = 'rewards' | 'history' | 'rules';
+type LabTab = 'rewards' | 'purchases' | 'history' | 'rules';
 
 interface NoticeProps {
   message: string | null;
@@ -49,6 +50,7 @@ const Notice = ({ message, onDismiss }: NoticeProps) => {
 
 const tabs: Array<{ id: LabTab; label: string; icon: typeof Gift }> = [
   { id: 'rewards', label: 'Rewards', icon: Gift },
+  { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
   { id: 'history', label: 'History', icon: History },
   { id: 'rules', label: 'Rules', icon: Dice5 },
 ];
@@ -126,19 +128,32 @@ const RewardsLabPanel = () => {
     }
   };
 
-  const runConfirmation = () => {
+  const runConfirmation = (actualCost?: number) => {
     if (!confirmation) return;
     if (confirmation.kind === 'redeem') {
-      const outcome = runtime.redeem(confirmation.reward.id);
+      const outcome = runtime.redeem(confirmation.reward.id, actualCost);
       if (outcome === 'redeemed') setNotice(t('{title} redeemed.', { title: confirmation.reward.title }));
       else if (outcome === 'insufficient-balance') setNotice(t('The balance is no longer sufficient for that reward.'));
       else if (outcome === 'already-redeemed') setNotice(t('That one-time reward was already redeemed.'));
+      else if (outcome === 'missing-key') setNotice(t('A matching reward key is required.'));
+      else if (outcome === 'cooldown' || outcome === 'limit-reached') setNotice(t('This reward is still on cooldown or at its rolling limit.'));
       else setNotice(t('The reward could not be redeemed.'));
+    } else if (confirmation.kind === 'redeem-purchase') {
+      const outcome = runtime.redeemPurchase(confirmation.purchase.id, actualCost ?? confirmation.purchase.estimatedCost);
+      if (outcome === 'redeemed') setNotice(t('{title} purchased.', { title: confirmation.purchase.title }));
+      else if (outcome === 'missing-key') setNotice(t('A matching reward key is required.'));
+      else setNotice(t('The purchase could not be completed.'));
     } else if (confirmation.kind === 'refund') {
       const outcome = runtime.refund(confirmation.transaction.id);
       setNotice(outcome === 'refunded' ? t('Redemption undone and balance restored.') : t('That redemption was already handled.'));
     } else if (confirmation.kind === 'archive') {
       if (runtime.archiveReward(confirmation.reward.id)) setNotice(t('{title} archived.', { title: confirmation.reward.title }));
+    } else if (confirmation.kind === 'upgrade-key') {
+      if (runtime.upgradeKeys(confirmation.fromGrade)) setNotice(t('Five keys were upgraded.'));
+      else setNotice(t('The keys could not be upgraded.'));
+    } else if (confirmation.kind === 'undo-key-upgrade') {
+      const outcome = runtime.undoLatestKeyUpgrade();
+      setNotice(outcome === 'reversed' ? t('The last key upgrade was undone.') : t('The upgraded key has already been used.'));
     } else if (confirmation.kind === 'disable') {
       runtime.disableKeepData();
     } else if (confirmation.kind === 'reset') {
@@ -195,7 +210,7 @@ const RewardsLabPanel = () => {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-1" role="tablist" aria-label={t('Rewards Lab sections')}>
+          <div className="mt-4 grid grid-cols-4 gap-1" role="tablist" aria-label={t('Rewards Lab sections')}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
@@ -231,6 +246,7 @@ const RewardsLabPanel = () => {
             aria-labelledby={`rewards-tab-${activeTab}`}
           >
             {activeTab === 'rewards' && <RewardsTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
+            {activeTab === 'purchases' && <PurchasesTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
             {activeTab === 'history' && <HistoryTab state={state} onConfirm={openConfirmation} />}
             {activeTab === 'rules' && <RulesTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
           </div>
@@ -240,6 +256,7 @@ const RewardsLabPanel = () => {
       {confirmation && (
         <ConfirmationDialog
           confirmation={confirmation}
+          key={`${confirmation.kind}-${'reward' in confirmation ? confirmation.reward.id : 'purchase' in confirmation ? confirmation.purchase.id : 'fromGrade' in confirmation ? confirmation.fromGrade : ''}`}
           currencyName={state.currencyName}
           onCancel={() => setConfirmation(null)}
           onConfirm={runConfirmation}

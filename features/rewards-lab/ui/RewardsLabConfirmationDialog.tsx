@@ -1,4 +1,5 @@
-import { KeyboardEvent as ReactKeyboardEvent, useRef } from 'react';
+import { FormEvent, KeyboardEvent as ReactKeyboardEvent, useRef, useState } from 'react';
+import { REWARD_GRADES } from '../domain';
 import { useI18n } from '../../../i18n';
 import {
   Confirmation,
@@ -11,13 +12,19 @@ interface ConfirmationDialogProps {
   confirmation: Confirmation;
   currencyName: string;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (actualCost?: number) => void;
 }
 
 export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onConfirm }: ConfirmationDialogProps) => {
   const { t } = useI18n();
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLFormElement>(null);
   const destructive = confirmation.kind === 'reset' || confirmation.kind === 'erase';
+  const variableCost = confirmation.kind === 'redeem' && confirmation.reward.variableCost;
+  const purchaseCost = confirmation.kind === 'redeem-purchase';
+  const initialCost = confirmation.kind === 'redeem'
+    ? confirmation.reward.cost
+    : confirmation.kind === 'redeem-purchase' ? confirmation.purchase.estimatedCost : 0;
+  const [actualCost, setActualCost] = useState(initialCost.toString());
   const displayCurrency = currencyName === 'points' ? t('points') : currencyName;
   let title = '';
   let message = '';
@@ -25,8 +32,14 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
 
   if (confirmation.kind === 'redeem') {
     title = t('Redeem {title}?', { title: confirmation.reward.title });
-    message = t('{amount} {currency} will be deducted from your balance.', { amount: confirmation.reward.cost, currency: displayCurrency });
+    message = confirmation.reward.variableCost
+      ? t('Enter the actual price. The same number of credits and one {grade} key will be deducted.', { grade: t(REWARD_GRADES[confirmation.reward.grade].label) })
+      : t('{amount} {currency} and one {grade} key will be deducted.', { amount: confirmation.reward.cost, currency: displayCurrency, grade: t(REWARD_GRADES[confirmation.reward.grade].label) });
     confirmLabel = t('Redeem');
+  } else if (confirmation.kind === 'redeem-purchase') {
+    title = t('Buy {title}?', { title: confirmation.purchase.title });
+    message = t('Enter the actual price. The same number of credits and one {grade} key will be deducted.', { grade: t(REWARD_GRADES[confirmation.purchase.grade].label) });
+    confirmLabel = t('Buy');
   } else if (confirmation.kind === 'refund') {
     title = t('Undo this redemption?');
     message = t('{amount} {currency} will be returned to your balance.', { amount: Math.abs(confirmation.transaction.amount), currency: displayCurrency });
@@ -35,13 +48,24 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     title = t('Archive {title}?', { title: confirmation.reward.title });
     message = t('It will leave the active catalog, but its wallet history will remain. You can restore it later.');
     confirmLabel = t('Archive');
+  } else if (confirmation.kind === 'upgrade-key') {
+    const from = REWARD_GRADES[confirmation.fromGrade];
+    const grades = Object.keys(REWARD_GRADES) as Array<keyof typeof REWARD_GRADES>;
+    const to = REWARD_GRADES[grades[grades.indexOf(confirmation.fromGrade) + 1]];
+    title = t('Upgrade reward keys?');
+    message = t('Five {from} keys will become one {to} key. This cannot be exchanged downward.', { from: t(from.label), to: t(to.label) });
+    confirmLabel = t('Upgrade');
+  } else if (confirmation.kind === 'undo-key-upgrade') {
+    title = t('Undo the last key upgrade?');
+    message = t('The upgraded key will be removed and the five source keys returned.');
+    confirmLabel = t('Undo upgrade');
   } else if (confirmation.kind === 'disable') {
     title = t('Disable Rewards Lab?');
-    message = t('The experiment will disappear from the planner, but all grades, rewards, and wallet history will stay on this device.');
+    message = t('The experiment will disappear from the planner, but all grades, keys, rewards, purchases, and wallet history will stay on this device.');
     confirmLabel = t('Disable, keep data');
   } else if (confirmation.kind === 'reset') {
     title = t('Reset the experiment?');
-    message = t('This permanently clears task grades, wallet history, claims, rewards, and settings. Rewards Lab will stay enabled. Planner tasks are not affected.');
+    message = t('This permanently clears task grades, wallet history, claims, keys, rewards, purchases, and settings. Rewards Lab will stay enabled. Planner tasks are not affected.');
     confirmLabel = t('Reset Rewards Lab');
   } else {
     title = t('Disable and erase Rewards Lab?');
@@ -49,7 +73,7 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     confirmLabel = t('Disable & erase');
   }
 
-  const trapDialogFocus = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+  const trapDialogFocus = (event: ReactKeyboardEvent<HTMLFormElement>) => {
     if (event.key !== 'Tab') return;
     const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? []);
     if (focusable.length === 0) return;
@@ -64,6 +88,17 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     }
   };
 
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (variableCost || purchaseCost) {
+      const value = Number(actualCost);
+      if (!Number.isInteger(value) || value <= 0) return;
+      onConfirm(value);
+      return;
+    }
+    onConfirm();
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
@@ -72,7 +107,7 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
         onCancel();
       }}
     >
-      <div
+      <form
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
@@ -81,19 +116,27 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
         className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={trapDialogFocus}
+        onSubmit={submit}
       >
         <div className={`${destructive ? 'bg-red-50' : 'bg-slate-50'} px-4 py-3`}>
           <h2 id="rewards-confirm-title" className={`font-semibold ${destructive ? 'text-red-900' : 'text-slate-900'}`}>{title}</h2>
         </div>
-        <p id="rewards-confirm-description" className="px-4 py-4 text-sm leading-relaxed text-slate-700">{message}</p>
+        <div className="px-4 py-4">
+          <p id="rewards-confirm-description" className="text-sm leading-relaxed text-slate-700">{message}</p>
+          {(variableCost || purchaseCost) && (
+            <label className="mt-3 block text-sm font-medium text-slate-700">
+              {t('Actual price')}
+              <input value={actualCost} onChange={event => setActualCost(event.target.value)} type="number" min="1" step="1" autoFocus className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+            </label>
+          )}
+        </div>
         <div className="flex justify-end gap-2 bg-slate-50 px-4 py-3">
-          <button type="button" onClick={onCancel} className={secondaryButton} autoFocus>{t('Cancel')}</button>
-          <button type="button" onClick={onConfirm} className={destructive ? `${buttonBase} bg-red-600 text-white hover:bg-red-700` : primaryButton}>
+          <button type="button" onClick={onCancel} className={secondaryButton} autoFocus={!variableCost && !purchaseCost}>{t('Cancel')}</button>
+          <button type="submit" className={destructive ? `${buttonBase} bg-red-600 text-white hover:bg-red-700` : primaryButton}>
             {confirmLabel}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
-

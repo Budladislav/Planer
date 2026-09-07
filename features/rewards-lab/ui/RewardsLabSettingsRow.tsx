@@ -16,13 +16,13 @@ const confirmationCopy: Record<Exclude<Confirmation, null>, {
 }> = {
   enable: {
     title: 'Enable Rewards Lab?',
-    message: 'Rewards Lab is an optional experiment stored only on this device. Its grades, wallet and rewards are not included in planner backups or future planner sync. You can disable it, reset it, or erase it at any time without changing planner tasks.',
+    message: 'Rewards Lab is an optional experiment stored only on this device. Its grades, wallet, keys, rewards and purchases are not included in planner backups or future planner sync. You can disable it, reset it, or erase it at any time without changing planner tasks.',
     confirmText: 'Enable experiment',
     danger: false,
   },
   reset: {
     title: 'Reset Rewards Lab?',
-    message: 'This permanently clears grades, claims, wallet history, rewards and experiment settings. Rewards Lab stays enabled. Planner tasks and backups are not affected.',
+    message: 'This permanently clears grades, claims, wallet history, keys, rewards, purchases and experiment settings. Rewards Lab stays enabled. Planner tasks and backups are not affected.',
     confirmText: 'Reset experiment',
     danger: true,
   },
@@ -89,7 +89,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
               {t('Experimental')}
             </span>
           </div>
-          <p className="text-sm text-slate-500">{t('Optional task grades, fair rewards and a personal reward bank.')}</p>
+          <p className="text-sm text-slate-500">{t('Optional task grades, reward keys and a personal reward catalog.')}</p>
         </div>
         <span className={`flex-shrink-0 text-xs font-semibold ${snapshot.enabled ? 'text-emerald-600' : snapshot.safeMode && snapshot.flagEnabled ? 'text-amber-600' : 'text-slate-400'}`}>
           {status}

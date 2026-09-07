@@ -2,6 +2,7 @@ import {
   ChevronDown,
   ChevronUp,
   Dice5,
+  KeyRound,
   RotateCcw,
   Settings2,
   ShieldCheck,
@@ -10,6 +11,7 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   REWARD_GRADES,
+  KEY_DROP_PROBABILITIES,
   RewardGrade,
   RewardsLabState,
 } from '../domain';
@@ -112,13 +114,13 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
           <Dice5 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-semibold text-slate-900">{t('Fair-bag rewards')}</h2>
+              <h2 className="font-semibold text-slate-900">{t('Credits and protected key randomness')}</h2>
               <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
                 {t('Economy v{version} · since {date}', { version: state.economyVersion, date: economyDate })}
               </span>
             </div>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
-              {t('Every cycle shuffles nine unique hidden luck slots. The same slot maps into the selected grade corridor, so a higher grade always pays more than any lower grade while the result stays varied and fair over nine draws.')}
+              {t('Credits keep the strict grade corridors from Economy v2. Each new completion also gets one independent chance to find a reward key.')}
             </p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {(Object.keys(REWARD_GRADES) as RewardGrade[]).map((grade) => (
@@ -126,8 +128,25 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
               ))}
             </ul>
             <p className="mt-3 text-xs text-slate-500">
-              {t('Undoing a task reverses its reward and unlocks its grade. You may correct the grade while it is undone; completing it again keeps the original luck and restores the corrected amount without a reroll.')}
+              {t('Undoing a task reverses its credits and suspends an unused key. Recompletion restores the same result without rerolling; changing the task grade never changes its original key.')}
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex items-start gap-3">
+          <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold text-slate-900">{t('Key drop chances')}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t('At most one key drops per task. After five misses the Common chance grows; after seven misses the eighth attempt guarantees a Common key.')}</p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-left text-xs">
+                <thead><tr className="border-b border-slate-200 text-slate-500"><th className="p-2">{t('Task')}</th>{(Object.keys(REWARD_GRADES) as RewardGrade[]).map(grade => <th key={grade} className="p-2 text-right">{t(REWARD_GRADES[grade].label)}</th>)}</tr></thead>
+                <tbody>{(Object.keys(REWARD_GRADES) as RewardGrade[]).map(taskGrade => <tr key={taskGrade} className="border-b border-slate-100 last:border-0"><th className="p-2 font-medium text-slate-700">{t(REWARD_GRADES[taskGrade].label)}</th>{(Object.keys(REWARD_GRADES) as RewardGrade[]).map(keyGrade => <td key={keyGrade} className="p-2 text-right tabular-nums text-slate-600">{(KEY_DROP_PROBABILITIES[taskGrade][keyGrade] * 100).toLocaleString(locale, { maximumFractionDigits: 2 })}%</td>)}</tr>)}</tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-slate-500">{t('Five keys of one grade can be manually upgraded to one key of the next grade. Higher keys never replace lower keys.')}</p>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import { Coins, Gift, History, Pencil, Undo2 } from 'lucide-react';
+import { ArrowUp, Coins, Gift, History, KeyRound, Pencil, Undo2 } from 'lucide-react';
 import { REWARD_GRADES, RewardGradeCorrection, RewardsLabState, WalletTransaction } from '../domain';
 import { useI18n } from '../../../i18n';
 import {
@@ -31,6 +31,11 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
       item: correction,
       index: state.ledger.length + index,
     })),
+    ...state.keyUpgrades.map((upgrade, index) => ({
+      kind: 'upgrade' as const,
+      item: upgrade,
+      index: state.ledger.length + state.gradeCorrections.length + index,
+    })),
   ]
     .sort((left, right) => {
       const dateDifference = new Date(right.item.occurredAt).getTime()
@@ -43,7 +48,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
       <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
         <History className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
         <p className="mt-3 font-medium text-slate-700">{t('No wallet activity yet')}</p>
-        <p className="mt-1 text-sm text-slate-500">{t('Complete a task to make the first fair-bag draw.')}</p>
+        <p className="mt-1 text-sm text-slate-500">{t('Complete a task to earn the first credits and try for a key.')}</p>
       </div>
     );
   }
@@ -52,6 +57,15 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
     <section aria-label={t('Wallet history')}>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {newestFirst.map(historyItem => {
+          if (historyItem.kind === 'upgrade') {
+            const upgrade = historyItem.item;
+            return (
+              <article key={upgrade.id} className="flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 sm:px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-700"><ArrowUp className="h-4 w-4" /></div>
+                <div className="min-w-0 flex-1"><p className="text-sm font-medium text-slate-800">{upgrade.reversedAt ? t('Key upgrade undone') : t('Keys upgraded')}</p><p className="text-xs text-slate-500">5 × {t(REWARD_GRADES[upgrade.fromGrade].label)} → 1 × {t(REWARD_GRADES[upgrade.toGrade].label)} · {formatDateTime(upgrade.occurredAt, locale)}</p></div>
+              </article>
+            );
+          }
           if (historyItem.kind === 'correction') {
             const correction = historyItem.item as RewardGradeCorrection;
             return (
@@ -80,6 +94,13 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
             ? Object.values(state.claims).find(claim => claim.id === transaction.claimId)?.economyVersion
             : undefined;
           const economyVersion = transaction.economyVersion ?? claimVersion;
+          const claim = transaction.claimId
+            ? Object.values(state.claims).find(item => item.id === transaction.claimId)
+            : undefined;
+          const claimKey = claim?.economyVersion === 3 && claim.keyId
+            ? state.keys.find(key => key.id === claim.keyId)
+            : undefined;
+          const spentKey = transaction.keyId ? state.keys.find(key => key.id === transaction.keyId) : undefined;
           return (
             <article key={transaction.id} className="flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 sm:px-4">
               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -91,6 +112,9 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                   {t(transactionKindLabel[transaction.kind])} · {formatDateTime(transaction.occurredAt, locale)}
                   {economyVersion ? ` · v${economyVersion}` : ''}
                 </p>
+                {(claimKey || spentKey) && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-indigo-600"><KeyRound className="h-3 w-3" />{transaction.kind === 'spend' ? t('{grade} key spent', { grade: t(REWARD_GRADES[(spentKey ?? claimKey)!.grade].label) }) : t('{grade} key found', { grade: t(REWARD_GRADES[(claimKey ?? spentKey)!.grade].label) })}</p>
+                )}
               </div>
               <div className="shrink-0 text-right">
                 <p className={`font-semibold tabular-nums ${positive ? 'text-emerald-700' : 'text-slate-700'}`}>

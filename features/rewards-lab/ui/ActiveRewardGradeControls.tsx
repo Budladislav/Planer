@@ -12,10 +12,10 @@ const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
 };
 
 const GRADE_SURFACES: Record<Exclude<RewardGrade, 'common'>, string> = {
-  uncommon: 'border-l-emerald-400 bg-emerald-50/40',
-  rare: 'border-l-blue-400 bg-blue-50/40',
-  legendary: 'border-l-amber-400 bg-amber-50/45',
-  mythic: 'border-l-rose-400 bg-rose-50/40',
+  uncommon: 'border-l-emerald-400',
+  rare: 'border-l-blue-400',
+  legendary: 'border-l-amber-400',
+  mythic: 'border-l-rose-400',
 };
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
