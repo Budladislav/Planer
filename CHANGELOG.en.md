@@ -2,6 +2,32 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [4.2.0] — 07.09.2026 — Reward keys and Economy v3
+
+### Added
+
+- A completed task can now drop one of five reward-key grades, from Common to Mythic. Each task grade has its own probability matrix, while protected randomness increases the Common-key chance after a dry streak and guarantees one on the eighth attempt.
+- Five keys of one grade can be explicitly upgraded into one key of the next grade. The latest upgrade can be undone while its output key remains unspent.
+- Redeeming a reward now requires both credits and an exact-grade key. Rewards support editable cooldowns, rolling-period limits, shared limit groups, and actual-price entry.
+- An editable starter catalog covers small treats, games, outings, hobbies, and optional purchases. Existing non-empty catalogs receive templates only on request and without duplicates.
+- Rewards Lab gained an isolated optional-purchases list with an estimate or price range, grade, link, note, and statuses from idea to purchased.
+
+### Changed
+
+- The default currency name changed from Tokens to Credits; custom currency names are preserved.
+- Rewards Economy v3 separates credit payouts from key drops. Undo and recompletion restore the original outcome without a reroll, while correcting a grade changes only credits and never replaces an already dropped key.
+- Rewards Lab summary, history, and rules now include key balances, upgrades, the economy version, and the catalog's new constraints.
+
+### Fixed
+
+- Task cards with a selected grade no longer dim or desaturate their full content: grade is communicated through a colored side accent and marker.
+- Undoing a task cannot make its linked key reusable: an available key is suspended, while spent or upgraded keys retain their state. Refunding a later purchase returns that key to suspended status.
+
+### Safety
+
+- Every Economy v1 and v2 claim, wallet entry, balance, and user catalog migrates without recalculation. Economy v3 applies only to new completions.
+- Keys, the purchases list, and the entire Rewards Lab remain in separate local storage and stay outside the planner JSON backup.
+
 ## [4.1.0] — 06.09.2026 — Rewards Economy v2 and interface performance
 
 ### Added
