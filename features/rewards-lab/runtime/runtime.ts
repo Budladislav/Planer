@@ -1,25 +1,34 @@
 import {
   REWARD_GRADES,
+  PurchaseItem,
+  PurchaseItemInput,
   RewardDefinition,
   RewardDefinitionInput,
   RewardGrade,
   RewardsLabState,
   WalletTransaction,
   addRewardDefinition,
+  addPurchaseItem,
   adjustWalletBalance,
   archiveRewardDefinition,
   claimTaskCompletion,
   createDefaultRewardsLabState,
   regradeReversedTaskClaim,
   recordLabOpened,
+  redeemPurchase,
   redeemReward,
   refundRedemption,
   reverseTaskCompletion,
   setTaskGrade as setDomainTaskGrade,
   updateRewardDefinition,
+  updatePurchaseItem,
+  upgradeRewardKeys,
+  undoLatestKeyUpgrade,
+  installStarterCatalog,
 } from '../domain';
 import type {
   EconomyRuntime,
+  RedeemPurchaseOutcome,
   RedeemRewardOutcome,
   RefundOutcome,
 } from '../domain';
@@ -44,7 +53,8 @@ export interface RewardsLabToast {
   taskTitle: string;
   grade: RewardGrade;
   amount: number;
-  economyVersion: 1 | 2;
+  economyVersion: 1 | 2 | 3;
+  keyGrade?: RewardGrade;
   roll?: number;
   multiplier?: number;
   currencyName: string;
@@ -81,7 +91,13 @@ export interface RewardsLabRuntime {
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
   archiveReward(rewardId: string): boolean;
-  redeem(rewardId: string): RedeemRewardOutcome;
+  redeem(rewardId: string, actualCost?: number): RedeemRewardOutcome;
+  installStarterCatalog(): number;
+  upgradeKeys(fromGrade: RewardGrade): boolean;
+  undoLatestKeyUpgrade(): 'reversed' | 'not-found' | 'output-used';
+  addPurchase(input: PurchaseItemInput): PurchaseItem | null;
+  updatePurchase(purchaseId: string, input: PurchaseItemInput): PurchaseItem | null;
+  redeemPurchase(purchaseId: string, actualCost: number): RedeemPurchaseOutcome;
   refund(spendTransactionId: string): RefundOutcome;
   adjustBalance(amount: number, label: string): boolean;
   updateCurrency(currencyName: string): boolean;
@@ -219,7 +235,7 @@ export const createRewardsLabRuntime = (
     resetDataKeepingEnabled: () => {
       try {
         if (safeMode || !snapshot.flagEnabled) return false;
-        const state = createDefaultRewardsLabState();
+        const state = installStarterCatalog(createDefaultRewardsLabState(), economyRuntime).state;
         // Reset is explicitly destructive for this sidecar. Clear pending work
         // first so an old completion cannot repopulate the freshly reset lab.
         if (!clearRewardsLabLifecycleOutbox(storage)) {
@@ -340,6 +356,7 @@ export const createRewardsLabRuntime = (
             grade: result.claim.grade,
             amount: result.claim.amount,
             economyVersion: result.claim.economyVersion,
+            ...(result.key?.status === 'available' ? { keyGrade: result.key.grade } : {}),
             ...(result.claim.economyVersion === 1
               ? { roll: result.claim.roll, multiplier: result.claim.multiplier }
               : {}),
@@ -393,10 +410,78 @@ export const createRewardsLabRuntime = (
       }
     },
 
-    redeem: rewardId => {
+    redeem: (rewardId, actualCost) => {
       try {
         if (unavailable()) return 'inactive';
-        const result = redeemReward(snapshot.state!, rewardId, economyRuntime);
+        const result = redeemReward(snapshot.state!, rewardId, actualCost, economyRuntime);
+        if (result.outcome === 'redeemed' && !persist(result.state)) return 'inactive';
+        return result.outcome;
+      } catch (error) {
+        fail(errorMessage(error));
+        return 'inactive';
+      }
+    },
+
+    installStarterCatalog: () => {
+      try {
+        if (unavailable()) return 0;
+        const result = installStarterCatalog(snapshot.state!, economyRuntime);
+        return persist(result.state) ? result.added.length : 0;
+      } catch (error) {
+        fail(errorMessage(error));
+        return 0;
+      }
+    },
+
+    upgradeKeys: fromGrade => {
+      try {
+        if (unavailable() || !canUseGrade(fromGrade)) return false;
+        const result = upgradeRewardKeys(snapshot.state!, fromGrade, economyRuntime);
+        return result.outcome === 'upgraded' ? persist(result.state) : false;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    undoLatestKeyUpgrade: () => {
+      try {
+        if (unavailable()) return 'not-found';
+        const result = undoLatestKeyUpgrade(snapshot.state!, economyRuntime);
+        if (result.outcome === 'reversed' && !persist(result.state)) return 'output-used';
+        return result.outcome;
+      } catch (error) {
+        fail(errorMessage(error));
+        return 'output-used';
+      }
+    },
+
+    addPurchase: input => {
+      try {
+        if (unavailable()) return null;
+        const result = addPurchaseItem(snapshot.state!, input, economyRuntime);
+        return persist(result.state) ? result.purchase : null;
+      } catch (error) {
+        fail(errorMessage(error));
+        return null;
+      }
+    },
+
+    updatePurchase: (purchaseId, input) => {
+      try {
+        if (unavailable()) return null;
+        const result = updatePurchaseItem(snapshot.state!, purchaseId, input, economyRuntime);
+        if (!result.purchase) return null;
+        return persist(result.state) ? result.purchase : null;
+      } catch (error) {
+        fail(errorMessage(error));
+        return null;
+      }
+    },
+
+    redeemPurchase: (purchaseId, actualCost) => {
+      try {
+        if (unavailable()) return 'inactive';
+        const result = redeemPurchase(snapshot.state!, purchaseId, actualCost, economyRuntime);
         if (result.outcome === 'redeemed' && !persist(result.state)) return 'inactive';
         return result.outcome;
       } catch (error) {

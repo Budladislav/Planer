@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, setTaskGrade } from '../domain';
+import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, installStarterCatalog, setTaskGrade } from '../domain';
 import { REWARDS_LAB_LIFECYCLE_OUTBOX_KEY } from '../outbox';
 import {
   EXPERIMENT_FLAGS_STORAGE_KEY,
@@ -28,6 +28,11 @@ class MemoryStorage implements StorageLike {
     this.values.delete(key);
   }
 }
+
+const freshStoredState = () => installStarterCatalog(createDefaultRewardsLabState(), {
+  now: () => '2026-09-07T00:00:00.000Z',
+  createId: (() => { let index = 0; return () => `starter-${++index}`; })(),
+}).state;
 
 describe('Rewards Lab experiment flag storage', () => {
   it('is disabled by default and fails closed for malformed data', () => {
@@ -58,7 +63,7 @@ describe('Rewards Lab experiment flag storage', () => {
     };
     expect(loadExperimentFlags(broken)).toEqual({ rewardsLab: false });
     expect(setRewardsLabEnabled(broken, true)).toBe(false);
-    expect(loadRewardsLabState(broken)).toEqual(createDefaultRewardsLabState());
+    expect(loadRewardsLabState(broken)).toEqual(freshStoredState());
     expect(saveRewardsLabState(broken, createDefaultRewardsLabState())).toBe(false);
     expect(clearRewardsLabData(broken)).toBe(false);
     expect(eraseRewardsLab(broken)).toBe(false);
@@ -68,7 +73,7 @@ describe('Rewards Lab experiment flag storage', () => {
 describe('Rewards Lab sidecar storage', () => {
   it('round-trips valid state in its own key', () => {
     const storage = new MemoryStorage();
-    const graded = setTaskGrade(createDefaultRewardsLabState(), 'task-1', 'legendary');
+    const graded = setTaskGrade(freshStoredState(), 'task-1', 'legendary');
     const rewarded = claimTaskCompletion(graded, {
       taskId: 'task-1', taskTitle: 'Test', completedAt: '2026-08-28T10:00:00.000Z',
     }, {
@@ -86,13 +91,13 @@ describe('Rewards Lab sidecar storage', () => {
   it('returns a fresh default for malformed or unknown schemas', () => {
     const storage = new MemoryStorage();
     storage.setItem(REWARDS_LAB_STORAGE_KEY, '{bad json');
-    expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+    expect(loadRewardsLabState(storage)).toEqual(freshStoredState());
 
     storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({ schemaVersion: 999, ledger: [{ amount: 1000 }] }));
-    expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+    expect(loadRewardsLabState(storage)).toEqual(freshStoredState());
   });
 
-  it('migrates v1 without recalculating claims or wallet history and starts a fresh v2 bag', () => {
+  it('migrates v1 without recalculating claims or wallet history and starts a fresh points bag', () => {
     const storage = new MemoryStorage();
     storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
       schemaVersion: 1,
@@ -126,8 +131,9 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 2,
-      economyVersion: 2,
+      schemaVersion: 3,
+      economyVersion: 3,
+      currencyName: 'Креды',
       animationsEnabled: false,
       fairBag: { remaining: [], cycle: 0 },
       gradeCorrections: [],
@@ -137,6 +143,47 @@ describe('Rewards Lab sidecar storage', () => {
     });
     expect(migrated.rewards[0]).toMatchObject({ title: 'Cinema', cost: 50 });
     expect(getWalletBalance(migrated)).toBe(232);
+  });
+
+  it('migrates the live v2 state without recalculating balance or existing claims', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
+      schemaVersion: 2,
+      economyVersion: 2,
+      economyActivatedAt: '2026-09-06T00:00:00.000Z',
+      currencyName: 'Tokens',
+      animationsEnabled: true,
+      taskGrades: { task: 'rare' },
+      fairBag: { remaining: [1, 2, 3], cycle: 4 },
+      claims: {
+        task: {
+          id: 'claim-v2', taskId: 'task', taskTitle: 'Existing v2 task',
+          completedAt: '2026-09-06T12:00:00.000Z', createdAt: '2026-09-06T12:00:00.000Z',
+          grade: 'rare', luckSlot: 4, amount: 7, economyVersion: 2,
+        },
+      },
+      gradeCorrections: [],
+      ledger: [{
+        id: 'earn-v2', kind: 'earn', amount: 7, occurredAt: '2026-09-06T12:00:00.000Z',
+        label: 'Reward', taskId: 'task', claimId: 'claim-v2', economyVersion: 2,
+      }],
+      rewards: [{
+        id: 'existing-reward', title: 'Existing', cost: 5, note: '', active: true,
+        repeatable: true, createdAt: '2026-09-06T00:00:00.000Z', updatedAt: '2026-09-06T00:00:00.000Z',
+      }],
+      metrics: { labOpenCount: 1, redemptionCount: 0, lastOpenedAt: null, lastRedeemedAt: null },
+    }));
+
+    const migrated = loadRewardsLabState(storage);
+    expect(migrated).toMatchObject({
+      schemaVersion: 3, economyVersion: 3, currencyName: 'Креды',
+      fairBag: { remaining: [1, 2, 3], cycle: 4 }, keyDropState: { dryStreak: 0 },
+      keys: [], purchases: [], starterCatalogInstalled: false,
+    });
+    expect(migrated.claims.task).toMatchObject({ economyVersion: 2, luckSlot: 4, amount: 7 });
+    expect(migrated.rewards).toHaveLength(1);
+    expect(migrated.rewards[0]).toMatchObject({ grade: 'common', variableCost: false, cooldownDays: 0 });
+    expect(getWalletBalance(migrated)).toBe(7);
   });
 
   it('sanitizes invalid nested values without importing them into the wallet', () => {
@@ -156,10 +203,10 @@ describe('Rewards Lab sidecar storage', () => {
       metrics: { labOpenCount: -10, redemptionCount: 'many' },
     }));
 
-    expect(loadRewardsLabState(storage)).toEqual({
-      ...createDefaultRewardsLabState(),
-      taskGrades: { a: 'rare' },
-    });
+    const sanitized = loadRewardsLabState(storage);
+    expect(sanitized.taskGrades).toEqual({ a: 'rare' });
+    expect(getWalletBalance(sanitized)).toBe(0);
+    expect(sanitized.rewards).toHaveLength(22);
   });
 
   it('can reset data without disabling, or erase data and disable', () => {

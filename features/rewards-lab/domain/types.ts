@@ -1,6 +1,6 @@
-export const REWARDS_LAB_SCHEMA_VERSION = 2 as const;
-export const REWARDS_ECONOMY_VERSION = 2 as const;
-export const REWARDS_ECONOMY_V2_RELEASED_AT = '2026-09-06T00:00:00.000Z';
+export const REWARDS_LAB_SCHEMA_VERSION = 3 as const;
+export const REWARDS_ECONOMY_VERSION = 3 as const;
+export const REWARDS_ECONOMY_V3_RELEASED_AT = '2026-09-07T00:00:00.000Z';
 
 export const REWARD_GRADES = {
   common: { label: 'Common', min: 1, max: 2, color: 'gray', legacyMultiplier: 1 },
@@ -13,11 +13,15 @@ export const REWARD_GRADES = {
 export type RewardGrade = keyof typeof REWARD_GRADES;
 export type RewardRoll = 2 | 3 | 4;
 export type RewardLuckSlot = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export type RewardsEconomyVersion = 1 | typeof REWARDS_ECONOMY_VERSION;
+export type RewardsEconomyVersion = 1 | 2 | typeof REWARDS_ECONOMY_VERSION;
 
 export interface FairBagState {
   remaining: RewardLuckSlot[];
   cycle: number;
+}
+
+export interface KeyDropState {
+  dryStreak: number;
 }
 
 interface RewardClaimBase {
@@ -37,11 +41,17 @@ export interface LegacyRewardClaim extends RewardClaimBase {
 }
 
 export interface RewardClaimV2 extends RewardClaimBase {
-  economyVersion: typeof REWARDS_ECONOMY_VERSION;
+  economyVersion: 2;
   luckSlot: RewardLuckSlot;
 }
 
-export type RewardClaim = LegacyRewardClaim | RewardClaimV2;
+export interface RewardClaimV3 extends RewardClaimBase {
+  economyVersion: typeof REWARDS_ECONOMY_VERSION;
+  luckSlot: RewardLuckSlot;
+  keyId: string | null;
+}
+
+export type RewardClaim = LegacyRewardClaim | RewardClaimV2 | RewardClaimV3;
 
 export interface RewardGradeCorrection {
   id: string;
@@ -53,6 +63,30 @@ export interface RewardGradeCorrection {
   amount: number;
   economyVersion: RewardsEconomyVersion;
   occurredAt: string;
+}
+
+export type RewardKeyStatus = 'available' | 'suspended' | 'spent' | 'upgraded' | 'reversed';
+
+export interface RewardKey {
+  id: string;
+  grade: RewardGrade;
+  status: RewardKeyStatus;
+  createdAt: string;
+  sourceClaimId?: string;
+  sourceTaskId?: string;
+  sourceUpgradeId?: string;
+  consumedByTransactionId?: string;
+  consumedByUpgradeId?: string;
+}
+
+export interface RewardKeyUpgrade {
+  id: string;
+  fromGrade: RewardGrade;
+  toGrade: RewardGrade;
+  inputKeyIds: string[];
+  outputKeyId: string;
+  occurredAt: string;
+  reversedAt: string | null;
 }
 
 export type WalletTransactionKind =
@@ -72,17 +106,51 @@ export interface WalletTransaction {
   taskId?: string;
   claimId?: string;
   rewardId?: string;
+  purchaseId?: string;
+  keyId?: string;
   relatedTransactionId?: string;
   economyVersion?: RewardsEconomyVersion;
 }
 
-export interface RewardDefinition {
+export interface RewardLimitSettings {
+  cooldownDays: number;
+  limitCount: number | null;
+  limitWindowDays: number | null;
+  limitGroup: string;
+}
+
+export interface RewardDefinition extends RewardLimitSettings {
   id: string;
   title: string;
   cost: number;
+  variableCost: boolean;
+  grade: RewardGrade;
   note: string;
   active: boolean;
   repeatable: boolean;
+  starterTemplateId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PurchaseStatus = 'considering' | 'wanted' | 'ready' | 'purchased' | 'rejected';
+
+export interface PurchasePriceEntry {
+  amount: number;
+  recordedAt: string;
+}
+
+export interface PurchaseItem extends RewardLimitSettings {
+  id: string;
+  title: string;
+  url: string;
+  note: string;
+  estimatedCost: number;
+  priceMin: number | null;
+  priceMax: number | null;
+  grade: RewardGrade;
+  status: PurchaseStatus;
+  priceHistory: PurchasePriceEntry[];
   createdAt: string;
   updatedAt: string;
 }
@@ -102,10 +170,15 @@ export interface RewardsLabState {
   animationsEnabled: boolean;
   taskGrades: Record<string, Exclude<RewardGrade, 'common'>>;
   fairBag: FairBagState;
+  keyDropState: KeyDropState;
   claims: Record<string, RewardClaim>;
   gradeCorrections: RewardGradeCorrection[];
   ledger: WalletTransaction[];
+  keys: RewardKey[];
+  keyUpgrades: RewardKeyUpgrade[];
   rewards: RewardDefinition[];
+  purchases: PurchaseItem[];
+  starterCatalogInstalled: boolean;
   metrics: RewardsLabMetrics;
 }
 
@@ -122,15 +195,20 @@ export interface EconomyRuntime {
 export const createDefaultRewardsLabState = (): RewardsLabState => ({
   schemaVersion: REWARDS_LAB_SCHEMA_VERSION,
   economyVersion: REWARDS_ECONOMY_VERSION,
-  economyActivatedAt: REWARDS_ECONOMY_V2_RELEASED_AT,
-  currencyName: 'Tokens',
+  economyActivatedAt: REWARDS_ECONOMY_V3_RELEASED_AT,
+  currencyName: 'Креды',
   animationsEnabled: true,
   taskGrades: {},
   fairBag: { remaining: [], cycle: 0 },
+  keyDropState: { dryStreak: 0 },
   claims: {},
   gradeCorrections: [],
   ledger: [],
+  keys: [],
+  keyUpgrades: [],
   rewards: [],
+  purchases: [],
+  starterCatalogInstalled: false,
   metrics: {
     labOpenCount: 0,
     redemptionCount: 0,

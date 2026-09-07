@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskLifecycleEvent } from '../../../task-lifecycle';
 import type { Task } from '../../../types';
-import { createDefaultRewardsLabState, getWalletBalance } from '../domain';
+import { createDefaultRewardsLabState, getWalletBalance, installStarterCatalog } from '../domain';
 import {
   REWARDS_LAB_LIFECYCLE_OUTBOX_KEY,
   enqueueRewardsLabLifecycleEvent,
@@ -41,6 +41,11 @@ class MemoryStorage implements StorageLike {
     this.values.delete(key);
   }
 }
+
+const freshStoredState = () => installStarterCatalog(createDefaultRewardsLabState(), {
+  now: () => '2026-09-07T00:00:00.000Z',
+  createId: (() => { let index = 0; return () => `starter-${++index}`; })(),
+}).state;
 
 const deterministicEconomy = () => {
   let id = 0;
@@ -203,7 +208,7 @@ describe('Rewards Lab runtime activation', () => {
     storage.values.set(REWARDS_LAB_STORAGE_KEY, JSON.stringify({ schemaVersion: 999, ledger: [{ amount: 999 }] }));
 
     const runtime = createRewardsLabRuntime(storage);
-    expect(runtime.getSnapshot().state).toEqual(createDefaultRewardsLabState());
+    expect(runtime.getSnapshot().state).toEqual(freshStoredState());
   });
 });
 
@@ -247,10 +252,10 @@ describe('Rewards Lab task lifecycle', () => {
     const earned = runtime.getSnapshot();
     const claim = earned.state!.claims['task-1'];
     const bagAfterClaim = earned.state!.fairBag;
-    expect(claim).toMatchObject({ grade: 'rare', luckSlot: 0, amount: 5, economyVersion: 2 });
+    expect(claim).toMatchObject({ grade: 'rare', luckSlot: 0, amount: 5, economyVersion: 3, keyId: expect.any(String) });
     expect(getWalletBalance(earned.state!)).toBe(5);
     expect(earned.toast).toMatchObject({
-      kind: 'earned', taskId: 'task-1', grade: 'rare', amount: 5, currencyName: 'Tokens', economyVersion: 2,
+      kind: 'earned', taskId: 'task-1', grade: 'rare', amount: 5, currencyName: 'Креды', economyVersion: 3, keyGrade: 'common',
     });
 
     runtime.handleTaskLifecycle(completedEvent({ title: 'Renamed task' }));
@@ -286,7 +291,7 @@ describe('Rewards Lab task lifecycle', () => {
     runtime.handleTaskLifecycle(reopenedEvent());
     expect(runtime.setTaskGrade('task-1', 'mythic')).toBe(true);
     expect(runtime.getSnapshot().state!.claims['task-1']).toMatchObject({
-      grade: 'mythic', luckSlot: 0, amount: 16, economyVersion: 2,
+      grade: 'mythic', luckSlot: 0, amount: 16, economyVersion: 3,
     });
     expect(runtime.getSnapshot().state!.gradeCorrections).toHaveLength(1);
     runtime.handleTaskLifecycle(completedEvent());
@@ -328,6 +333,7 @@ describe('Rewards Lab wallet, catalog and controls', () => {
     const storage = new MemoryStorage();
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
     runtime.enable();
+    runtime.handleTaskLifecycle(completedEvent());
 
     const reward = runtime.addReward({ title: '  Music break  ', cost: 6, repeatable: true });
     expect(reward).toMatchObject({ title: 'Music break', cost: 6, active: true });
@@ -335,14 +341,14 @@ describe('Rewards Lab wallet, catalog and controls', () => {
       title: 'Fruit', cost: 5, note: 'One serving', repeatable: false,
     });
     expect(edited).toMatchObject({ title: 'Fruit', cost: 5, note: 'One serving' });
-    expect(runtime.adjustBalance(10, 'Pilot seed')).toBe(true);
+    expect(runtime.adjustBalance(9, 'Pilot seed')).toBe(true);
     expect(runtime.redeem(reward!.id)).toBe('redeemed');
     const spend = runtime.getSnapshot().state!.ledger.find(item => item.kind === 'spend')!;
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(5);
     expect(runtime.refund(spend.id)).toBe('refunded');
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(10);
     expect(runtime.archiveReward(reward!.id)).toBe(true);
-    expect(runtime.getSnapshot().state!.rewards[0].active).toBe(false);
+    expect(runtime.getSnapshot().state!.rewards.find(item => item.id === reward!.id)?.active).toBe(false);
 
     expect(runtime.updateCurrency('  Sparks  ')).toBe(true);
     expect(runtime.updateAnimations(false)).toBe(true);
@@ -392,7 +398,7 @@ describe('Rewards Lab wallet, catalog and controls', () => {
     expect(runtime.disableAndErase()).toBe(true);
     expect(runtime.getSnapshot()).toMatchObject({ flagEnabled: false, enabled: false, state: null });
     expect(storage.values.has(REWARDS_LAB_STORAGE_KEY)).toBe(false);
-    expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+    expect(loadRewardsLabState(storage)).toEqual(freshStoredState());
   });
 
   it('does not erase anything unless disable succeeds', () => {

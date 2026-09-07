@@ -2,19 +2,26 @@ import { describe, expect, it } from 'vitest';
 import {
   FAIR_BAG_SLOTS,
   addRewardDefinition,
+  addPurchaseItem,
   adjustWalletBalance,
   archiveRewardDefinition,
   claimTaskCompletion,
   drawFromFairBag,
+  drawRewardKey,
+  getAvailableKeyCounts,
+  getRedemptionAvailability,
   getTaskGrade,
   getV2RewardAmount,
   getWalletBalance,
   redeemReward,
+  redeemPurchase,
   refundRedemption,
   regradeReversedTaskClaim,
   reverseTaskCompletion,
   setTaskGrade,
   updateRewardDefinition,
+  undoLatestKeyUpgrade,
+  upgradeRewardKeys,
 } from './economy';
 import { EconomyRuntime, FairBagState, LegacyRewardClaim, RewardGrade, createDefaultRewardsLabState } from './types';
 
@@ -26,6 +33,11 @@ const makeRuntime = (): EconomyRuntime => {
     random: () => 0,
   };
 };
+
+const withCommonKey = (state = createDefaultRewardsLabState()) => ({
+  ...state,
+  keys: [{ id: 'key-1', grade: 'common' as const, status: 'available' as const, createdAt: '2026-08-28T09:00:00.000Z' }],
+});
 
 describe('fair reward bag', () => {
   it('draws every hidden luck slot exactly once in every cycle', () => {
@@ -64,6 +76,39 @@ describe('fair reward bag', () => {
   });
 });
 
+describe('protected reward keys', () => {
+  it('uses the configured mutually exclusive drop corridors', () => {
+    expect(drawRewardKey('common', { dryStreak: 0 }, () => 0.10).grade).toBe('common');
+    expect(drawRewardKey('common', { dryStreak: 0 }, () => 0.25).grade).toBe('uncommon');
+    expect(drawRewardKey('common', { dryStreak: 0 }, () => 0.295).grade).toBe('rare');
+    expect(drawRewardKey('common', { dryStreak: 0 }, () => 0.9)).toMatchObject({ grade: null, keyDropState: { dryStreak: 1 } });
+  });
+
+  it('adds only Common pity chance and guarantees the eighth dry attempt', () => {
+    expect(drawRewardKey('common', { dryStreak: 5 }, () => 0.35)).toMatchObject({ grade: 'common', protectedDrop: true });
+    expect(drawRewardKey('common', { dryStreak: 6 }, () => 0.45)).toMatchObject({ grade: 'common', protectedDrop: true });
+    expect(drawRewardKey('mythic', { dryStreak: 7 }, () => 0.99)).toEqual({
+      grade: 'common', keyDropState: { dryStreak: 0 }, protectedDrop: true,
+    });
+  });
+
+  it('upgrades five exact keys and can undo while the output is unused', () => {
+    const initial = {
+      ...createDefaultRewardsLabState(),
+      keys: Array.from({ length: 5 }, (_, index) => ({
+        id: `key-${index}`, grade: 'common' as const, status: 'available' as const,
+        createdAt: '2026-08-28T10:00:00.000Z',
+      })),
+    };
+    const upgraded = upgradeRewardKeys(initial, 'common', makeRuntime());
+    expect(upgraded.outcome).toBe('upgraded');
+    expect(getAvailableKeyCounts(upgraded.state)).toMatchObject({ common: 0, uncommon: 1 });
+    const reversed = undoLatestKeyUpgrade(upgraded.state, makeRuntime());
+    expect(reversed.outcome).toBe('reversed');
+    expect(getAvailableKeyCounts(reversed.state)).toMatchObject({ common: 5, uncommon: 0 });
+  });
+});
+
 describe('task rewards', () => {
   it('stores only non-common grade overrides', () => {
     const initial = createDefaultRewardsLabState();
@@ -90,7 +135,7 @@ describe('task rewards', () => {
 
     expect(first.outcome).toBe('earned');
     expect(first.claim).toMatchObject({
-      taskId: 'task-1', grade: 'rare', luckSlot: 8, amount: 8, economyVersion: 2,
+      taskId: 'task-1', grade: 'rare', luckSlot: 8, amount: 8, economyVersion: 3,
     });
     expect(getWalletBalance(first.state)).toBe(8);
     expect(first.state.fairBag.remaining).toHaveLength(0);
@@ -160,9 +205,9 @@ describe('task rewards', () => {
     const reversed = reverseTaskCompletion(earned.state, 'task-1', runtime);
     const regraded = regradeReversedTaskClaim(reversed.state, 'task-1', 'rare', runtime);
     expect(regraded.outcome).toBe('regraded');
-    expect(regraded.claim).toMatchObject({ grade: 'rare', luckSlot: 6, amount: 7, economyVersion: 2 });
+    expect(regraded.claim).toMatchObject({ grade: 'rare', luckSlot: 6, amount: 7, economyVersion: 3 });
     expect(regraded.correction).toMatchObject({
-      fromGrade: 'common', toGrade: 'rare', previousAmount: 2, amount: 7, economyVersion: 2,
+      fromGrade: 'common', toGrade: 'rare', previousAmount: 2, amount: 7, economyVersion: 3,
     });
     expect(getWalletBalance(regraded.state)).toBe(0);
 
@@ -206,7 +251,7 @@ describe('task rewards', () => {
 describe('reward catalog and wallet', () => {
   it('adds, edits and archives reward definitions', () => {
     const runtime = makeRuntime();
-    const added = addRewardDefinition(createDefaultRewardsLabState(), {
+    const added = addRewardDefinition(withCommonKey(), {
       title: '  Listen to music  ', cost: 7, note: 'One album', repeatable: false,
     }, runtime);
     expect(added.reward).toMatchObject({
@@ -232,7 +277,7 @@ describe('reward catalog and wallet', () => {
 
   it('guards balance, records spend, and supports a single refund', () => {
     const runtime = makeRuntime();
-    const added = addRewardDefinition(createDefaultRewardsLabState(), {
+    const added = addRewardDefinition(withCommonKey(), {
       title: 'Fruit', cost: 6,
     }, runtime);
     expect(redeemReward(added.state, added.reward.id, runtime).outcome).toBe('insufficient-balance');
@@ -251,7 +296,7 @@ describe('reward catalog and wallet', () => {
 
   it('prevents spending an unrefunded one-time reward twice', () => {
     const runtime = makeRuntime();
-    const added = addRewardDefinition(createDefaultRewardsLabState(), {
+    const added = addRewardDefinition(withCommonKey(), {
       title: 'Special treat', cost: 2, repeatable: false,
     }, runtime);
     const funded = adjustWalletBalance(added.state, 10, 'Pilot seed', runtime).state;
@@ -260,5 +305,68 @@ describe('reward catalog and wallet', () => {
 
     const refunded = refundRedemption(first.state, first.transaction!.id, runtime);
     expect(redeemReward(refunded.state, added.reward.id, runtime).outcome).toBe('redeemed');
+  });
+
+  it('keeps a spent task key spent through Undo and suspends it when the redemption is refunded', () => {
+    const runtime = makeRuntime();
+    const claimed = claimTaskCompletion({
+      ...createDefaultRewardsLabState(), fairBag: { remaining: [0], cycle: 1 },
+    }, { taskId: 'task-key', taskTitle: 'Key task', completedAt: '2026-08-28T10:00:00.000Z' }, runtime);
+    expect(claimed.key?.grade).toBe('common');
+    const funded = adjustWalletBalance(claimed.state, 10, 'Seed', runtime).state;
+    const reward = addRewardDefinition(funded, { title: 'Treat', cost: 2 }, runtime);
+    const redeemed = redeemReward(reward.state, reward.reward.id, runtime);
+    const keyId = claimed.key!.id;
+    expect(redeemed.state.keys.find(key => key.id === keyId)?.status).toBe('spent');
+
+    const reversed = reverseTaskCompletion(redeemed.state, 'task-key', runtime);
+    expect(reversed.state.keys.find(key => key.id === keyId)?.status).toBe('spent');
+    const refunded = refundRedemption(reversed.state, redeemed.transaction!.id, runtime);
+    expect(refunded.state.keys.find(key => key.id === keyId)?.status).toBe('suspended');
+    const restored = claimTaskCompletion(refunded.state, {
+      taskId: 'task-key', taskTitle: 'Key task', completedAt: '2026-08-29T10:00:00.000Z',
+    }, runtime);
+    expect(restored.state.keys.find(key => key.id === keyId)?.status).toBe('available');
+  });
+
+  it('applies cooldowns and shared rolling limits to active redemptions', () => {
+    const runtime = makeRuntime();
+    const keys = Array.from({ length: 3 }, (_, index) => ({
+      id: `limit-key-${index}`, grade: 'common' as const, status: 'available' as const,
+      createdAt: '2026-08-28T00:00:00.000Z',
+    }));
+    const state = adjustWalletBalance({ ...createDefaultRewardsLabState(), keys }, 20, 'Seed', runtime).state;
+    const first = addRewardDefinition(state, {
+      title: 'Game 30', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+    }, runtime);
+    const second = addRewardDefinition(first.state, {
+      title: 'Game 60', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games', cooldownDays: 2,
+    }, runtime);
+    const redeemed = redeemReward(second.state, first.reward.id, {
+      ...runtime, now: () => '2026-08-28T12:00:00.000Z',
+    });
+    const availability = getRedemptionAvailability(redeemed.state, {
+      ...second.reward, kind: 'reward', active: true,
+    }, new Date('2026-08-29T12:00:00.000Z'));
+    expect(availability.outcome).toBe('limit-reached');
+  });
+
+  it('purchases a wishlist item at its actual price and restores it on refund', () => {
+    const runtime = makeRuntime();
+    const state = adjustWalletBalance({
+      ...createDefaultRewardsLabState(),
+      keys: [{ id: 'rare-key', grade: 'rare', status: 'available', createdAt: '2026-08-28T00:00:00.000Z' }],
+    }, 50, 'Seed', runtime).state;
+    const added = addPurchaseItem(state, {
+      title: 'Hobby tool', estimatedCost: 30, priceMin: 25, priceMax: 40, grade: 'rare', status: 'ready',
+    }, runtime);
+    const redeemed = redeemPurchase(added.state, added.purchase.id, 34, runtime);
+    expect(redeemed.outcome).toBe('redeemed');
+    expect(getWalletBalance(redeemed.state)).toBe(16);
+    expect(redeemed.state.purchases[0]).toMatchObject({ status: 'purchased', estimatedCost: 34 });
+    const refunded = refundRedemption(redeemed.state, redeemed.transaction!.id, runtime);
+    expect(refunded.state.purchases[0].status).toBe('ready');
+    expect(getWalletBalance(refunded.state)).toBe(50);
+    expect(getAvailableKeyCounts(refunded.state).rare).toBe(1);
   });
 });
