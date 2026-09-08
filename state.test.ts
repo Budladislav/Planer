@@ -129,12 +129,13 @@ describe('migrateAppState', () => {
       workShiftSettings: { baseWeek: '2026-W33', baseShift: 1, overrides: {} },
     });
 
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.tasks).toHaveLength(1);
     expect(migrated.captures).toHaveLength(1);
     expect(migrated.events).toHaveLength(1);
     expect(migrated.taskOrderByMonthBucket).toEqual({ '2026-08': ['task-1'] });
     expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
+    expect(migrated.monthNotes).toEqual({});
     expect(migrated.weekNotes).toEqual({});
     expect(migrated.dayNotes).toEqual({});
     expect(migrated.goals).toEqual([]);
@@ -331,7 +332,35 @@ describe('appReducer task ordering', () => {
   });
 });
 
-describe('appReducer week notes and UI preferences', () => {
+describe('appReducer period notes and UI preferences', () => {
+  it('adds, updates and deletes a month note', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-08T08:00:00.000Z'));
+
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_MONTH_NOTE',
+      payload: { month: '2026-09', text: '  Main focus  ' },
+    });
+    const note = added.monthNotes['2026-09'][0];
+    expect(note).toMatchObject({ text: 'Main focus', createdAt: '2026-09-08T08:00:00.000Z' });
+
+    const updated = appReducer(added, {
+      type: 'UPDATE_MONTH_NOTE',
+      payload: { month: '2026-09', id: note.id, text: 'Main direction' },
+    });
+    expect(updated.monthNotes['2026-09'][0].text).toBe('Main direction');
+
+    const deleted = appReducer(updated, {
+      type: 'DELETE_MONTH_NOTE',
+      payload: { month: '2026-09', id: note.id },
+    });
+    expect(deleted.monthNotes).toEqual({});
+    expect(appReducer(INITIAL_STATE, {
+      type: 'ADD_MONTH_NOTE',
+      payload: { month: 'invalid', text: 'Discard' },
+    })).toBe(INITIAL_STATE);
+  });
+
   it('adds, updates and deletes a week note', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-16T08:00:00.000Z'));
@@ -467,6 +496,10 @@ describe('appReducer day notes and long-term goals', () => {
         '2026-09-04': [{ id: 'day-note', text: '  Remember this  ', createdAt: '2026-09-01T10:00:00.000Z' }],
         '2026-02-31': [{ id: 'invalid-date', text: 'Discard' }],
       },
+      monthNotes: {
+        '2026-09': [{ id: 'month-note', text: '  September focus  ', createdAt: '2026-09-01T10:00:00.000Z' }],
+        invalid: [{ id: 'invalid-month', text: 'Discard' }],
+      },
       goals: [{
         id: 'goal-1',
         title: '  Emergency fund  ',
@@ -481,6 +514,8 @@ describe('appReducer day notes and long-term goals', () => {
 
     expect(migrated.dayNotes['2026-09-04'][0].text).toBe('Remember this');
     expect(migrated.dayNotes['2026-02-31']).toBeUndefined();
+    expect(migrated.monthNotes['2026-09'][0].text).toBe('September focus');
+    expect(migrated.monthNotes.invalid).toBeUndefined();
     expect(migrated.goals).toHaveLength(1);
     expect(migrated.goals[0]).toEqual(expect.objectContaining({ title: 'Emergency fund', status: 'completed' }));
     expect(migrated.goals[0].notes[0].text).toBe('Final transfer');

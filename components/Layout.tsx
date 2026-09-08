@@ -28,8 +28,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
   const navItems: NavigationItem[] = [
     { view: 'inbox', icon: Heart, label: t('Wish') },
-    { view: 'month', icon: CalendarDays, label: t('Month') },
     { view: 'events', icon: Calendar, label: t('Calendar') },
+    { view: 'month', icon: CalendarDays, label: t('Month') },
     { view: 'week', icon: List, label: t('Week') },
     { view: 'today', icon: Target, label: t('Today') },
   ];

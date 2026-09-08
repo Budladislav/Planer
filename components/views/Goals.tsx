@@ -16,7 +16,7 @@ import { GoalNote, LongTermGoal } from '../../types';
 import { getDateString, getTodayString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader } from '../ui/Primitives';
+import { EmptyState } from '../ui/Primitives';
 
 const toDateInputValue = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -335,10 +335,6 @@ export const GoalsView: React.FC = () => {
 
   return (
     <div className="page-container space-y-4">
-      <PageHeader title={t('Long-term goals')} subtitle={t('Keep the destination, current situation and next step together.')}>
-        <span className="mt-2 inline-flex rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700">{t('Experimental')}</span>
-      </PageHeader>
-
       <form onSubmit={addGoal} className="section-card flex gap-2">
         <input
           value={draft}

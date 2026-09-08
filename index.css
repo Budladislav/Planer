@@ -72,22 +72,6 @@
     @apply mx-auto w-full max-w-3xl pb-20 lg:pb-4;
   }
 
-  .page-context {
-    @apply mb-4 text-center;
-  }
-
-  .page-title {
-    @apply text-3xl font-bold tracking-[-0.035em] text-ink;
-  }
-
-  .page-title-mobile-hidden {
-    @apply hidden lg:block;
-  }
-
-  .page-subtitle {
-    @apply mt-1 text-sm text-muted;
-  }
-
   .surface-card {
     @apply overflow-hidden rounded-2xl border border-line bg-surface shadow-quiet;
   }

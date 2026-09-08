@@ -26,6 +26,13 @@ export interface DayNote {
   updatedAt: string;
 }
 
+export interface MonthNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GoalNote {
   id: string;
   text: string;
@@ -96,6 +103,7 @@ export interface AppState {
   taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
   taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
   workShiftSettings: WorkShiftSettings;
+  monthNotes: Record<string, MonthNote[]>; // Maps month (YYYY-MM) to user-authored notes
   weekNotes: Record<string, WeekNote[]>; // Maps ISO week (YYYY-Www) to user-authored notes
   dayNotes: Record<string, DayNote[]>; // Maps date (YYYY-MM-DD) to user-authored notes
   goals: LongTermGoal[];
@@ -108,7 +116,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   captures: [],
   tasks: [],
   events: [],
@@ -118,6 +126,7 @@ export const INITIAL_STATE: AppState = {
   taskOrderByMonthBucket: {},
   taskOrderByMonthWeek: {},
   workShiftSettings: { baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'extended' },
+  monthNotes: {},
   weekNotes: {},
   dayNotes: {},
   goals: [],

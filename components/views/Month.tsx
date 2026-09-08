@@ -31,10 +31,11 @@ import {
 import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
+import { MonthMetaBadges, MonthNotesEditor } from '../MonthNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
-import { PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
+import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { TaskCard, TaskIconButton } from '../ui/Primitives';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -88,7 +89,6 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
           className="flex min-w-0 flex-1 touch-none items-center gap-2 cursor-grab active:cursor-grabbing"
           title={t('Drag task')}
         >
-          <RewardGradeMarker taskId={task.id} />
           <RewardGradeIncrementButton taskId={task.id} />
           <span className={`min-w-0 flex-1 text-slate-700 ${showActions ? 'sr-only' : 'truncate'}`}>
             {task.title}
@@ -170,6 +170,7 @@ export const MonthView: React.FC = () => {
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [notesEditorWeek, setNotesEditorWeek] = useState<string | null>(null);
+  const [notesEditorMonth, setNotesEditorMonth] = useState<string | null>(null);
   const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
 
   const weeks = useMemo(() => getMonthWeeks(currentMonth), [currentMonth]);
@@ -391,7 +392,10 @@ export const MonthView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <PageHeader title={t('Month')} subtitle={t('{count} planned tasks', { count: todoTasks.length })} />
+      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2 text-sm text-muted">
+        <span>{t('{count} planned tasks', { count: todoTasks.length })}</span>
+        <MonthMetaBadges month={currentMonth} onEdit={() => setNotesEditorMonth(currentMonth)} maxNotes={2} />
+      </div>
 
       <div className="period-switcher">
         <button type="button" onClick={() => changeMonth(-1)} className="icon-button" title={t('Previous month')}>
@@ -510,6 +514,7 @@ export const MonthView: React.FC = () => {
       />
 
       <WeekNotesEditor week={notesEditorWeek} onClose={() => setNotesEditorWeek(null)} />
+      <MonthNotesEditor month={notesEditorMonth} onClose={() => setNotesEditorMonth(null)} />
     </div>
   );
 };

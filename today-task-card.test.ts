@@ -4,6 +4,7 @@ import todayViewSource from './components/views/Today.tsx?raw';
 import weekTaskItemsSource from './components/week/WeekTaskItems.tsx?raw';
 import dayNotesSource from './components/DayNotes.tsx?raw';
 import weekNotesSource from './components/WeekNotes.tsx?raw';
+import monthNotesSource from './components/MonthNotes.tsx?raw';
 
 describe('Today task card presentation', () => {
   it('does not apply an implicit highlight to the first task', () => {
@@ -18,7 +19,7 @@ describe('Today task card presentation', () => {
   });
 
   it('keeps task actions visible as compact icon buttons while expansion contains the grade selector', () => {
-    expect(todayViewSource.match(/<TaskIconButton/g)).toHaveLength(5);
+    expect(todayViewSource.match(/<TaskIconButton/g)).toHaveLength(6);
     expect(monthViewSource.match(/<TaskIconButton/g)).toHaveLength(4);
     expect(weekTaskItemsSource.match(/<TaskIconButton/g)).toHaveLength(8);
     expect(weekTaskItemsSource.match(/label=\{t\('Mark as done'\)\}/g)).toHaveLength(2);
@@ -27,13 +28,23 @@ describe('Today task card presentation', () => {
     expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(2);
   });
 
-  it('uses a pencil for adding and editing day and week notes', () => {
+  it('combines the active grade marker with its promotion button', () => {
+    const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('export const TodayView'));
+    expect(activeTodayCard).not.toContain('<RewardGradeMarker');
+    expect(monthViewSource).not.toContain('<RewardGradeMarker');
+    expect(weekTaskItemsSource).not.toContain('<RewardGradeMarker');
+  });
+
+  it('uses a notebook with a pencil for period note controls', () => {
     const dayMetaBadges = dayNotesSource.slice(0, dayNotesSource.indexOf('interface DayNotesEditorProps'));
     const weekMetaBadges = weekNotesSource.slice(0, weekNotesSource.indexOf('interface WeekNotesEditorProps'));
+    const monthMetaBadges = monthNotesSource.slice(0, monthNotesSource.indexOf('interface MonthNotesEditorProps'));
 
-    expect(dayMetaBadges).toContain('<Pencil');
+    expect(dayMetaBadges).toContain('<NotebookPen');
     expect(dayMetaBadges).not.toContain('<Plus');
-    expect(weekMetaBadges).toContain('<Pencil');
+    expect(weekMetaBadges).toContain('<NotebookPen');
     expect(weekMetaBadges).not.toContain('<Plus');
+    expect(monthMetaBadges).toContain('<NotebookPen');
+    expect(monthMetaBadges).not.toContain('<Plus');
   });
 });

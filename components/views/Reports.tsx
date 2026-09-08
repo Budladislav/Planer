@@ -8,7 +8,6 @@ import {
 import { useAppStore } from '../../store';
 import { getTodayString, getWeekString } from '../../utils';
 import { useI18n } from '../../i18n';
-import { PageHeader } from '../ui/Primitives';
 
 export const ReportsView: React.FC = () => {
   const { state } = useAppStore();
@@ -54,8 +53,6 @@ export const ReportsView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <PageHeader title={t('Progress Reports')} subtitle={t('Completed tasks, realized wishes and long-term goals in one structured TXT file.')} />
-
       <section className="section-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-auto flex items-center gap-2 text-sm font-semibold text-slate-700">

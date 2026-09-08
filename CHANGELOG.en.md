@@ -8,6 +8,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - MonoFocus has been renamed to Takt, with a new name, refreshed PWA icons, and a four-step mark rising from green to red.
 - Added a compact internal design system for surfaces, task cards, fields, buttons, disclosures, sticky composers, and dialogs.
+- Added month notes with the same create, edit, and delete flow used for day and week notes.
 
 ### Changed
 
@@ -15,7 +16,9 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Today, Week, Month, Events, Inbox, Goals, Done, Reports, Settings, and Rewards Lab now share one visual language without changing familiar structure or workflows.
 - Navigation is monochrome, mobile screens remain compact, and forms and sheets better account for the bottom dock and short viewports.
 - Day, week, and month task cards are aligned: grade promotion and primary actions are available as compact icons while collapsed, and expansion is reserved for the detailed grade selector.
-- Adding day and week notes now uses a pencil icon so it cannot be confused with adding a task.
+- Repeated page titles and explanatory subtitles are removed on both mobile and desktop; Today, Week, and Month retain only useful counters.
+- Calendar now precedes Month in the primary navigation, and note controls for every period use a notebook-with-pencil icon.
+- The current grade indicator is merged into the promotion button. Completed tasks retain their grade color and show the reward actually earned.
 - Grade colors are now consistent: Common stays neutral, Uncommon is green, Rare is blue, Legendary is amber, and Mythic is red.
 - Lazy-loaded screens and the local-first architecture remain intact; no new UI framework or external fonts were added.
 
@@ -28,6 +31,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - Internal local-storage keys and the legacy PWA cache namespace remain unchanged, so the update neither migrates nor deletes user data.
 - Rewards Lab remains isolated from the planner state and planner backups.
+- The planner schema advances to version 8 solely for `monthNotes`; older saves receive an empty month-note section without changing existing data.
 
 ## [4.3.1] — 08.09.2026 — Reliable PWA updates
 

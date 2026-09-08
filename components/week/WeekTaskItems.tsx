@@ -12,7 +12,7 @@ import { Task } from '../../types';
 import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
 import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
-import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
@@ -194,7 +194,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
-          <RewardGradeMarker taskId={task.id} />
           <RewardGradeIncrementButton taskId={task.id} />
           <span
             className={`min-w-0 flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
@@ -477,7 +476,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
-          <RewardGradeMarker taskId={task.id} />
           <RewardGradeIncrementButton taskId={task.id} />
           <span
             className={`min-w-0 max-w-full flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}

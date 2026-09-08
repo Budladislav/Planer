@@ -7,6 +7,7 @@ import {
   GoalNote,
   INITIAL_STATE,
   LongTermGoal,
+  MonthNote,
   ShiftTransitionHighlight,
   Task,
   ViewState,
@@ -16,7 +17,7 @@ import {
 import { formatEventTitle, generateId, getDateString, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -43,7 +44,7 @@ const migrateOrderMap = (value: unknown): Record<string, string[]> => {
   );
 };
 
-const migrateNotesByKey = <T extends WeekNote | DayNote>(
+const migrateNotesByKey = <T extends MonthNote | WeekNote | DayNote>(
   value: unknown,
   now: string,
   isValidKey: (key: string) => boolean,
@@ -244,6 +245,7 @@ export const migrateAppState = (value: unknown): AppState => {
       overrides,
       transitionHighlight: requestedTransitionHighlight,
     },
+    monthNotes: migrateNotesByKey<MonthNote>(parsed.monthNotes, now, isValidMonthString),
     weekNotes: migrateNotesByKey<WeekNote>(parsed.weekNotes, now, isValidWeekString),
     dayNotes: migrateNotesByKey<DayNote>(parsed.dayNotes, now, isValidDateKey),
     goals: migrateGoals(parsed.goals, now),
@@ -279,6 +281,9 @@ export type Action =
   | { type: 'UPDATE_TASK_ORDER_MONTH_BUCKET'; payload: { month: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_MONTH_WEEK'; payload: { key: string; order: string[] } }
   | { type: 'UPDATE_WORK_SHIFT_SETTINGS'; payload: AppState['workShiftSettings'] }
+  | { type: 'ADD_MONTH_NOTE'; payload: { month: string; text: string } }
+  | { type: 'UPDATE_MONTH_NOTE'; payload: { month: string; id: string; text: string } }
+  | { type: 'DELETE_MONTH_NOTE'; payload: { month: string; id: string } }
   | { type: 'ADD_WEEK_NOTE'; payload: { week: string; text: string } }
   | { type: 'UPDATE_WEEK_NOTE'; payload: { week: string; id: string; text: string } }
   | { type: 'DELETE_WEEK_NOTE'; payload: { week: string; id: string } }
@@ -500,6 +505,42 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       };
     case 'UPDATE_WORK_SHIFT_SETTINGS':
       return { ...state, workShiftSettings: action.payload };
+    case 'ADD_MONTH_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text || !isValidMonthString(action.payload.month)) return state;
+      const now = new Date().toISOString();
+      const note: MonthNote = { id: generateId(), text, createdAt: now, updatedAt: now };
+      return {
+        ...state,
+        monthNotes: {
+          ...state.monthNotes,
+          [action.payload.month]: [...(state.monthNotes[action.payload.month] ?? []), note],
+        },
+      };
+    }
+    case 'UPDATE_MONTH_NOTE': {
+      const text = action.payload.text.trim();
+      const notes = state.monthNotes[action.payload.month];
+      if (!text || !notes || !isValidMonthString(action.payload.month)) return state;
+      return {
+        ...state,
+        monthNotes: {
+          ...state.monthNotes,
+          [action.payload.month]: notes.map(note => note.id === action.payload.id
+            ? { ...note, text, updatedAt: new Date().toISOString() }
+            : note),
+        },
+      };
+    }
+    case 'DELETE_MONTH_NOTE': {
+      const notes = state.monthNotes[action.payload.month];
+      if (!notes) return state;
+      const remainingNotes = notes.filter(note => note.id !== action.payload.id);
+      const monthNotes = { ...state.monthNotes };
+      if (remainingNotes.length > 0) monthNotes[action.payload.month] = remainingNotes;
+      else delete monthNotes[action.payload.month];
+      return { ...state, monthNotes };
+    }
     case 'ADD_WEEK_NOTE': {
       const text = action.payload.text.trim();
       if (!text || !isValidWeekString(action.payload.week)) return state;

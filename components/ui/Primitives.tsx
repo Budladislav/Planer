@@ -2,28 +2,6 @@ import React from 'react';
 
 const join = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(' ');
 
-interface PageHeaderProps {
-  title: string;
-  subtitle?: React.ReactNode;
-  children?: React.ReactNode;
-  hideTitleOnMobile?: boolean;
-  className?: string;
-}
-
-export const PageHeader: React.FC<PageHeaderProps> = ({
-  title,
-  subtitle,
-  children,
-  hideTitleOnMobile = true,
-  className,
-}) => (
-  <header className={join('page-context', className)}>
-    <h1 className={join('page-title', hideTitleOnMobile && 'page-title-mobile-hidden')}>{title}</h1>
-    {subtitle && <div className="page-subtitle">{subtitle}</div>}
-    {children}
-  </header>
-);
-
 interface EmptyStateProps {
   children: React.ReactNode;
   className?: string;

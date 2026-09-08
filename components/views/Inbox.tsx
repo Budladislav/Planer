@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader } from '../ui/Primitives';
+import { EmptyState } from '../ui/Primitives';
 
 const toDateInputValue = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -168,9 +168,6 @@ export const InboxView: React.FC = () => {
 
   return (
     <div className="page-container">
-      {/* Header - Centered */}
-      <PageHeader title={t('I wish')} subtitle={t('Capture everything. Process later.')} />
-
       {/* Content - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {completedCaptures.length > 0 && (

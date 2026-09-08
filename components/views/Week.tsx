@@ -10,7 +10,7 @@ import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { PageHeader } from '../ui/Primitives';
+import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import {
   DndContext,
   closestCenter,
@@ -463,10 +463,13 @@ export const WeekView: React.FC = () => {
             ? new Date(completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : null;
           return (
-            <div key={task.id} className="flex min-w-0 items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
+            <div key={task.id} className="relative flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
+              <RewardGradeSurface taskId={task.id} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
+              <RewardGradeMarker taskId={task.id} />
               <span className="min-w-0 flex-1 truncate text-slate-500 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
+              <RewardCompletionMeta taskId={task.id} />
               <button
                 type="button"
                 onClick={() => reopenTask(dispatch, task)}
@@ -529,17 +532,16 @@ export const WeekView: React.FC = () => {
 
   return (
     <div className="page-container">
-      {/* Header - Centered */}
-      <PageHeader title={t('Week')} className="px-12 lg:px-0">
+      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2 px-12 lg:px-0">
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}
-          className="mt-1 justify-center"
+          className="justify-center"
         />
-        <p className="mt-1 text-sm text-muted">
+        <p className="text-sm text-muted">
           {t('{todo} left • {done} done', { todo: todoWeekTasks.length, done: doneWeekTasks.length })}
         </p>
-      </PageHeader>
+      </div>
 
       {/* Content - with bottom padding for fixed forms */}
       <div className="pb-48 lg:pb-16 min-h-[60vh] flex flex-col">

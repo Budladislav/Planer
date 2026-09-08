@@ -8,7 +8,7 @@ import { formatDateShort, formatEventTitle, generateId, getTodayString, getWeekS
 import { EventsCalendar } from '../events/EventsCalendar';
 import { ConfirmModal, Modal } from '../Modal';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader } from '../ui/Primitives';
+import { EmptyState } from '../ui/Primitives';
 
 interface EventItemProps {
   event: CalendarEvent;
@@ -192,8 +192,6 @@ export const EventsView: React.FC = () => {
   return (
     <>
       <div className="page-container">
-        <PageHeader title={t('Calendar')} subtitle={t('Events create a linked task on the corresponding day')} />
-
         <div className="space-y-3 pb-48 lg:pb-6">
           <EventsCalendar
             events={state.events}

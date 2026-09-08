@@ -8,7 +8,6 @@ import { getDateString } from '../../utils';
 import { WorkShiftSettingsPanel } from '../settings/WorkShiftSettings';
 import { RewardsLabSettingsRow } from '../../features/rewards-lab/ui/RewardsLabSettingsRow';
 import { useI18n } from '../../i18n';
-import { PageHeader } from '../ui/Primitives';
 
 export const SettingsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -185,8 +184,6 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-8">
-      <PageHeader title={t('Settings')} />
-
       <section>
         <p className="settings-group-label">{t('Planning')}</p>
         <div className="surface-card divide-y divide-line">

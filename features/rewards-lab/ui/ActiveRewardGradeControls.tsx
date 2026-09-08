@@ -27,6 +27,14 @@ const GRADE_STEP_STYLES: Record<RewardGrade, string> = {
   mythic: 'border-[#E4515E]/35 bg-[#FDECEF] text-[#B52D3C] hover:bg-red-100',
 };
 
+const GRADE_META_STYLES: Record<RewardGrade, string> = {
+  common: 'bg-[#F4F6F8] text-[#475569]',
+  uncommon: 'bg-[#EAF8F2] text-[#187A54]',
+  rare: 'bg-[#EEF4FF] text-[#1D5FD1]',
+  legendary: 'bg-[#FFF6DD] text-[#925E00]',
+  mythic: 'bg-[#FDECEF] text-[#B52D3C]',
+};
+
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
 
 export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => {
@@ -73,7 +81,6 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string }> = ({
   const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
   const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
-  const visualGrade = nextGrade ?? grade;
   const label = nextGrade
     ? t('Increase task grade: {from} to {to}', { from: t(REWARD_GRADES[grade].label), to: t(REWARD_GRADES[nextGrade].label) })
     : t('Maximum task grade: {grade}', { grade: t(REWARD_GRADES[grade].label) });
@@ -89,13 +96,26 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string }> = ({
       onPointerDown={event => event.stopPropagation()}
       onMouseDown={event => event.stopPropagation()}
       onTouchStart={event => event.stopPropagation()}
-      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[visualGrade]}`}
+      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[grade]}`}
       aria-label={label}
       title={locked ? t('Grade is locked while the task is completed.') : label}
     >
-      <span className={`h-2.5 w-2.5 rotate-45 rounded-[2px] ${GRADE_STYLES[visualGrade].dot}`} aria-hidden="true" />
+      <span className={`h-2.5 w-2.5 rotate-45 rounded-[2px] ${GRADE_STYLES[grade].dot}`} aria-hidden="true" />
       <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
     </button>
+  );
+};
+
+export const ActiveRewardCompletionMeta: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const { snapshot } = useRewardsLab();
+  if (!snapshot.enabled || !snapshot.state) return null;
+  const claim = snapshot.state.claims[taskId];
+  if (!claim || !isRewardClaimActive(snapshot.state, taskId)) return null;
+
+  return (
+    <span className={`inline-flex flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${GRADE_META_STYLES[claim.grade]}`}>
+      +{claim.amount} {snapshot.state.currencyName}
+    </span>
   );
 };
 

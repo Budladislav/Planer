@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { CalendarArrowDown, CalendarCheck2, Check, ChevronDown, Pencil, Plus, RotateCcw, X } from 'lucide-react';
-import { getDateString, getTodayString, generateId, formatDateReadable, getWeekString } from '../../utils';
+import { getDateString, getTodayString, generateId, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
   getLocalDateFromTimestamp,
@@ -29,11 +29,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
-import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardCompletionMeta, RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
+import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -142,7 +142,6 @@ const SortableTaskItem: React.FC<{
         className="flex flex-1 min-w-0 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <RewardGradeMarker taskId={task.id} />
           <RewardGradeIncrementButton taskId={task.id} />
           <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-700 ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
@@ -223,7 +222,7 @@ const SortableTaskItem: React.FC<{
 
 export const TodayView: React.FC = () => {
   const { state, dispatch } = useAppStore();
-  const { language, locale, t } = useI18n();
+  const { locale, t } = useI18n();
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
   const todayStr = getTodayString();
@@ -402,21 +401,18 @@ export const TodayView: React.FC = () => {
   return (
     <>
       <div className="page-container">
-          {/* Today Section - Header */}
-          <PageHeader title={t('Today')} subtitle={formatDateReadable(todayStr, language)}>
+          <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2">
             <DayMetaBadges
               date={todayStr}
               onEdit={() => setNotesEditorDate(todayStr)}
               maxNotes={2}
-              className="mt-1 justify-center"
+              className="justify-center"
             />
-            <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-              <p className="text-sm text-muted">
-                {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
-              </p>
-              <RewardsBalancePill />
-            </div>
-          </PageHeader>
+            <p className="text-sm text-muted">
+              {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
+            </p>
+            <RewardsBalancePill />
+          </div>
 
           {/* Tasks List - with bottom padding for fixed form */}
           <div className="space-y-3 pb-20 lg:pb-4">
@@ -477,7 +473,8 @@ export const TodayView: React.FC = () => {
                   {completedTodayTasks.length === 0 ? (
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
                   ) : completedTodayTasks.map(task => (
-                    <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <div key={task.id} className="relative flex items-center gap-2 overflow-hidden px-3 py-2.5">
+                      <RewardGradeSurface taskId={task.id} />
                       <RewardGradeMarker taskId={task.id} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
@@ -485,15 +482,14 @@ export const TodayView: React.FC = () => {
                           {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
-                      <button
-                        type="button"
+                      <RewardCompletionMeta taskId={task.id} />
+                      <TaskIconButton
+                        label={t("Return task to today's list")}
+                        tone="primary"
                         onClick={() => handleUndoComplete(task.id)}
-                        className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
-                        title={t("Return task to today's list")}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        {t('Undo')}
-                      </button>
+                      </TaskIconButton>
                     </div>
                   ))}
                 </div>

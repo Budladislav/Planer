@@ -62,7 +62,7 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
           title={notes.length ? t('Edit day notes') : t('Add day note')}
           aria-label={notes.length ? t('Edit day notes') : t('Add day note')}
         >
-          <Pencil className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+          <NotebookPen className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
         </button>
       )}
     </div>

@@ -6,8 +6,8 @@ import { Calendar, Plus, ChevronDown, ChevronRight, Pencil, RotateCcw, X } from 
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
-import { RewardGradeMarker } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
+import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -157,14 +157,16 @@ export const DoneView: React.FC = () => {
 
     return (
       <TaskCard>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <RewardGradeMarker taskId={task.id} />
-            <span className="text-sm break-all line-through text-slate-500">
-              {task.title}
-            </span>
-          </div>
-          <div className="flex flex-shrink-0 items-center gap-1">
+        <RewardGradeSurface taskId={task.id} />
+        <div className="flex min-w-0 items-start gap-2">
+          <RewardGradeMarker taskId={task.id} />
+          <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-500 line-through">
+            {task.title}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <RewardCompletionMeta taskId={task.id} />
+          <div className="ml-auto flex flex-shrink-0 items-center gap-1">
           <TaskIconButton
             label={t('Delete')}
             tone="danger"
@@ -198,9 +200,6 @@ export const DoneView: React.FC = () => {
   return (
     <>
     <div className="page-container">
-      {/* Header - Centered */}
-      <PageHeader title={t('Completed Tasks')} subtitle={t('Completed tasks: {count}', { count: doneTasks.length })} />
-
       {/* Tasks List - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {doneTasks.length === 0 ? (
