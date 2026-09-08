@@ -48,4 +48,4 @@ npm run build
 - Перед переносом браузера или устройства рекомендуется создать JSON backup в Settings.
 - Push в `main` запускает проверку, production-сборку и публикацию GitHub Pages через GitHub Actions.
 
-История пользовательских изменений находится в [CHANGELOG.md](CHANGELOG.md), инструкция по публикации — в [DEPLOY.md](DEPLOY.md).
+История пользовательских изменений находится в [CHANGELOG.md](CHANGELOG.md), согласованное направление развития — в [ROADMAP.md](ROADMAP.md), инструкция по публикации — в [DEPLOY.md](DEPLOY.md).
