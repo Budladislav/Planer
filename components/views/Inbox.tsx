@@ -168,9 +168,6 @@ export const InboxView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-2 flex min-h-10 items-center text-sm font-semibold text-slate-700">
-        {t('I want...')}
-      </div>
       {/* Content - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {completedCaptures.length > 0 && (

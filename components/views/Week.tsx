@@ -32,6 +32,7 @@ import {
   WeekTaskDropZone,
 } from '../week/WeekTaskItems';
 import { weekBucketContainer, weekDayContainer } from '../week/weekTaskContainers';
+import { WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -612,40 +613,11 @@ export const WeekView: React.FC = () => {
 
       {/* Move remains available as an alternative to drag and drop. */}
       {moveTaskId && (
-        <div className="sheet-backdrop" onClick={() => setMoveTaskId(null)}>
-          <div
-            className="sheet-panel sm:w-[420px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <div className="font-semibold text-slate-800">{t('Where to move task?')}</div>
-              <button onClick={() => setMoveTaskId(null)} className="text-slate-400 hover:text-slate-600 text-sm">{t('Close')}</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => moveTask(moveTaskId, null)}
-                className="button-secondary h-auto justify-start p-3 text-left"
-              >
-                {t('Week bucket (no date)')}
-              </button>
-              {weekDays
-                .filter(day => currentWeek !== thisWeek || day.date >= todayStr)
-                .map((day) => (
-                <button
-                  key={day.date}
-                  onClick={() => moveTask(moveTaskId, day.date)}
-                  className={`button-secondary h-auto justify-start p-3 text-left ${
-                    day.date === todayStr
-                      ? 'border-brand-100 bg-brand-50 hover:bg-brand-50'
-                      : ''
-                  }`}
-                >
-                  {day.weekday} {day.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <WeekTaskMoveSheet
+          week={currentWeek}
+          onMove={(day) => moveTask(moveTaskId, day)}
+          onClose={() => setMoveTaskId(null)}
+        />
       )}
 
       {/* Quick Add to Day Modal */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { CalendarArrowDown, CalendarCheck2, Check, ChevronDown, Pencil, Plus, RotateCcw, X } from 'lucide-react';
-import { getDateString, getTodayString, generateId, getWeekString } from '../../utils';
+import { CalendarCheck2, Check, ChevronDown, Pencil, Plus, RotateCcw, X } from 'lucide-react';
+import { getTodayString, generateId, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
   getLocalDateFromTimestamp,
@@ -34,16 +34,18 @@ import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalance
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
 import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
+import { WeekTaskMoveButton, WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
+import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
   task: Task; 
   onComplete: (id: string) => void;
   onCompleteYesterday: (id: string) => void;
-  onMoveTomorrow: (id: string) => void;
+  onMove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
-}> = ({ task, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm }) => {
+}> = ({ task, onComplete, onCompleteYesterday, onMove, onUpdate, onDeleteConfirm }) => {
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -193,13 +195,7 @@ const SortableTaskItem: React.FC<{
               <RewardGradeSelector taskId={task.id} compact />
             </div>
             <div className="flex justify-center gap-1">
-              <TaskIconButton
-                label={t('Move this task to tomorrow')}
-                tone="primary"
-                onClick={() => onMoveTomorrow(task.id)}
-              >
-                <CalendarArrowDown className="h-3.5 w-3.5" />
-              </TaskIconButton>
+              <WeekTaskMoveButton onClick={() => onMove(task.id)} />
               <TaskIconButton
                 label={t('Record this task as completed yesterday')}
                 tone="warning"
@@ -221,6 +217,7 @@ export const TodayView: React.FC = () => {
   const { locale, t } = useI18n();
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
+  const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
   const todayStr = getTodayString();
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
@@ -358,17 +355,52 @@ export const TodayView: React.FC = () => {
     });
   };
 
-  const handleMoveTomorrow = (id: string) => {
-    const tomorrow = new Date(`${todayStr}T12:00:00`);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = getDateString(tomorrow);
+  const handleMove = (id: string, day: string | null) => {
+    const task = state.tasks.find(candidate => candidate.id === id);
+    if (!task) return;
+    const currentWeek = getWeekString(todayStr);
+    const planningMonth = getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek);
+
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id,
-        plan: { day: tomorrowStr, week: getWeekString(tomorrowStr), month: tomorrowStr.slice(0, 7) },
+        plan: day
+          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7) }
+          : { day: null, week: currentWeek, month: planningMonth },
       },
     });
+
+    const sourceDay = task.plan.day;
+    if (sourceDay) {
+      const sourceOrder = state.taskOrderByDay[sourceDay] || [];
+      if (sourceOrder.includes(id)) {
+        dispatch({
+          type: 'UPDATE_TASK_ORDER',
+          payload: { day: sourceDay, order: sourceOrder.filter(taskId => taskId !== id) },
+        });
+      }
+    }
+    if (sourceDay !== todayStr && orderedIds.includes(id)) {
+      dispatch({
+        type: 'UPDATE_TASK_ORDER',
+        payload: { day: todayStr, order: orderedIds.filter(taskId => taskId !== id) },
+      });
+    }
+
+    if (day) {
+      const targetOrder = state.taskOrderByDay[day] || [];
+      if (!targetOrder.includes(id)) {
+        dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day, order: [...targetOrder, id] } });
+      }
+    } else {
+      const bucketOrder = (state.taskOrderByWeekBucket[currentWeek] || []).filter(taskId => taskId !== id);
+      dispatch({
+        type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
+        payload: { week: currentWeek, order: [...bucketOrder, id] },
+      });
+    }
+    setMoveTaskId(null);
   };
 
   const handleUndoComplete = (id: string) => {
@@ -442,7 +474,7 @@ export const TodayView: React.FC = () => {
                           task={task} 
                           onComplete={handleComplete}
                           onCompleteYesterday={handleCompleteYesterday}
-                          onMoveTomorrow={handleMoveTomorrow}
+                          onMove={setMoveTaskId}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}
                         />
@@ -540,6 +572,14 @@ export const TodayView: React.FC = () => {
             </button>
           </form>
       </div>
+
+      {moveTaskId && (
+        <WeekTaskMoveSheet
+          week={getWeekString(todayStr)}
+          onMove={(day) => handleMove(moveTaskId, day)}
+          onClose={() => setMoveTaskId(null)}
+        />
+      )}
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}

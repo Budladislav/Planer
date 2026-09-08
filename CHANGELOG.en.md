@@ -15,7 +15,8 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Settings is now the first bottom-navigation item; the separate floating button and its reserved space have been removed.
 - Bottom navigation sits flush with the viewport, uses an opaque surface, and respects the system safe area without exposing content underneath.
 - The compact balance displays only its icon and credit count while retaining the currency name in its accessible description.
-- Today keeps Move to tomorrow and Done yesterday inside the expanded card. Week and Month move Edit and Delete there while Move and Complete remain immediately available.
+- Today keeps the universal move action for the current week's bucket or any available weekday and Done yesterday inside the expanded card. Today and Week reuse the same destination picker instead of duplicating it.
+- The remaining contextual heading was removed from Wish. Week and Month move Edit and Delete into the expanded card while Move and Complete remain immediately available.
 
 ### Fixed
 

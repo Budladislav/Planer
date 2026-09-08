@@ -6,7 +6,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowRightLeft, Check, Pencil, X } from 'lucide-react';
+import { Check, Pencil, X } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
@@ -16,6 +16,7 @@ import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } f
 import { useI18n } from '../../i18n';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
+import { WeekTaskMoveButton } from './WeekTaskMoveControl';
 
 type DayTaskItemProps = {
   task: Task;
@@ -203,20 +204,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <TaskIconButton
-            label={t('Move')}
-            tone="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onMove(task.id);
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <ArrowRightLeft className="h-3.5 w-3.5" />
-          </TaskIconButton>
+          <WeekTaskMoveButton onClick={() => onMove(task.id)} />
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
@@ -473,20 +461,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <TaskIconButton
-            label={t('Move')}
-            tone="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onMove(task.id);
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <ArrowRightLeft className="h-3.5 w-3.5" />
-          </TaskIconButton>
+          <WeekTaskMoveButton onClick={() => onMove(task.id)} />
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
