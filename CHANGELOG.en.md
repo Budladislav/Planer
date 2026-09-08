@@ -1,6 +1,31 @@
-# MonoFocus Changelog
+# Takt Changelog
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
+
+## [5.0.0] — 08.09.2026 — Takt and “Quiet Depth”
+
+### Added
+
+- MonoFocus has been renamed to Takt, with a new name, refreshed PWA icons, and a four-step mark rising from green to red.
+- Added a compact internal design system for surfaces, task cards, fields, buttons, disclosures, sticky composers, and dialogs.
+
+### Changed
+
+- Refreshed the interface with a calm cool light palette, deep indigo core accent, clearer hierarchy, consistent rhythm, and restrained shadows.
+- Today, Week, Month, Events, Inbox, Goals, Done, Reports, Settings, and Rewards Lab now share one visual language without changing familiar structure or workflows.
+- Navigation is monochrome, mobile screens remain compact, and forms and sheets better account for the bottom dock and short viewports.
+- Grade colors are now consistent: Common stays neutral, Uncommon is green, Rare is blue, Legendary is amber, and Mythic is red.
+- Lazy-loaded screens and the local-first architecture remain intact; no new UI framework or external fonts were added.
+
+### Fixed
+
+- Dialogs now trap keyboard focus, close with Escape, and restore focus to the element that opened them.
+- Unified inconsistent spacing, radii, focus states, and empty-state treatments that had accumulated across screens.
+
+### Safety
+
+- Internal local-storage keys and the legacy PWA cache namespace remain unchanged, so the update neither migrates nor deletes user data.
+- Rewards Lab remains isolated from the planner state and planner backups.
 
 ## [4.3.1] — 08.09.2026 — Reliable PWA updates
 
