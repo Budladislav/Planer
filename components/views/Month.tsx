@@ -33,7 +33,7 @@ import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -100,6 +100,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
             {formatDateShort(task.plan.day).slice(0, 5)}
           </span>
         )}
+        {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
         <button
           type="button"
           onClick={event => {

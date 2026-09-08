@@ -45,7 +45,7 @@ export const RewardsKeyInventory = ({ state, onUpgrade, onUndoUpgrade }: Rewards
             <div key={grade} className={`rounded-lg border p-2 ${gradeStyles[grade].border}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-                  <KeyRound className="h-3.5 w-3.5 text-indigo-500" />
+                  <KeyRound className={`h-3.5 w-3.5 ${gradeStyles[grade].keyText}`} />
                   {t(REWARD_GRADES[grade].label)}
                 </span>
                 <strong className="tabular-nums text-slate-900">{counts[grade]}</strong>

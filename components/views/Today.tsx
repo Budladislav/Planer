@@ -29,7 +29,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
-import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
@@ -154,6 +154,7 @@ const SortableTaskItem: React.FC<{
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
+          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
           {showActions && (
             <button
               type="button"

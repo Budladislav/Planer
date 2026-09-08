@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronUp } from 'lucide-react';
 import { getTaskGrade, isRewardClaimActive, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
@@ -16,6 +17,14 @@ const GRADE_SURFACES: Record<Exclude<RewardGrade, 'common'>, string> = {
   rare: 'border-l-blue-400',
   legendary: 'border-l-amber-400',
   mythic: 'border-l-rose-400',
+};
+
+const GRADE_STEP_STYLES: Record<RewardGrade, string> = {
+  common: 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100',
+  uncommon: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+  rare: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100',
+  legendary: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
+  mythic: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100',
 };
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
@@ -52,6 +61,41 @@ export const ActiveRewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId 
       className={`pointer-events-none absolute inset-0 rounded-[inherit] border-l-[3px] ${GRADE_SURFACES[grade]}`}
       aria-hidden="true"
     />
+  );
+};
+
+export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const { t } = useI18n();
+  const { runtime, snapshot } = useRewardsLab();
+  if (!snapshot.enabled || !snapshot.state) return null;
+
+  const claim = snapshot.state.claims[taskId];
+  const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
+  const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
+  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
+  const visualGrade = nextGrade ?? grade;
+  const label = nextGrade
+    ? t('Increase task grade: {from} to {to}', { from: t(REWARD_GRADES[grade].label), to: t(REWARD_GRADES[nextGrade].label) })
+    : t('Maximum task grade: {grade}', { grade: t(REWARD_GRADES[grade].label) });
+
+  return (
+    <button
+      type="button"
+      disabled={locked || !nextGrade}
+      onClick={event => {
+        event.stopPropagation();
+        if (nextGrade) runtime.setTaskGrade(taskId, nextGrade);
+      }}
+      onPointerDown={event => event.stopPropagation()}
+      onMouseDown={event => event.stopPropagation()}
+      onTouchStart={event => event.stopPropagation()}
+      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[visualGrade]}`}
+      aria-label={label}
+      title={locked ? t('Grade is locked while the task is completed.') : label}
+    >
+      <span className={`h-2.5 w-2.5 rotate-45 rounded-[2px] ${GRADE_STYLES[visualGrade].dot}`} aria-hidden="true" />
+      <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
   );
 };
 

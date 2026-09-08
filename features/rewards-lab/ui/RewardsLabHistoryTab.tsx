@@ -4,6 +4,7 @@ import { useI18n } from '../../../i18n';
 import {
   Confirmation,
   formatDateTime,
+  gradeStyles,
   unrefundedSpendIds,
 } from './RewardsLabPanel.shared';
 
@@ -112,9 +113,10 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                   {t(transactionKindLabel[transaction.kind])} · {formatDateTime(transaction.occurredAt, locale)}
                   {economyVersion ? ` · v${economyVersion}` : ''}
                 </p>
-                {(claimKey || spentKey) && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-indigo-600"><KeyRound className="h-3 w-3" />{transaction.kind === 'spend' ? t('{grade} key spent', { grade: t(REWARD_GRADES[(spentKey ?? claimKey)!.grade].label) }) : t('{grade} key found', { grade: t(REWARD_GRADES[(claimKey ?? spentKey)!.grade].label) })}</p>
-                )}
+                {(claimKey || spentKey) && (() => {
+                  const key = (transaction.kind === 'spend' ? spentKey ?? claimKey : claimKey ?? spentKey)!;
+                  return <p className={`mt-0.5 flex items-center gap-1 text-xs ${gradeStyles[key.grade].keyText}`}><KeyRound className="h-3 w-3" />{transaction.kind === 'spend' ? t('{grade} key spent', { grade: t(REWARD_GRADES[key.grade].label) }) : t('{grade} key found', { grade: t(REWARD_GRADES[key.grade].label) })}</p>;
+                })()}
               </div>
               <div className="shrink-0 text-right">
                 <p className={`font-semibold tabular-nums ${positive ? 'text-emerald-700' : 'text-slate-700'}`}>

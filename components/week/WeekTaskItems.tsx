@@ -11,7 +11,7 @@ import { Task } from '../../types';
 import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
 import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
-import { RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 
@@ -205,22 +205,25 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             {task.title}
           </span>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            onMove(task.id);
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-          }}
-          className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
-            showActions ? 'mt-0' : ''
-          }`}
-          title={t('Move')}
-        >
-          {t('Move')}
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onMove(task.id);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+            }}
+            className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
+              showActions ? 'mt-0' : ''
+            }`}
+            title={t('Move')}
+          >
+            {t('Move')}
+          </button>
+        </div>
       </div>
 
       <div
@@ -493,22 +496,25 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             {task.title}
           </span>
         </div>
-        <button
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            e.preventDefault();
-            onMove(task.id); 
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-          }}
-          className={`px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
-            showActions ? 'mt-0' : ''
-          }`}
-          title={t('Move')}
-        >
-          {t('Move')}
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onMove(task.id);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+            }}
+            className={`px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
+              showActions ? 'mt-0' : ''
+            }`}
+            title={t('Move')}
+          >
+            {t('Move')}
+          </button>
+        </div>
       </div>
 
       <div

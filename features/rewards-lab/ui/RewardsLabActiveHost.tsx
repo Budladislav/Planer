@@ -4,6 +4,7 @@ import { REWARD_GRADES } from '../domain';
 import { rewardsLabGate } from '../gate';
 import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
+import { gradeStyles } from './rewardGradeStyles';
 
 const RewardsLabPanel = lazy(() => import('./RewardsLabPanel'));
 
@@ -53,7 +54,7 @@ const RewardsLabActiveHost: React.FC = () => {
                 {toastDescription}
               </span>
               {toast.keyGrade && (
-                <span className="mt-1 flex items-center gap-1 text-xs font-medium text-indigo-600">
+                <span className={`mt-1 flex items-center gap-1 text-xs font-medium ${gradeStyles[toast.keyGrade].keyText}`}>
                   <KeyRound className="h-3 w-3" /> {t('{grade} key', { grade: t(REWARD_GRADES[toast.keyGrade].label) })}
                 </span>
               )}
