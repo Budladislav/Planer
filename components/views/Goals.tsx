@@ -335,7 +335,7 @@ export const GoalsView: React.FC = () => {
 
   return (
     <div className="page-container space-y-4">
-      <form onSubmit={addGoal} className="section-card mr-12 flex gap-2 lg:mr-0">
+      <form onSubmit={addGoal} className="section-card flex gap-2">
         <input
           value={draft}
           onChange={event => setDraft(event.target.value)}

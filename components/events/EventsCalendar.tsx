@@ -150,7 +150,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   return (
     <>
       <section className="surface-card">
-        <div className="flex min-h-10 items-center justify-center gap-1 border-b border-line px-12 py-2 lg:px-3">
+        <div className="flex min-h-10 items-center justify-center gap-1 border-b border-line px-2 py-2 sm:px-3">
           <button
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, -1))}

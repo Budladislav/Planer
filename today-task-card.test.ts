@@ -18,7 +18,7 @@ describe('Today task card presentation', () => {
     expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} \/>/g)).toHaveLength(2);
   });
 
-  it('keeps task actions visible as compact icon buttons while expansion contains the grade selector', () => {
+  it('keeps frequent actions collapsed and moves secondary actions under the grade selector', () => {
     expect(todayViewSource.match(/<TaskIconButton/g)).toHaveLength(6);
     expect(monthViewSource.match(/<TaskIconButton/g)).toHaveLength(4);
     expect(weekTaskItemsSource.match(/<TaskIconButton/g)).toHaveLength(8);
@@ -26,6 +26,12 @@ describe('Today task card presentation', () => {
     expect(todayViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
     expect(monthViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
     expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(2);
+    expect(todayViewSource.indexOf("label={t('Move this task to tomorrow')}")).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
+    expect(todayViewSource.indexOf("label={t('Record this task as completed yesterday')}")).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
+    expect(monthViewSource.indexOf("label={t('Delete')}")).toBeGreaterThan(monthViewSource.indexOf('showActions &&'));
+    expect(monthViewSource.indexOf("label={t('Edit task')}")).toBeGreaterThan(monthViewSource.indexOf('showActions &&'));
+    expect(weekTaskItemsSource.indexOf("label={t('Delete')}")).toBeGreaterThan(weekTaskItemsSource.indexOf('showActions &&'));
+    expect(weekTaskItemsSource.indexOf("label={t('Edit task')}")).toBeGreaterThan(weekTaskItemsSource.indexOf('showActions &&'));
   });
 
   it('combines the active grade marker with its promotion button', () => {

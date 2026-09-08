@@ -10,6 +10,7 @@ try {
   // Заменяем пути на production пути с /Planer/
   manifest.start_url = '/Planer/';
   manifest.scope = '/Planer/';
+  manifest.id = '/Planer/';
   
   // Исправляем пути к иконкам
   manifest.icons = manifest.icons.map(icon => ({

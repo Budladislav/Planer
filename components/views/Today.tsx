@@ -159,26 +159,6 @@ const SortableTaskItem: React.FC<{
             <X className="h-3.5 w-3.5" />
           </TaskIconButton>
           <TaskIconButton
-            label={t('Move this task to tomorrow')}
-            tone="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveTomorrow(task.id);
-            }}
-          >
-            <CalendarArrowDown className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
-            label={t('Record this task as completed yesterday')}
-            tone="warning"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCompleteYesterday(task.id);
-            }}
-          >
-            <CalendarCheck2 className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
             label={t('Edit task')}
             onClick={(e) => {
               e.stopPropagation();
@@ -211,6 +191,22 @@ const SortableTaskItem: React.FC<{
             <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
+            </div>
+            <div className="flex justify-center gap-1">
+              <TaskIconButton
+                label={t('Move this task to tomorrow')}
+                tone="primary"
+                onClick={() => onMoveTomorrow(task.id)}
+              >
+                <CalendarArrowDown className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton
+                label={t('Record this task as completed yesterday')}
+                tone="warning"
+                onClick={() => onCompleteYesterday(task.id)}
+              >
+                <CalendarCheck2 className="h-3.5 w-3.5" />
+              </TaskIconButton>
             </div>
           </div>
         )}
@@ -401,7 +397,7 @@ export const TodayView: React.FC = () => {
   return (
     <>
       <div className="page-container">
-          <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 lg:pr-0">
+          <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2">
             <DayMetaBadges
               date={todayStr}
               onEdit={() => setNotesEditorDate(todayStr)}

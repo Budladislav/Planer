@@ -2,9 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { AppProvider, useAppStore } from './store';
 import { Layout } from './components/Layout';
 import { TodayView } from './components/views/Today';
-import { InboxView } from './components/views/Inbox';
 import { WeekView } from './components/views/Week';
-import { MonthView } from './components/views/Month';
 import { EventsView } from './components/views/Events';
 import { ViewState } from './types';
 import { RewardsLabHost } from './features/rewards-lab/ui/RewardsLabHost';
@@ -12,6 +10,8 @@ import { RewardsLabGateProvider } from './features/rewards-lab/ui/RewardsLabGate
 import { useI18n } from './i18n';
 
 const DoneView = lazy(() => import('./components/views/Done').then(module => ({ default: module.DoneView })));
+const InboxView = lazy(() => import('./components/views/Inbox').then(module => ({ default: module.InboxView })));
+const MonthView = lazy(() => import('./components/views/Month').then(module => ({ default: module.MonthView })));
 const SettingsView = lazy(() => import('./components/views/Settings').then(module => ({ default: module.SettingsView })));
 const ReportsView = lazy(() => import('./components/views/Reports').then(module => ({ default: module.ReportsView })));
 const GoalsView = lazy(() => import('./components/views/Goals').then(module => ({ default: module.GoalsView })));

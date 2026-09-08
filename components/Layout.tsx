@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewState } from '../types';
 import {
-  Target, Calendar, CalendarDays, Heart, List, Settings, type LucideIcon,
+  Target, Calendar, List, Settings, type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
@@ -26,16 +26,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     document.title = language === 'ru' ? 'Планировщик Takt' : 'Takt Planner';
   }, [language]);
 
-  const navItems: NavigationItem[] = [
-    { view: 'inbox', icon: Heart, label: t('Wish') },
+  const primaryNavItems: NavigationItem[] = [
     { view: 'events', icon: Calendar, label: t('Calendar') },
-    { view: 'month', icon: CalendarDays, label: t('Month') },
     { view: 'week', icon: List, label: t('Week') },
     { view: 'today', icon: Target, label: t('Today') },
   ];
+  const mobileNavItems: NavigationItem[] = [
+    { view: 'settings', icon: Settings, label: t('Settings') },
+    ...primaryNavItems,
+  ];
+  const settingsViews: ViewState[] = ['settings', 'inbox', 'month', 'done', 'reports', 'goals'];
+  const isNavigationActive = (view: ViewState) => view === 'settings'
+    ? settingsViews.includes(currentView)
+    : currentView === view;
 
   const DesktopNavItem = ({ view, icon: Icon, label }: NavigationItem) => {
-    const isActive = currentView === view;
+    const isActive = isNavigationActive(view);
     return (
       <button
         type="button"
@@ -57,7 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   };
 
   const MobileNavItem = ({ view, icon: Icon, label }: NavigationItem) => {
-    const isActive = currentView === view;
+    const isActive = isNavigationActive(view);
     return (
       <button
         type="button"
@@ -87,7 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label={t('Main navigation')}>
-          {navItems.map(item => <DesktopNavItem key={item.view} {...item} />)}
+          {primaryNavItems.map(item => <DesktopNavItem key={item.view} {...item} />)}
         </nav>
 
         <div className="border-t border-line p-3">
@@ -96,28 +102,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       </aside>
 
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <main className="mx-auto w-full max-w-4xl flex-1 overflow-y-auto px-3 pb-24 pt-3 lg:px-6 lg:pb-6 lg:pt-5">
+        <main className="app-main mx-auto w-full max-w-4xl flex-1 overflow-y-auto px-3 pt-3 lg:px-6 lg:pt-5">
           {children}
         </main>
 
-        <button
-          type="button"
-          onClick={() => onNavigate('settings')}
-          className={`fixed right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-xl border bg-white/90 shadow-quiet backdrop-blur-lg lg:hidden ${
-            currentView === 'settings'
-              ? 'border-brand-100 bg-brand-50 text-brand-700'
-              : 'border-line text-slate-500'
-          }`}
-          title={t('Settings')}
-          aria-label={t('Settings')}
-          aria-current={currentView === 'settings' ? 'page' : undefined}
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-
-        <nav className="fixed bottom-2 left-2 right-2 z-30 rounded-2xl border border-line bg-white/95 p-1 shadow-float backdrop-blur-xl lg:hidden" aria-label={t('Main navigation')}>
+        <nav className="mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden" aria-label={t('Main navigation')}>
           <div className="flex w-full items-center gap-0.5">
-            {navItems.map(item => <MobileNavItem key={item.view} {...item} />)}
+            {mobileNavItems.map(item => <MobileNavItem key={item.view} {...item} />)}
           </div>
         </nav>
       </div>

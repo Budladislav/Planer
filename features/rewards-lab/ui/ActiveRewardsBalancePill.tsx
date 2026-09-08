@@ -20,7 +20,6 @@ export const ActiveRewardsBalancePill: React.FC = () => {
     >
       <Coins className="h-3.5 w-3.5" />
       <span>{balance}</span>
-      <span className="max-w-20 truncate font-medium text-brand-500">{snapshot.state.currencyName}</span>
     </button>
   );
 };

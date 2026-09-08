@@ -2,6 +2,29 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.1.0] — 08.09.2026 — “Compact Route”
+
+### Added
+
+- Added an official `ROADMAP.md` describing the agreed path from Year planning to a dedicated domain and multi-device sync.
+- Added versioned PNG icons, a dedicated maskable icon, a stable app identifier, and `apple-touch-icon` support for the Android/Chrome PWA.
+
+### Changed
+
+- Primary navigation now contains only frequent routes: Settings, Calendar, Week, and Today. Wish and Month open from Settings, and infrequent screens load lazily.
+- Settings is now the first bottom-navigation item; the separate floating button and its reserved space have been removed.
+- Bottom navigation sits flush with the viewport, uses an opaque surface, and respects the system safe area without exposing content underneath.
+- The compact balance displays only its icon and credit count while retaining the currency name in its accessible description.
+- Today keeps Move to tomorrow and Done yesterday inside the expanded card. Week and Month move Edit and Delete there while Move and Complete remain immediately available.
+
+### Fixed
+
+- The manifest and PWA icons no longer resolve from old legacy caches, allowing an installed Android/Chrome PWA to receive the current Takt mark when its metadata refreshes.
+
+### Safety
+
+- Planner schema and user-data keys are unchanged; this release affects the shell, navigation, and PWA static assets only.
+
 ## [5.0.0] — 08.09.2026 — Takt and “Quiet Depth”
 
 ### Added

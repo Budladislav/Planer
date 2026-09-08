@@ -22,17 +22,29 @@ describe('compact planner hierarchy', () => {
     });
   });
 
-  it('places Calendar before Month in the primary navigation', () => {
-    const calendar = layoutSource.indexOf("{ view: 'events'");
-    const month = layoutSource.indexOf("{ view: 'month'");
-    expect(calendar).toBeGreaterThan(-1);
-    expect(calendar).toBeLessThan(month);
+  it('keeps only daily routes in primary navigation and places Settings first on mobile', () => {
+    const primaryNavigation = layoutSource.slice(
+      layoutSource.indexOf('const primaryNavItems'),
+      layoutSource.indexOf('const mobileNavItems'),
+    );
+    const mobileNavigation = layoutSource.slice(
+      layoutSource.indexOf('const mobileNavItems'),
+      layoutSource.indexOf('const settingsViews'),
+    );
+    expect(primaryNavigation).toContain("view: 'events'");
+    expect(primaryNavigation).toContain("view: 'week'");
+    expect(primaryNavigation).toContain("view: 'today'");
+    expect(primaryNavigation).not.toContain("view: 'inbox'");
+    expect(primaryNavigation).not.toContain("view: 'month'");
+    expect(mobileNavigation.indexOf("view: 'settings'")).toBeLessThan(mobileNavigation.indexOf('...primaryNavItems'));
+    expect(layoutSource).not.toContain('fixed right-3 top-3');
+    expect(layoutSource).toContain('fixed bottom-0 left-0 right-0');
   });
 
-  it('keeps the mobile settings corner clear in planning context rows', () => {
+  it('uses the full planning context width after Settings moves into navigation', () => {
     [todaySource, weekSource, monthSource].forEach(source => {
       expect(source).toContain('min-h-10');
-      expect(source).toContain('pr-12');
+      expect(source).not.toContain('pr-12');
       expect(source).toContain('<RewardsBalancePill />');
     });
   });

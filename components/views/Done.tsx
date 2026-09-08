@@ -201,7 +201,7 @@ export const DoneView: React.FC = () => {
     <>
     <div className="page-container">
       {/* Tasks List - with bottom padding for fixed form */}
-      <div className="flex min-h-[60vh] flex-col space-y-4 pb-20 pt-11 lg:pb-4 lg:pt-0">
+      <div className="flex min-h-[60vh] flex-col space-y-4 pb-20 lg:pb-4">
         {doneTasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <EmptyState className="py-12">

@@ -201,7 +201,7 @@ export const EventsView: React.FC = () => {
           />
 
           <section>
-            <div className="mb-1.5 flex items-center justify-between pl-1 pr-12 lg:pr-1">
+            <div className="mb-1.5 flex items-center justify-between px-1">
               <h3 className="text-sm font-semibold text-slate-600">{t('Current and next month')}</h3>
               <span className="text-xs text-slate-400">{nearEvents.length}</span>
             </div>

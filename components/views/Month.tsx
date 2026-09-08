@@ -104,12 +104,6 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
           <TaskIconButton label={t('Move')} tone="primary" onClick={event => { event.stopPropagation(); onMove(task.id); }}>
             <ArrowRightLeft className="h-3.5 w-3.5" />
           </TaskIconButton>
-          <TaskIconButton label={t('Delete')} tone="danger" onClick={event => { event.stopPropagation(); onDelete(task.id); }}>
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton label={t('Edit task')} onClick={event => { event.stopPropagation(); onEdit(task); }}>
-            <Pencil className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <TaskIconButton label={t('Mark as done')} tone="success" onClick={event => { event.stopPropagation(); onComplete(task.id); }}>
             <Check className="h-4 w-4" />
           </TaskIconButton>
@@ -127,6 +121,14 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
+            </div>
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDelete(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => onEdit(task)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
             </div>
           </div>
         )}
@@ -397,7 +399,7 @@ export const MonthView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 text-sm text-muted lg:pr-0">
+      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 text-sm text-muted">
         <MonthMetaBadges month={currentMonth} onEdit={() => setNotesEditorMonth(currentMonth)} showNotes={false} />
         <span>{t('{todo} left • {done} done', { todo: todoTasks.length, done: doneTasks.length })}</span>
         <RewardsBalancePill />

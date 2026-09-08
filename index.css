@@ -68,6 +68,20 @@
 }
 
 @layer components {
+  .app-main {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav-shell {
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 1024px) {
+    .app-main {
+      padding-bottom: 1.5rem;
+    }
+  }
+
   .page-container {
     @apply mx-auto w-full max-w-3xl pb-20 lg:pb-4;
   }

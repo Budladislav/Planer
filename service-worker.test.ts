@@ -17,6 +17,7 @@ const createWorkerHarness = ({
   const cache = {
     addAll: vi.fn().mockResolvedValue(undefined),
     put: vi.fn().mockResolvedValue(undefined),
+    match: vi.fn().mockResolvedValue(cachedResponse),
   };
   const caches = {
     open: vi.fn().mockResolvedValue(cache),
@@ -89,6 +90,29 @@ describe('service worker update recovery', () => {
     await expect(responsePromise).resolves.toBe(networkDocument);
     expect(worker.fetch).toHaveBeenCalledWith(expect.anything(), { cache: 'no-cache' });
     await vi.waitFor(() => expect(worker.cache.put).toHaveBeenCalledWith('/Planer/index.html', clonedDocument));
+  });
+
+  it('refreshes PWA metadata from the network instead of consulting legacy caches', async () => {
+    const clonedIcon = { id: 'current-icon' };
+    const networkIcon = { ok: true, status: 200, clone: () => clonedIcon };
+    const worker = createWorkerHarness({ fetchResponse: networkIcon, cachedResponse: { id: 'legacy-icon' } });
+    let responsePromise: Promise<unknown> | undefined;
+    const request = {
+      method: 'GET',
+      url: 'https://example.test/Planer/takt-icon-192-v5.1.0.png',
+      destination: 'image',
+      mode: 'cors',
+    };
+
+    worker.handlers.fetch({
+      request,
+      respondWith: (response: Promise<unknown>) => { responsePromise = response; },
+    });
+
+    await expect(responsePromise).resolves.toBe(networkIcon);
+    expect(worker.fetch).toHaveBeenCalledWith(request, { cache: 'no-cache' });
+    expect(worker.caches.match).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(worker.cache.put).toHaveBeenCalledWith(request, clonedIcon));
   });
 
   it('claims and reloads an open PWA window after the repaired worker activates', async () => {

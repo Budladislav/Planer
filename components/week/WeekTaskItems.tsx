@@ -218,25 +218,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <ArrowRightLeft className="h-3.5 w-3.5" />
           </TaskIconButton>
           <TaskIconButton
-            label={t('Delete')}
-            tone="danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteConfirm(task.id);
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
-            label={t('Edit task')}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
             label={t('Mark as done')}
             tone="success"
             onClick={(e) => {
@@ -262,6 +243,14 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
+            </div>
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
             </div>
           </div>
         )}
@@ -499,25 +488,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <ArrowRightLeft className="h-3.5 w-3.5" />
           </TaskIconButton>
           <TaskIconButton
-            label={t('Delete')}
-            tone="danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteConfirm(task.id);
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
-            label={t('Edit task')}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton
             label={t('Mark as done')}
             tone="success"
             onClick={(e) => {
@@ -543,6 +513,14 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
+            </div>
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
             </div>
           </div>
         )}

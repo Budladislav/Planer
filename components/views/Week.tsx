@@ -533,7 +533,7 @@ export const WeekView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 lg:pr-0">
+      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2">
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}

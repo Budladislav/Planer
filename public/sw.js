@@ -1,6 +1,6 @@
 // Service Worker для Takt Planner
 // Версия кэша - обновлять при изменении статики
-const STATIC_CACHE = 'monofocus-static-v5.0.0';
+const STATIC_CACHE = 'monofocus-static-v5.1.0';
 // Стабильное legacy-пространство кэшей сохраняется для бесшовного обновления установленной PWA.
 const STATIC_CACHE_PREFIX = 'monofocus-static-v';
 const RETAINED_VERSION_CACHES = 3;
@@ -16,8 +16,9 @@ const STATIC_ASSETS = [
   BASE_PATH + 'index.html',
   BASE_PATH + 'manifest.json',
   BASE_PATH + 'favicon.svg',
-  BASE_PATH + 'icon-192.svg',
-  BASE_PATH + 'icon-512.svg',
+  BASE_PATH + 'takt-icon-192-v5.1.0.png',
+  BASE_PATH + 'takt-icon-512-v5.1.0.png',
+  BASE_PATH + 'takt-icon-maskable-v5.1.0.svg',
   ...BUILD_ASSETS.map((asset) => BASE_PATH + asset),
 ];
 
@@ -84,6 +85,9 @@ self.addEventListener('fetch', (event) => {
     const isJS = request.url.includes('.js') || request.destination === 'script';
     const isCSS = request.url.includes('.css') || request.destination === 'style';
     const isNavigation = request.mode === 'navigate' || request.destination === 'document';
+    const isAppMetadata = url.pathname.endsWith('/manifest.json')
+      || url.pathname.includes('/takt-icon-')
+      || url.pathname.endsWith('/favicon.svg');
 
     if (isNavigation) {
       // HTML всегда запрашиваем заново, иначе старый документ может ссылаться
@@ -101,7 +105,20 @@ self.addEventListener('fetch', (event) => {
       return;
     }
     
-    if (isJS || isCSS) {
+    if (isAppMetadata) {
+      // Иконки и manifest должны обновляться из текущего релиза, а не
+      // возвращаться из одного из сохранённых legacy-кэшей Android PWA.
+      event.respondWith(
+        fetch(request, { cache: 'no-cache' })
+          .then((response) => {
+            if (!response.ok) throw new Error(`App metadata failed with ${response.status}`);
+            const responseToCache = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, responseToCache));
+            return response;
+          })
+          .catch(() => caches.open(STATIC_CACHE).then((cache) => cache.match(request)))
+      );
+    } else if (isJS || isCSS) {
       // Network First для JS/CSS - всегда проверяем сеть сначала
       event.respondWith(
         fetch(request)

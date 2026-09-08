@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { BriefcaseBusiness, CalendarRange, CheckSquare, ChevronDown, ChevronRight, Download, FileText, Flag, Inbox, Languages, Upload, Trash2 } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, CalendarRange, CheckSquare, ChevronDown, ChevronRight, Download, FileText, Flag, Inbox, Languages, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 import packageJson from '../../package.json';
 import { parseReleaseHistory } from '../../release-history';
@@ -184,7 +184,7 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-8">
-      <section className="mr-12 lg:mr-0">
+      <section>
         <p className="settings-group-label">{t('Planning')}</p>
         <div className="surface-card divide-y divide-line">
          <button
@@ -196,6 +196,19 @@ export const SettingsView: React.FC = () => {
            <div className="flex-1">
              <h3 className="font-semibold text-slate-800">{t('I wish')}</h3>
              <p className="text-sm text-slate-500">{t('Open your wishes and ideas.')}</p>
+           </div>
+           <ChevronRight className="h-5 w-5 text-slate-400" />
+         </button>
+
+         <button
+           type="button"
+           onClick={() => dispatch({ type: 'SET_VIEW', payload: 'month' })}
+           className="settings-row"
+         >
+           <CalendarDays className="h-5 w-5 flex-shrink-0 text-brand-500" />
+           <div className="flex-1">
+             <h3 className="font-semibold text-slate-800">{t('Month')}</h3>
+             <p className="text-sm text-slate-500">{t('Open the month planning horizon.')}</p>
            </div>
            <ChevronRight className="h-5 w-5 text-slate-400" />
          </button>

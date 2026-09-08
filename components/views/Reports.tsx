@@ -53,7 +53,7 @@ export const ReportsView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <section className="section-card mr-12 p-4 lg:mr-0">
+      <section className="section-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-auto flex items-center gap-2 text-sm font-semibold text-slate-700">
             <FileText className="h-4 w-4 text-brand-500" aria-hidden="true" />
