@@ -10,6 +10,7 @@ import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
+import { PageHeader } from '../ui/Primitives';
 import {
   DndContext,
   closestCenter,
@@ -462,14 +463,14 @@ export const WeekView: React.FC = () => {
             ? new Date(completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : null;
           return (
-            <div key={task.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-green-100 bg-green-50/60 px-3 py-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" />
+            <div key={task.id} className="flex min-w-0 items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
               <span className="min-w-0 flex-1 truncate text-slate-500 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <button
                 type="button"
                 onClick={() => reopenTask(dispatch, task)}
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-slate-400 hover:bg-white hover:text-indigo-600"
+                className="icon-button-compact h-7 w-7 text-slate-400 hover:text-brand-600"
                 title={t('Return task to work')}
                 aria-label={t('Return {title} to work', { title: task.title })}
               >
@@ -485,7 +486,7 @@ export const WeekView: React.FC = () => {
     );
 
     return (
-      <div key={day.date} className={`rounded-lg border bg-white transition-colors ${isPast ? 'border-slate-200/80' : 'border-slate-200'}`}>
+      <div key={day.date} className={`surface-card transition-colors ${isPast ? 'opacity-90' : ''}`}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left">
             <div className="min-w-0 flex-1">
@@ -503,7 +504,7 @@ export const WeekView: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               {canPlanDay && (
-                <button onClick={() => setQuickAddDay(day.date)} className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add task to this day')}>
+                <button onClick={() => setQuickAddDay(day.date)} className="icon-button-compact h-7 w-7 text-brand-600 hover:bg-brand-50" title={t('Add task to this day')}>
                   <Plus className="h-4 w-4" />
                 </button>
               )}
@@ -527,27 +528,26 @@ export const WeekView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="page-container">
       {/* Header - Centered */}
-      <div className="mb-3 px-12 text-center lg:px-0">
-        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Week')}</h2>
+      <PageHeader title={t('Week')} className="px-12 lg:px-0">
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}
           className="mt-1 justify-center"
         />
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="mt-1 text-sm text-muted">
           {t('{todo} left • {done} done', { todo: todoWeekTasks.length, done: doneWeekTasks.length })}
         </p>
-      </div>
+      </PageHeader>
 
       {/* Content - with bottom padding for fixed forms */}
-      <div className="pb-32 lg:pb-16 min-h-[60vh] flex flex-col">
+      <div className="pb-48 lg:pb-16 min-h-[60vh] flex flex-col">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWeekDragEnd}>
           <WeekTaskDropZone
             id={weekBucketContainer(currentWeek)}
             tasks={weekTasks}
-            className="flex-1 space-y-2 rounded-lg border border-dashed border-slate-200 p-2"
+            className="section-card flex-1 space-y-2 border-dashed"
           >
             <div className="text-center text-sm font-semibold text-slate-600">{t('Week tasks (no date)')}</div>
             {weekTasks.length === 0 ? (
@@ -573,12 +573,12 @@ export const WeekView: React.FC = () => {
 
           <div className="mt-3 space-y-2">
             {pastDays.length > 0 && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-1.5">
+              <div className="surface-card bg-slate-50/60 p-1.5 shadow-none">
                 <button
                   type="button"
                   aria-expanded={pastDaysExpanded}
                   onClick={() => setPastDaysExpanded(value => !value)}
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+                  className="disclosure-button py-2 text-slate-500"
                 >
                   <span>{t('Past days ({count})', { count: pastDays.length })}</span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${pastDaysExpanded ? 'rotate-180' : ''}`} />
@@ -597,9 +597,9 @@ export const WeekView: React.FC = () => {
 
       {/* Move remains available as an alternative to drag and drop. */}
       {moveTaskId && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => setMoveTaskId(null)}>
+        <div className="sheet-backdrop" onClick={() => setMoveTaskId(null)}>
           <div
-            className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
+            className="sheet-panel sm:w-[420px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -609,7 +609,7 @@ export const WeekView: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => moveTask(moveTaskId, null)}
-                className="p-3 border border-slate-200 rounded-lg hover:border-indigo-200 text-left"
+                className="button-secondary h-auto justify-start p-3 text-left"
               >
                 {t('Week bucket (no date)')}
               </button>
@@ -619,10 +619,10 @@ export const WeekView: React.FC = () => {
                 <button
                   key={day.date}
                   onClick={() => moveTask(moveTaskId, day.date)}
-                  className={`p-3 border rounded-lg text-left ${
+                  className={`button-secondary h-auto justify-start p-3 text-left ${
                     day.date === todayStr
-                      ? 'border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50'
-                      : 'border-slate-200 hover:border-indigo-200'
+                      ? 'border-brand-100 bg-brand-50 hover:bg-brand-50'
+                      : ''
                   }`}
                 >
                   {day.weekday} {day.label}
@@ -638,12 +638,12 @@ export const WeekView: React.FC = () => {
         const selectedDay = weekDays.find(d => d.date === quickAddDay);
         
         return (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end sm:items-center sm:justify-center z-40" onClick={() => {
+          <div className="sheet-backdrop" onClick={() => {
             setQuickAddDay(null);
             setQuickAddTitle('');
           }}>
             <div
-              className="w-full sm:w-[420px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 space-y-3"
+              className="sheet-panel sm:w-[420px]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
@@ -668,7 +668,7 @@ export const WeekView: React.FC = () => {
                     required
                     value={quickAddTitle}
                     onChange={(e) => setQuickAddTitle(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+                    className="field w-full"
                     autoFocus
                     placeholder={t('Task title...')}
                   />
@@ -680,13 +680,13 @@ export const WeekView: React.FC = () => {
                       setQuickAddDay(null);
                       setQuickAddTitle('');
                     }}
-                    className="flex-1 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+                    className="button-secondary flex-1"
                   >
                     {t('Cancel')}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="button-primary flex-1"
                   >
                     {t('Add')}
                   </button>
@@ -716,12 +716,12 @@ export const WeekView: React.FC = () => {
       <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
 
       {/* Week Selector - Fixed at bottom (mobile) */}
-      <div className="lg:hidden fixed bottom-32 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-10">
+      <div className="sticky-composer fixed bottom-[137px] left-0 right-0 z-10 p-2.5 lg:hidden">
         <div className="max-w-3xl mx-auto w-full">
-          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-2">
+          <div className="period-switcher mb-0">
             <button 
               onClick={() => changeWeek(-1)} 
-              className="p-2 hover:bg-slate-100 rounded transition-colors"
+              className="icon-button"
             >
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
@@ -735,7 +735,7 @@ export const WeekView: React.FC = () => {
             </div>
             <button 
               onClick={() => changeWeek(1)} 
-              className="p-2 hover:bg-slate-100 rounded transition-colors"
+              className="icon-button"
             >
               <ChevronRight className="w-5 h-5 text-slate-600" />
             </button>
@@ -744,18 +744,18 @@ export const WeekView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom (mobile) */}
-      <form onSubmit={handleQuickAdd} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
+      <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input 
             type="text" 
             value={quickAdd}
             onChange={e => setQuickAdd(e.target.value)}
             placeholder={t('Add task to {week}...', { week: getWeekRange(currentWeek, language) })}
-            className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
+            className="field min-w-0 flex-1"
           />
           <button 
             type="submit" 
-            className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+            className="composer-submit"
             title={t('Add task')}
           >
             <Plus className="w-6 h-6" />
@@ -770,11 +770,11 @@ export const WeekView: React.FC = () => {
           value={quickAdd}
           onChange={e => setQuickAdd(e.target.value)}
           placeholder={t('Add task to {week}...', { week: getWeekRange(currentWeek, language) })}
-          className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
+          className="field min-w-0 flex-1"
         />
         <button 
           type="submit" 
-          className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+          className="composer-submit"
           title={t('Add task')}
         >
           <Plus className="w-6 h-6" />
@@ -783,10 +783,10 @@ export const WeekView: React.FC = () => {
 
       {/* Week Selector - Desktop */}
       <div className="hidden lg:block w-full">
-        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-3">
+        <div className="period-switcher mb-0 p-2">
           <button 
             onClick={() => changeWeek(-1)} 
-            className="p-2 hover:bg-slate-100 rounded transition-colors"
+            className="icon-button"
           >
             <ChevronLeft className="w-5 h-5 text-slate-600" />
           </button>
@@ -800,7 +800,7 @@ export const WeekView: React.FC = () => {
           </div>
           <button 
             onClick={() => changeWeek(1)} 
-            className="p-2 hover:bg-slate-100 rounded transition-colors"
+            className="icon-button"
           >
             <ChevronRight className="w-5 h-5 text-slate-600" />
           </button>

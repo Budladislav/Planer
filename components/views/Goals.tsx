@@ -16,6 +16,7 @@ import { GoalNote, LongTermGoal } from '../../types';
 import { getDateString, getTodayString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
+import { EmptyState, PageHeader } from '../ui/Primitives';
 
 const toDateInputValue = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -129,7 +130,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
   };
 
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <article className="surface-card">
       <div className="flex items-start gap-2 p-3">
         <button
           type="button"
@@ -150,7 +151,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                 if (event.key === 'Enter') saveTitle();
                 if (event.key === 'Escape') setEditingTitle(false);
               }}
-              className="w-full rounded border border-violet-300 px-2 py-1 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-violet-100"
+              className="field-compact w-full font-semibold"
             />
           ) : (
             <h3 className={`break-words font-semibold ${goal.status === 'completed' ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{goal.title}</h3>
@@ -242,7 +243,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                 rows={3}
                 maxLength={500}
                 placeholder={t('Where things stand now…')}
-                className="mt-1 w-full resize-none rounded-lg border border-slate-200 p-2 text-sm font-normal text-slate-700 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-200"
+                className="field mt-1 w-full resize-none font-normal"
               />
             </label>
             <label className="block text-xs font-semibold text-slate-500">
@@ -254,7 +255,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                 rows={3}
                 maxLength={500}
                 placeholder={t('The next concrete action…')}
-                className="mt-1 w-full resize-none rounded-lg border border-slate-200 p-2 text-sm font-normal text-slate-700 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-200"
+                className="field mt-1 w-full resize-none font-normal"
               />
             </label>
           </div>
@@ -275,13 +276,13 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                   rows={2}
                   maxLength={500}
                   placeholder={t('Decision, update, result…')}
-                  className="mt-1 w-full resize-none rounded-lg border border-slate-200 p-2 text-sm font-normal text-slate-700 outline-none focus:border-violet-400"
+                  className="field mt-1 w-full resize-none font-normal"
                 />
               </label>
               <button
                 type="submit"
                 disabled={!noteDraft.trim()}
-                className="mb-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40"
+                className="composer-submit mb-0.5 h-9 w-9"
                 title={t('Add note')}
               >
                 <Plus className="h-4 w-4" />
@@ -322,7 +323,7 @@ export const GoalsView: React.FC = () => {
       <button
         type="button"
         onClick={() => setExpanded(value => !value)}
-        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+        className="disclosure-button px-2 py-2 text-slate-600"
         aria-expanded={expanded}
       >
         <span>{title} ({goals.length})</span>
@@ -333,31 +334,27 @@ export const GoalsView: React.FC = () => {
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <header className="text-center">
-        <div className="flex items-center justify-center gap-2">
-          <h2 className="text-3xl font-bold text-slate-900">{t('Long-term goals')}</h2>
-          <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700">{t('Experimental')}</span>
-        </div>
-        <p className="mt-1 text-sm text-slate-500">{t('Keep the destination, current situation and next step together.')}</p>
-      </header>
+    <div className="page-container space-y-4">
+      <PageHeader title={t('Long-term goals')} subtitle={t('Keep the destination, current situation and next step together.')}>
+        <span className="mt-2 inline-flex rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700">{t('Experimental')}</span>
+      </PageHeader>
 
-      <form onSubmit={addGoal} className="flex gap-2 rounded-xl border border-violet-100 bg-white p-3 shadow-sm">
+      <form onSubmit={addGoal} className="section-card flex gap-2">
         <input
           value={draft}
           onChange={event => setDraft(event.target.value)}
           placeholder={t('Name a big goal…')}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-200"
+          className="field min-w-0 flex-1"
         />
-        <button type="submit" disabled={!draft.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40">
+        <button type="submit" disabled={!draft.trim()} className="button-primary">
           <Plus className="h-4 w-4" /> {t('Add')}
         </button>
       </form>
 
       {active.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400">
+        <EmptyState className="py-10">
           {t('No active big goals yet.')}
-        </div>
+        </EmptyState>
       ) : (
         <section className="space-y-3">{active.map(goal => <GoalCard key={goal.id} goal={goal} onDelete={() => setDeleteId(goal.id)} />)}</section>
       )}

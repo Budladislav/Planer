@@ -8,6 +8,7 @@ import { getDateString } from '../../utils';
 import { WorkShiftSettingsPanel } from '../settings/WorkShiftSettings';
 import { RewardsLabSettingsRow } from '../../features/rewards-lab/ui/RewardsLabSettingsRow';
 import { useI18n } from '../../i18n';
+import { PageHeader } from '../ui/Primitives';
 
 export const SettingsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -35,11 +36,11 @@ export const SettingsView: React.FC = () => {
 
   const handleExport = () => {
     try {
-      // Generate filename with date and time: monofocus_backup_2024-01-15_14-30.json
+      // Generate a stable, human-readable filename with local date and time.
       const now = new Date();
       const dateStr = getDateString(now); // local YYYY-MM-DD
       const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-      const filename = `monofocus_backup_${dateStr}_${timeStr}.json`;
+      const filename = `takt_backup_${dateStr}_${timeStr}.json`;
       
       // Use Blob instead of data: URL - works better on mobile browsers
       const jsonString = JSON.stringify(state, null, 2);
@@ -183,18 +184,18 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-slate-900">{t('Settings')}</h2>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-5 pb-8">
+      <PageHeader title={t('Settings')} />
 
-      <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
+      <section>
+        <p className="settings-group-label">{t('Planning')}</p>
+        <div className="surface-card divide-y divide-line">
          <button
            type="button"
            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'inbox' })}
-           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+           className="settings-row"
          >
-           <Inbox className="h-5 w-5 text-purple-500" />
+           <Inbox className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="flex-1">
              <h3 className="font-semibold text-slate-800">{t('I wish')}</h3>
              <p className="text-sm text-slate-500">{t('Open your wishes and ideas.')}</p>
@@ -205,9 +206,9 @@ export const SettingsView: React.FC = () => {
          <button
            type="button"
            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'done' })}
-           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+           className="settings-row"
          >
-           <CheckSquare className="h-5 w-5 text-green-500" />
+           <CheckSquare className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="flex-1">
              <h3 className="font-semibold text-slate-800">{t('Completed Tasks')}</h3>
              <p className="text-sm text-slate-500">{t('Browse and manage task history.')}</p>
@@ -218,9 +219,9 @@ export const SettingsView: React.FC = () => {
          <button
            type="button"
            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'goals' })}
-           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+           className="settings-row"
          >
-           <Flag className="h-5 w-5 text-violet-500" />
+           <Flag className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="flex-1">
              <div className="flex flex-wrap items-center gap-2">
                <h3 className="font-semibold text-slate-800">{t('Long-term goals')}</h3>
@@ -234,9 +235,9 @@ export const SettingsView: React.FC = () => {
          <button
            type="button"
            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'reports' })}
-           className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+           className="settings-row"
          >
-           <FileText className="h-5 w-5 text-indigo-500" />
+           <FileText className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="flex-1">
              <h3 className="font-semibold text-slate-800">{t('Progress Reports')}</h3>
              <p className="text-sm text-slate-500">{t('Export completed tasks, realized wishes and long-term goals.')}</p>
@@ -249,9 +250,9 @@ export const SettingsView: React.FC = () => {
              type="button"
              aria-expanded={showWorkShifts}
              onClick={() => setShowWorkShifts(value => !value)}
-             className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+             className="settings-row"
            >
-             <BriefcaseBusiness className="h-5 w-5 text-indigo-500" />
+              <BriefcaseBusiness className="h-5 w-5 flex-shrink-0 text-brand-500" />
              <div className="min-w-0 flex-1">
                <h3 className="font-semibold text-slate-800">{t('Work Shifts')}</h3>
                <p className="text-sm text-slate-500">{t('Alternating weekly schedule and exceptions.')}</p>
@@ -265,8 +266,8 @@ export const SettingsView: React.FC = () => {
            )}
          </div>
 
-         <label className="flex cursor-pointer items-center gap-3 p-4 hover:bg-slate-50">
-           <CalendarRange className="h-5 w-5 flex-shrink-0 text-sky-500" />
+         <label className="settings-row cursor-pointer">
+           <CalendarRange className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="min-w-0 flex-1">
              <h3 className="font-semibold text-slate-800">{t('Day note highlighting')}</h3>
              <p className="text-sm text-slate-500">{t('Subtly tint calendar days that contain notes.')}</p>
@@ -278,12 +279,18 @@ export const SettingsView: React.FC = () => {
                type: 'UPDATE_UI_PREFERENCES',
                payload: { calendarNoteHighlight: event.target.checked },
              })}
-             className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+             className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
            />
          </label>
 
-         <label className="flex cursor-pointer items-center gap-3 p-4 hover:bg-slate-50">
-           <Languages className="h-5 w-5 flex-shrink-0 text-indigo-500" />
+        </div>
+      </section>
+
+      <section>
+        <p className="settings-group-label">{t('Additional features')}</p>
+        <div className="surface-card divide-y divide-line">
+         <label className="settings-row cursor-pointer">
+           <Languages className="h-5 w-5 flex-shrink-0 text-brand-500" />
            <div className="min-w-0 flex-1">
              <h3 className="font-semibold text-slate-800">{t('Language')}</h3>
              <p className="text-sm text-slate-500">{t('App language and generated report language.')}</p>
@@ -294,7 +301,7 @@ export const SettingsView: React.FC = () => {
                type: 'UPDATE_UI_PREFERENCES',
                payload: { language: event.target.value === 'en' ? 'en' : 'ru' },
              })}
-             className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700"
+             className="field-compact"
              aria-label={t('Language')}
            >
              <option value="ru">{t('Russian')}</option>
@@ -304,21 +311,27 @@ export const SettingsView: React.FC = () => {
 
          <RewardsLabSettingsRow />
 
-         <div className="p-6 flex items-center justify-between">
-            <div>
+        </div>
+      </section>
+
+      <section>
+        <p className="settings-group-label">{t('Data')}</p>
+        <div className="surface-card divide-y divide-line">
+         <div className="flex flex-col items-stretch gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
                <h3 className="font-semibold text-slate-800">{t('Export Data')}</h3>
                <p className="text-sm text-slate-500">{t('Download a JSON backup of your planner.')}</p>
-               <p className="mt-1 min-h-4 text-xs font-medium text-indigo-600" aria-live="polite">
+               <p className="mt-1 min-h-4 text-xs font-medium text-brand-600" aria-live="polite">
                  {exportStatus === 'started' && t('Download started. Check your browser downloads.')}
                </p>
             </div>
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50">
+            <button onClick={handleExport} className="button-secondary self-end sm:self-auto">
                <Download className="w-4 h-4" /> {t('Export')}
             </button>
          </div>
 
-         <div className="p-6 flex items-center justify-between">
-            <div>
+         <div className="flex flex-col items-stretch gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
                <h3 className="font-semibold text-slate-800">{t('Import Data')}</h3>
                <p className="text-sm text-slate-500">{t('Restore from a backup file.')}</p>
             </div>
@@ -330,29 +343,30 @@ export const SettingsView: React.FC = () => {
                  className="hidden" 
                  onChange={handleImport} 
                />
-               <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50">
+               <button onClick={() => fileInputRef.current?.click()} className="button-secondary">
                   <Upload className="w-4 h-4" /> {t('Import')}
                </button>
             </div>
          </div>
 
-         <div className="p-6 flex items-center justify-between bg-red-50">
-            <div>
+         <div className="flex flex-col items-stretch gap-3 bg-red-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
                <h3 className="font-semibold text-red-900">{t('Danger Zone')}</h3>
                <p className="text-sm text-red-700">{t('Delete planner tasks, events, goals and settings. Rewards Lab stays unchanged.')}</p>
             </div>
-            <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded hover:bg-red-100">
+            <button onClick={handleReset} className="button-danger self-end border border-red-200 bg-white sm:self-auto">
                <Trash2 className="w-4 h-4" /> {t('Reset planner')}
             </button>
          </div>
-      </div>
+        </div>
+      </section>
       
       <button
         type="button"
         onClick={openChangelog}
         className="mx-auto block text-center text-xs text-slate-400 underline-offset-4 hover:text-indigo-600 hover:underline"
       >
-         MonoFocus v{packageJson.version} • {t('Data stored locally in browser')}
+         Takt v{packageJson.version} • {t('Data stored locally in browser')}
       </button>
 
       <Modal
@@ -366,7 +380,7 @@ export const SettingsView: React.FC = () => {
       <Modal
         isOpen={showChangelog}
         onClose={() => setShowChangelog(false)}
-        title={t('MonoFocus changelog')}
+        title={t('Takt changelog')}
         wide
       >
         <div className="space-y-5">

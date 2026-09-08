@@ -8,6 +8,7 @@ import {
 import { useAppStore } from '../../store';
 import { getTodayString, getWeekString } from '../../utils';
 import { useI18n } from '../../i18n';
+import { PageHeader } from '../ui/Primitives';
 
 export const ReportsView: React.FC = () => {
   const { state } = useAppStore();
@@ -42,7 +43,7 @@ export const ReportsView: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `monofocus_progress_${range.start}_${range.end}.txt`;
+      anchor.download = `takt_progress_${range.start}_${range.end}.txt`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -52,16 +53,13 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-4 text-center">
-        <h2 className="text-3xl font-bold text-slate-900">{t('Progress Reports')}</h2>
-        <p className="text-slate-500">{t('Completed tasks, realized wishes and long-term goals in one structured TXT file.')}</p>
-      </div>
+    <div className="page-container">
+      <PageHeader title={t('Progress Reports')} subtitle={t('Completed tasks, realized wishes and long-term goals in one structured TXT file.')} />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="section-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-auto flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <FileText className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+            <FileText className="h-4 w-4 text-brand-500" aria-hidden="true" />
             {t('Report period')}
           </span>
           {(['week', 'month', 'custom'] as const).map(type => (
@@ -71,7 +69,7 @@ export const ReportsView: React.FC = () => {
               onClick={() => setReportType(type)}
               className={`rounded px-2.5 py-1.5 text-xs font-semibold ${
                 reportType === type
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-brand-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -88,7 +86,7 @@ export const ReportsView: React.FC = () => {
                 type="week"
                 value={reportWeek}
                 onChange={event => setReportWeek(event.target.value)}
-                className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
+                className="field-compact mt-1 block"
               />
             </label>
           )}
@@ -99,7 +97,7 @@ export const ReportsView: React.FC = () => {
                 type="month"
                 value={reportMonth}
                 onChange={event => setReportMonth(event.target.value)}
-                className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
+                className="field-compact mt-1 block"
               />
             </label>
           )}
@@ -111,7 +109,7 @@ export const ReportsView: React.FC = () => {
                   type="date"
                   value={customStart}
                   onChange={event => setCustomStart(event.target.value)}
-                  className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
+                  className="field-compact mt-1 block"
                 />
               </label>
               <label className="text-xs font-medium text-slate-500">
@@ -120,7 +118,7 @@ export const ReportsView: React.FC = () => {
                   type="date"
                   value={customEnd}
                   onChange={event => setCustomEnd(event.target.value)}
-                  className="mt-1 block rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800"
+                  className="field-compact mt-1 block"
                 />
               </label>
             </>
@@ -129,13 +127,13 @@ export const ReportsView: React.FC = () => {
             type="button"
             onClick={handleDownloadReport}
             disabled={downloadStatus === 'preparing'}
-            className="ml-auto flex items-center gap-2 rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60"
+            className="button-primary ml-auto"
           >
             <Download className="h-4 w-4" /> {t('Download TXT')}
           </button>
         </div>
 
-        <p className="mt-2 min-h-5 text-right text-xs font-medium text-indigo-600" aria-live="polite">
+        <p className="mt-2 min-h-5 text-right text-xs font-medium text-brand-600" aria-live="polite">
           {downloadStatus === 'preparing' && t('Preparing the report…')}
           {downloadStatus === 'started' && t('Download started. Check your browser downloads.')}
         </p>

@@ -5,26 +5,26 @@ import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
 
 const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
-  common: { dot: 'bg-slate-300', selected: 'ring-slate-500' },
-  uncommon: { dot: 'bg-emerald-500', selected: 'ring-emerald-600' },
-  rare: { dot: 'bg-blue-500', selected: 'ring-blue-600' },
-  legendary: { dot: 'bg-amber-400', selected: 'ring-amber-500' },
-  mythic: { dot: 'bg-rose-500', selected: 'ring-rose-600' },
+  common: { dot: 'bg-[#94A3B8]', selected: 'ring-[#94A3B8]' },
+  uncommon: { dot: 'bg-[#2FB47C]', selected: 'ring-[#2FB47C]' },
+  rare: { dot: 'bg-[#3B82F6]', selected: 'ring-[#3B82F6]' },
+  legendary: { dot: 'bg-[#E09A17]', selected: 'ring-[#E09A17]' },
+  mythic: { dot: 'bg-[#E4515E]', selected: 'ring-[#E4515E]' },
 };
 
 const GRADE_SURFACES: Record<Exclude<RewardGrade, 'common'>, string> = {
-  uncommon: 'border-l-emerald-400',
-  rare: 'border-l-blue-400',
-  legendary: 'border-l-amber-400',
-  mythic: 'border-l-rose-400',
+  uncommon: 'border-l-[#2FB47C] bg-[#EAF8F2]/55',
+  rare: 'border-l-[#3B82F6] bg-[#EEF4FF]/55',
+  legendary: 'border-l-[#E09A17] bg-[#FFF6DD]/55',
+  mythic: 'border-l-[#E4515E] bg-[#FDECEF]/55',
 };
 
 const GRADE_STEP_STYLES: Record<RewardGrade, string> = {
-  common: 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100',
-  uncommon: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-  rare: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100',
-  legendary: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-  mythic: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100',
+  common: 'border-[#94A3B8]/35 bg-[#F4F6F8] text-[#475569] hover:bg-slate-200/70',
+  uncommon: 'border-[#2FB47C]/35 bg-[#EAF8F2] text-[#187A54] hover:bg-emerald-100',
+  rare: 'border-[#3B82F6]/35 bg-[#EEF4FF] text-[#1D5FD1] hover:bg-blue-100',
+  legendary: 'border-[#E09A17]/35 bg-[#FFF6DD] text-[#925E00] hover:bg-amber-100',
+  mythic: 'border-[#E4515E]/35 bg-[#FDECEF] text-[#B52D3C] hover:bg-red-100',
 };
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
@@ -89,7 +89,7 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string }> = ({
       onPointerDown={event => event.stopPropagation()}
       onMouseDown={event => event.stopPropagation()}
       onTouchStart={event => event.stopPropagation()}
-      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[visualGrade]}`}
+      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[visualGrade]}`}
       aria-label={label}
       title={locked ? t('Grade is locked while the task is completed.') : label}
     >
@@ -114,7 +114,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
 
   return (
     <div
-      className={`flex w-full min-w-0 items-center gap-2 rounded-md bg-slate-50 ${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'}`}
+      className={`flex w-full min-w-0 items-center gap-2 rounded-lg bg-slate-50/80 ${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'}`}
       onClick={event => event.stopPropagation()}
       onPointerDown={event => event.stopPropagation()}
     >

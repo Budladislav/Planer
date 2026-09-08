@@ -46,7 +46,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
 
   if (newestFirst.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
+      <div className="empty-state py-10">
         <History className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
         <p className="mt-3 font-medium text-slate-700">{t('No wallet activity yet')}</p>
         <p className="mt-1 text-sm text-slate-500">{t('Complete a task to earn the first credits and try for a key.')}</p>
@@ -56,7 +56,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
 
   return (
     <section aria-label={t('Wallet history')}>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="surface-card shadow-none">
         {newestFirst.map(historyItem => {
           if (historyItem.kind === 'upgrade') {
             const upgrade = historyItem.item;
@@ -71,7 +71,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
             const correction = historyItem.item as RewardGradeCorrection;
             return (
               <article key={correction.id} className="flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 sm:px-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                   <Pencil className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -81,7 +81,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-semibold tabular-nums text-indigo-700">{correction.previousAmount} → {correction.amount}</p>
+                  <p className="font-semibold tabular-nums text-brand-700">{correction.previousAmount} → {correction.amount}</p>
                   <p className="max-w-20 truncate text-[11px] text-slate-400">{state.currencyName}</p>
                 </div>
               </article>
@@ -128,7 +128,7 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                 <button
                   type="button"
                   onClick={() => onConfirm({ kind: 'refund', transaction })}
-                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="icon-button"
                   aria-label={t('Undo redemption of {title}', { title: transaction.label })}
                 >
                   <Undo2 className="h-4 w-4" />

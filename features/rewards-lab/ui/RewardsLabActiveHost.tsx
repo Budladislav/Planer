@@ -39,11 +39,11 @@ const RewardsLabActiveHost: React.FC = () => {
         <button
           type="button"
           onClick={() => runtime.openLab()}
-          className={`rewards-toast-enter fixed bottom-20 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-violet-200 bg-white px-4 py-3 text-left shadow-xl lg:bottom-6 ${snapshot.state?.animationsEnabled === false ? 'rewards-toast-static' : ''}`}
+          className={`rewards-toast-enter fixed bottom-20 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border border-brand-100 bg-white px-4 py-3 text-left shadow-float lg:bottom-6 ${snapshot.state?.animationsEnabled === false ? 'rewards-toast-static' : ''}`}
           aria-label={`${toastTitle}. ${toastDescription}. Open Rewards Lab.`}
         >
           <span className="flex items-start gap-3">
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
               <Dice5 className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
@@ -59,7 +59,7 @@ const RewardsLabActiveHost: React.FC = () => {
                 </span>
               )}
             </span>
-            <span className="flex-shrink-0 text-sm font-bold text-violet-700">+{toast.amount}</span>
+            <span className="flex-shrink-0 text-sm font-bold text-brand-700">+{toast.amount}</span>
           </span>
         </button>
       )}

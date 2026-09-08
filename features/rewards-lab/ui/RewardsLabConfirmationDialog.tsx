@@ -101,7 +101,7 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         event.stopPropagation();
         onCancel();
@@ -126,7 +126,7 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
           {(variableCost || purchaseCost) && (
             <label className="mt-3 block text-sm font-medium text-slate-700">
               {t('Actual price')}
-              <input value={actualCost} onChange={event => setActualCost(event.target.value)} type="number" min="1" step="1" autoFocus className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <input value={actualCost} onChange={event => setActualCost(event.target.value)} type="number" min="1" step="1" autoFocus className="field mt-1 w-full" />
             </label>
           )}
         </div>

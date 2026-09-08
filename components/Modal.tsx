@@ -15,54 +15,122 @@ interface ModalProps {
   hideFooter?: boolean;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, message, children, type = 'info', wide = false, hideFooter = false }) => {
-  const { t } = useI18n();
-  if (!isOpen) return null;
+const focusableSelector = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
-  const iconConfig = {
-    info: { icon: AlertCircle, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    success: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-    error: { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
-    warning: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
-  };
+const useAccessibleDialog = (isOpen: boolean, onClose: () => void) => {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+  const onCloseRef = React.useRef(onClose);
+
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const frame = window.requestAnimationFrame(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
+      (firstFocusable ?? dialogRef.current)?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen]);
+
+  return dialogRef;
+};
+
+const iconConfig = {
+  info: { icon: AlertCircle, color: 'text-brand-600', bg: 'bg-brand-50' },
+  success: { icon: CheckCircle, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+  error: { icon: AlertCircle, color: 'text-red-700', bg: 'bg-red-50' },
+  warning: { icon: AlertTriangle, color: 'text-amber-700', bg: 'bg-amber-50' },
+};
+
+export const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  message,
+  children,
+  type = 'info',
+  wide = false,
+  hideFooter = false,
+}) => {
+  const { t } = useI18n();
+  const dialogRef = useAccessibleDialog(isOpen, onClose);
+  const titleId = React.useId();
+  if (!isOpen) return null;
 
   const config = iconConfig[type];
   const Icon = config.icon;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <div className="sheet-backdrop z-50" onMouseDown={event => event.target === event.currentTarget && onClose()}>
       <div
-        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-md'} bg-white rounded-lg shadow-xl overflow-hidden`}
-        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={`w-full overflow-hidden rounded-t-3xl border border-line bg-white shadow-float sm:rounded-3xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
       >
-        <div className={`${config.bg} px-4 py-3 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <Icon className={`w-5 h-5 ${config.color}`} />
-            <h3 className="font-semibold text-slate-800">{title}</h3>
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${config.bg}`}>
+              <Icon className={`h-[18px] w-[18px] ${config.color}`} />
+            </span>
+            <h2 id={titleId} className="min-w-0 truncate font-semibold text-ink">{title}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-            title={t('Close')}
-            aria-label={t('Close')}
-          >
-            <X className="w-5 h-5" />
+          <button type="button" onClick={onClose} className="icon-button-compact" title={t('Close')} aria-label={t('Close')}>
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="max-h-[65vh] overflow-y-auto px-4 py-4">
-          {children ?? <p className="text-sm text-slate-700 whitespace-pre-line">{message}</p>}
+        <div className="max-h-[72dvh] overflow-y-auto px-4 py-4">
+          {children ?? <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{message}</p>}
         </div>
         {!hideFooter && (
-          <div className="px-4 py-3 bg-slate-50 flex justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-            >
-              OK
-            </button>
+          <div className="flex justify-end border-t border-line bg-slate-50/70 px-4 py-3">
+            <button type="button" onClick={onClose} className="button-subtle">OK</button>
           </div>
         )}
       </div>
@@ -92,6 +160,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   variant = 'default',
 }) => {
   const { t } = useI18n();
+  const dialogRef = useAccessibleDialog(isOpen, onClose);
+  const titleId = React.useId();
   if (!isOpen) return null;
 
   const handleConfirm = () => {
@@ -100,45 +170,29 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <div className="sheet-backdrop z-50" onMouseDown={event => event.target === event.currentTarget && onClose()}>
       <div
-        className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full overflow-hidden rounded-t-3xl border border-line bg-white shadow-float sm:max-w-md sm:rounded-3xl"
       >
-        <div className={`px-4 py-3 ${variant === 'danger' ? 'bg-red-50' : 'bg-slate-50'} flex items-center justify-between`}>
-          <h3 className={`font-semibold ${variant === 'danger' ? 'text-red-900' : 'text-slate-800'}`}>
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-            title={t('Close')}
-            aria-label={t('Close')}
-          >
-            <X className="w-5 h-5" />
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+          <h2 id={titleId} className={`font-semibold ${variant === 'danger' ? 'text-red-900' : 'text-ink'}`}>{title}</h2>
+          <button type="button" onClick={onClose} className="icon-button-compact" title={t('Close')} aria-label={t('Close')}>
+            <X className="h-5 w-5" />
           </button>
         </div>
         <div className="px-4 py-4">
-          <p className="text-sm text-slate-700 whitespace-pre-line">{message}</p>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{message}</p>
         </div>
-        <div className="px-4 py-3 bg-slate-50 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors"
-          >
+        <div className="flex justify-end gap-2 border-t border-line bg-slate-50/70 px-4 py-3">
+          <button type="button" onClick={onClose} className="button-secondary">
             {cancelText ?? t('Cancel')}
           </button>
-          <button
-            onClick={handleConfirm}
-            className={`px-4 py-2 text-sm font-medium text-white rounded hover:opacity-90 transition-colors ${
-              variant === 'danger' 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-          >
+          <button type="button" onClick={handleConfirm} className={variant === 'danger' ? 'button-danger' : 'button-primary'}>
             {confirmText ?? t('Confirm')}
           </button>
         </div>
@@ -146,6 +200,3 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     </div>
   );
 };
-
-
-

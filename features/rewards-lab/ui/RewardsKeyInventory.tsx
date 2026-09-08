@@ -24,11 +24,11 @@ export const RewardsKeyInventory = ({ state, onUpgrade, onUndoUpgrade }: Rewards
     && state.keys.some(key => key.id === latestUpgrade.outputKeyId && key.status === 'available'));
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-3">
+    <section className="section-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-            <KeyRound className="h-4 w-4 text-indigo-600" /> {t('Reward keys')}
+            <KeyRound className="h-4 w-4 text-brand-600" /> {t('Reward keys')}
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">{t('Five keys of one grade can be upgraded to the next grade.')}</p>
         </div>
@@ -42,7 +42,7 @@ export const RewardsKeyInventory = ({ state, onUpgrade, onUndoUpgrade }: Rewards
         {rewardGrades.map((grade, index) => {
           const canUpgrade = index < rewardGrades.length - 1 && counts[grade] >= KEY_UPGRADE_COST;
           return (
-            <div key={grade} className={`rounded-lg border p-2 ${gradeStyles[grade].border}`}>
+            <div key={grade} className={`rounded-xl border bg-white p-2 ${gradeStyles[grade].border}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
                   <KeyRound className={`h-3.5 w-3.5 ${gradeStyles[grade].keyText}`} />

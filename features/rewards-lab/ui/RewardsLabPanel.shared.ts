@@ -26,11 +26,11 @@ const averageCommonReward = FAIR_BAG_SLOTS.reduce<number>(
   0,
 ) / FAIR_BAG_SLOTS.length;
 
-export const buttonBase = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-export const primaryButton = `${buttonBase} bg-indigo-600 text-white hover:bg-indigo-700`;
-export const secondaryButton = `${buttonBase} border border-slate-200 bg-white text-slate-700 hover:bg-slate-50`;
-export const dangerButton = `${buttonBase} border border-red-200 bg-white text-red-700 hover:bg-red-50`;
-export const fieldClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
+export const buttonBase = 'button-base';
+export const primaryButton = 'button-primary';
+export const secondaryButton = 'button-secondary';
+export const dangerButton = 'button-danger border border-red-200 bg-white';
+export const fieldClass = 'field w-full';
 
 export const formatDateTime = (value: string, locale: string): string => {
   const date = new Date(value);

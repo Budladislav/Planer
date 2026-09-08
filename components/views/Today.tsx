@@ -33,6 +33,7 @@ import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, Rew
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
+import { EmptyState, PageHeader, TaskCard } from '../ui/Primitives';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -93,7 +94,7 @@ const SortableTaskItem: React.FC<{
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
+      <form onSubmit={handleSaveEdit} className="task-editor">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
@@ -107,7 +108,7 @@ const SortableTaskItem: React.FC<{
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
               }
             }}
-            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            className="field w-full min-h-[2.5rem] resize-none overflow-hidden"
             rows={1}
             autoFocus
           />
@@ -116,11 +117,11 @@ const SortableTaskItem: React.FC<{
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="button-secondary"
             >
               {t('Cancel')}
             </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="submit" className="button-primary">
               {t('Save')}
             </button>
         </div>
@@ -129,10 +130,9 @@ const SortableTaskItem: React.FC<{
   }
 
   return (
-    <div
+    <TaskCard
       ref={setNodeRef}
       style={style}
-      className="relative w-full max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-all hover:border-slate-300"
       onClick={() => setShowActions((prev) => !prev)}
     >
       <RewardGradeSurface taskId={task.id} />
@@ -160,11 +160,11 @@ const SortableTaskItem: React.FC<{
               }}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
-              className="-my-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-600"
+              className="-my-1 flex h-10 w-10 items-center justify-center rounded-xl text-slate-600"
               title={t('Edit task')}
               aria-label={t('Edit task')}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 transition-colors hover:bg-slate-200">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 transition-colors hover:bg-slate-200">
                 <Pencil className="h-4 w-4" />
               </span>
             </button>
@@ -176,10 +176,10 @@ const SortableTaskItem: React.FC<{
             }}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
-            className={`-my-1 flex h-10 w-10 items-center justify-center rounded-lg text-green-700 ${showActions ? 'mt-0' : ''}`}
+            className={`-my-1 flex h-10 w-10 items-center justify-center rounded-xl text-emerald-700 ${showActions ? 'mt-0' : ''}`}
             title={t('Mark as done')}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-green-50 transition-colors hover:bg-green-100">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 transition-colors hover:bg-emerald-100">
               <Check className="h-4 w-4" />
             </span>
           </button>
@@ -199,7 +199,7 @@ const SortableTaskItem: React.FC<{
         )}
         <button
           onClick={() => onDeleteConfirm(task.id)}
-          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
+          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Delete task')}
         >
           {t('Delete')}
@@ -207,7 +207,7 @@ const SortableTaskItem: React.FC<{
         <div className="flex items-center gap-2 flex-1 justify-center">
           <button
             onClick={() => onMoveTomorrow(task.id)}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 transition-colors hover:bg-sky-100"
+            className="button-subtle min-h-8 whitespace-nowrap px-2.5 py-1.5 text-xs"
             title={t('Move this task to tomorrow')}
           >
             <CalendarArrowDown className="h-3.5 w-3.5" />
@@ -215,14 +215,14 @@ const SortableTaskItem: React.FC<{
           </button>
           <button
             onClick={() => onCompleteYesterday(task.id)}
-            className="whitespace-nowrap rounded bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100"
+            className="button-base min-h-8 whitespace-nowrap bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 hover:bg-amber-100"
             title={t('Record this task as completed yesterday')}
           >
             {t('Done yesterday')}
           </button>
         </div>
       </div>
-    </div>
+    </TaskCard>
   );
 };
 
@@ -407,11 +407,9 @@ export const TodayView: React.FC = () => {
 
   return (
     <>
-      <div className="max-w-3xl mx-auto">
+      <div className="page-container">
           {/* Today Section - Header */}
-          <div className="text-center mb-3">
-            <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Today')}</h2>
-            <p className="text-slate-500">{formatDateReadable(todayStr, language)}</p>
+          <PageHeader title={t('Today')} subtitle={formatDateReadable(todayStr, language)}>
             <DayMetaBadges
               date={todayStr}
               onEdit={() => setNotesEditorDate(todayStr)}
@@ -419,12 +417,12 @@ export const TodayView: React.FC = () => {
               className="mt-1 justify-center"
             />
             <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted">
                 {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
               </p>
               <RewardsBalancePill />
             </div>
-          </div>
+          </PageHeader>
 
           {/* Tasks List - with bottom padding for fixed form */}
           <div className="space-y-3 pb-20 lg:pb-4">
@@ -436,9 +434,9 @@ export const TodayView: React.FC = () => {
               <div className="flex flex-col space-y-4">
                 {todayTasks.length === 0 ? (
                   <div className="flex items-center justify-center">
-                    <div className="text-center py-8 text-slate-400 italic border border-dashed border-slate-200 rounded-lg w-full">
+                    <EmptyState>
                       {t('No pending tasks for today. Check your Week plan?')}
-                    </div>
+                    </EmptyState>
                   </div>
                 ) : (
                   <div className="flex-1">
@@ -462,15 +460,15 @@ export const TodayView: React.FC = () => {
               </div>
             </DndContext>
 
-            <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <section className="surface-card">
               <button
                 type="button"
                 onClick={toggleCompletedToday}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
+                className="disclosure-button"
                 aria-expanded={state.uiPreferences.todayCompletedExpanded}
               >
                 <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-700">
-                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-50 text-green-700">
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   {t('Completed today ({count})', { count: completedTodayTasks.length })}
@@ -496,7 +494,7 @@ export const TodayView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleUndoComplete(task.id)}
-                        className="flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200"
+                        className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
                         title={t("Return task to today's list")}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -510,18 +508,18 @@ export const TodayView: React.FC = () => {
           </div>
 
           {/* Add Form - Fixed at bottom */}
-          <form onSubmit={handleQuickAdd} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
+          <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
             <div className="max-w-3xl mx-auto flex items-center gap-3">
               <input 
                 type="text" 
                 value={quickAdd}
                 onChange={e => setQuickAdd(e.target.value)}
                 placeholder={t('Add a task for today...')}
-                className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
+                className="field min-w-0 flex-1"
               />
               <button 
                 type="submit" 
-                className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+                className="composer-submit"
                 title={t('Add task')}
               >
                 <Plus className="w-6 h-6" />
@@ -537,11 +535,11 @@ export const TodayView: React.FC = () => {
               value={quickAdd}
               onChange={e => setQuickAdd(e.target.value)}
               placeholder={t('Add a task for today...')}
-              className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
+              className="field min-w-0 flex-1"
             />
             <button 
               type="submit" 
-              className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+              className="composer-submit"
               title={t('Add task')}
             >
               <Plus className="w-6 h-6" />

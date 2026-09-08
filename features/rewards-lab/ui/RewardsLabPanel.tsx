@@ -31,7 +31,7 @@ const Notice = ({ message, onDismiss }: NoticeProps) => {
   if (!message) return null;
   return (
     <div
-      className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-900"
+      className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-700"
       role="status"
       aria-live="polite"
     >
@@ -39,7 +39,7 @@ const Notice = ({ message, onDismiss }: NoticeProps) => {
       <button
         type="button"
         onClick={onDismiss}
-        className="rounded p-0.5 text-indigo-600 hover:bg-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        className="rounded p-0.5 text-brand-600 hover:bg-brand-100"
         aria-label={t('Dismiss message')}
       >
         <X className="h-4 w-4" />
@@ -169,7 +169,7 @@ const RewardsLabPanel = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 backdrop-blur-sm md:items-center md:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 backdrop-blur-[2px] md:items-center md:p-4"
       onMouseDown={() => runtime.closeLab()}
     >
       <div
@@ -177,15 +177,15 @@ const RewardsLabPanel = () => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="rewards-lab-title"
-        className="flex h-[94dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-slate-50 shadow-2xl md:h-auto md:max-h-[88vh] md:max-w-3xl md:rounded-2xl"
+        className="flex h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-canvas shadow-float md:h-auto md:max-h-[88vh] md:max-w-3xl md:rounded-3xl"
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={trapFocus}
       >
-        <header className="shrink-0 border-b border-slate-200 bg-white px-4 pt-4 sm:px-5">
+        <header className="shrink-0 border-b border-line bg-white px-4 pt-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
                   <Dice5 className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
@@ -195,14 +195,14 @@ const RewardsLabPanel = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden max-w-48 truncate rounded-full bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-800 sm:block" aria-label={t('Balance: {balance} {currency}', { balance, currency: state.currencyName === 'points' ? t('points') : state.currencyName })}>
+              <div className="hidden max-w-48 truncate rounded-full bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-700 sm:block" aria-label={t('Balance: {balance} {currency}', { balance, currency: state.currencyName === 'points' ? t('points') : state.currencyName })}>
                 {balance} {state.currencyName}
               </div>
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => runtime.closeLab()}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="icon-button"
                 aria-label={t('Close Rewards Lab')}
               >
                 <X className="h-5 w-5" />
@@ -223,7 +223,7 @@ const RewardsLabPanel = () => {
                   aria-selected={selected}
                   aria-controls={`rewards-panel-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex min-h-11 items-center justify-center gap-2 rounded-t-lg border-b-2 px-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${selected ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700' : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-t-xl border-b-2 px-2 text-sm font-medium transition-colors ${selected ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {t(tab.label)}

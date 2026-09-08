@@ -61,7 +61,7 @@ export const WorkShiftSettingsPanel: React.FC = () => {
             type="week"
             value={baseWeek}
             onChange={event => setBaseWeek(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm text-slate-800"
+            className="field-compact mt-1 w-full py-2"
           />
         </label>
         <label className="text-xs font-medium text-slate-500">
@@ -69,7 +69,7 @@ export const WorkShiftSettingsPanel: React.FC = () => {
           <select
             value={baseShift}
             onChange={event => setBaseShift(Number(event.target.value) as WorkShift)}
-            className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm text-slate-800"
+            className="field-compact mt-1 w-full py-2"
           >
             <option value={1}>{t('First')}</option>
             <option value={2}>{t('Second')}</option>
@@ -78,7 +78,7 @@ export const WorkShiftSettingsPanel: React.FC = () => {
         <button
           type="button"
           onClick={saveBase}
-          className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="button-primary"
         >
           {t('Save')}
         </button>
@@ -98,7 +98,7 @@ export const WorkShiftSettingsPanel: React.FC = () => {
               transitionHighlight: event.target.value as typeof settings.transitionHighlight,
             },
           })}
-          className="mt-2 w-full rounded border border-slate-300 px-2 py-2 text-sm text-slate-800"
+          className="field-compact mt-2 w-full py-2"
         >
           <option value="off">{t('Do not highlight')}</option>
           <option value="weekend">{t('Saturday and Sunday')}</option>
@@ -117,13 +117,13 @@ export const WorkShiftSettingsPanel: React.FC = () => {
             aria-label={t('Exception week')}
             value={overrideWeek}
             onChange={event => setOverrideWeek(event.target.value)}
-            className="rounded border border-slate-300 px-2 py-2 text-sm text-slate-800"
+            className="field-compact py-2"
           />
           <select
             aria-label={t('Exception shift')}
             value={overrideShift}
             onChange={event => setOverrideShift(Number(event.target.value) as WorkShift)}
-            className="rounded border border-slate-300 px-2 py-2 text-sm text-slate-800"
+            className="field-compact py-2"
           >
             <option value={1}>{t('First')}</option>
             <option value={2}>{t('Second')}</option>
@@ -131,7 +131,7 @@ export const WorkShiftSettingsPanel: React.FC = () => {
           <button
             type="button"
             onClick={addOverride}
-            className="flex items-center justify-center gap-1 rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="button-secondary"
           >
             <Plus className="h-4 w-4" /> {t('Add')}
           </button>

@@ -64,7 +64,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   const selectedEvents = selectedDate ? eventsByDate[selectedDate] ?? [] : [];
 
   const renderWeek = ({ week, days }: (typeof weeks)[number]) => (
-    <div key={week} className="border-b border-slate-100 last:border-b-0">
+    <div key={week} className="border-b border-line last:border-b-0">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50/80 px-2 py-1.5">
         <span className="flex-shrink-0 text-[10px] font-bold uppercase text-slate-400">
           {language === 'ru' ? 'Н' : 'W'}{week.split('-W')[1]}
@@ -98,13 +98,13 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
               type="button"
               onClick={() => setSelectedDate(day.date)}
               aria-current={isToday ? 'date' : undefined}
-              className={`flex min-h-20 min-w-0 flex-col items-stretch justify-start border-r border-slate-100 p-0.5 text-left last:border-r-0 hover:brightness-[0.98] sm:min-h-28 sm:p-1 ${background}`}
+              className={`flex min-h-20 min-w-0 flex-col items-stretch justify-start border-r border-line p-0.5 text-left last:border-r-0 hover:brightness-[0.98] sm:min-h-28 sm:p-1 ${background}`}
               title={`${isToday ? t('Today · ') : ''}${dayEvents.length ? t('{count} events', { count: dayEvents.length }) : t('No events')}${dayNotes.length ? ` · ${t('{count} notes', { count: dayNotes.length })}` : ''}`}
             >
               <div className="flex items-start justify-between gap-0.5">
                 <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold sm:text-xs ${
                   isToday
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-brand-600 text-white'
                     : day.isInMonth ? 'text-slate-600' : 'text-slate-300'
                 }`}>
                   {day.dayOfMonth}
@@ -147,12 +147,12 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
 
   return (
     <>
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-2 py-2 sm:px-3">
+      <section className="surface-card">
+        <div className="flex items-center justify-between border-b border-line px-2 py-2 sm:px-3">
           <button
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, -1))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+            className="icon-button"
             title={t('Previous month')}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -164,14 +164,14 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
           <button
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+            className="icon-button"
             title={t('Next month')}
           >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+        <div className="grid grid-cols-7 border-b border-line bg-slate-50">
           {WEEKDAYS[language].map(day => (
             <div key={day} className="py-1.5 text-center text-[10px] font-bold uppercase text-slate-400 sm:text-xs">
               {day}
@@ -184,7 +184,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
             type="button"
             onClick={() => setPastWeeksExpanded(value => !value)}
             aria-expanded={pastWeeksExpanded}
-            className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50/70 px-3 py-2 text-left text-xs font-semibold text-slate-500 hover:bg-slate-100"
+            className="flex w-full items-center justify-between border-b border-line bg-slate-50/70 px-3 py-2 text-left text-xs font-semibold text-slate-500 hover:bg-slate-100"
           >
             <span>{t('Past weeks ({count})', { count: pastWeeks.length })}</span>
             <ChevronDown
@@ -212,7 +212,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
             />
           )}
           {selectedEvents.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 px-3 py-8 text-center text-sm text-slate-400">
+            <div className="empty-state py-8">
               {t('No events planned for this day.')}
             </div>
           ) : (
@@ -225,7 +225,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
                   setSelectedDate(null);
                   onEditEvent(event);
                 }}
-                className="flex w-full items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-amber-200 hover:bg-amber-50/40"
+                className="flex w-full items-start gap-3 rounded-xl border border-line p-3 text-left transition-colors hover:border-amber-200 hover:bg-amber-50/40"
               >
                 <span className="rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-800">{event.time}</span>
                 <span className="min-w-0 flex-1 break-words text-sm text-slate-700">{event.title}</span>

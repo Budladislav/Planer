@@ -34,6 +34,7 @@ import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { PageHeader, TaskCard } from '../ui/Primitives';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -68,7 +69,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
   const [showActions, setShowActions] = useState(false);
 
   return (
-    <div
+    <TaskCard
       ref={setNodeRef}
       data-task-id={task.id}
       style={{
@@ -76,7 +77,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
         transition,
         opacity: isDragging ? 0.45 : 1,
       }}
-      className="relative rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm shadow-sm"
+      className="px-2"
       onClick={() => setShowActions(value => !value)}
     >
       <RewardGradeSurface taskId={task.id} />
@@ -86,7 +87,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
           {...attributes}
           {...listeners}
           onClick={event => event.stopPropagation()}
-          className="flex h-8 w-7 flex-shrink-0 touch-none items-center justify-center rounded text-slate-300 hover:bg-slate-50 hover:text-slate-500"
+          className="icon-button-compact w-7 touch-none text-slate-300 hover:text-slate-500"
           title={t('Drag task')}
         >
           <GripVertical className="h-4 w-4" />
@@ -107,7 +108,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
             event.stopPropagation();
             onComplete(task.id);
           }}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-green-50 text-green-700 hover:bg-green-100"
+          className="icon-button-compact bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
           title={t('Mark as done')}
         >
           <Check className="h-4 w-4" />
@@ -125,17 +126,17 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
             <RewardGradeSelector taskId={task.id} compact />
           </div>
         )}
-        <button type="button" onClick={() => onDelete(task.id)} className="rounded bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+        <button type="button" onClick={() => onDelete(task.id)} className="button-danger min-h-8 px-2.5 py-1 text-xs">
           {t('Delete')}
         </button>
-        <button type="button" onClick={() => onEdit(task)} className="rounded bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+        <button type="button" onClick={() => onEdit(task)} className="button-secondary min-h-8 px-2.5 py-1 text-xs">
           {t('Edit')}
         </button>
-        <button type="button" onClick={() => onMove(task.id)} className="rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+        <button type="button" onClick={() => onMove(task.id)} className="button-subtle min-h-8 px-2.5 py-1 text-xs">
           {t('Move')}
         </button>
       </div>
-    </div>
+    </TaskCard>
   );
 };
 
@@ -152,7 +153,7 @@ const TaskContainer: React.FC<TaskContainerProps> = ({ id, tasks, children, empt
     <div
       ref={setNodeRef}
       data-container-id={id}
-      className={`min-h-14 space-y-2 rounded-lg p-2 transition-colors ${isOver ? 'bg-indigo-50 ring-2 ring-indigo-200' : 'bg-slate-50/60'}`}
+      className={`min-h-14 space-y-2 rounded-xl p-2 transition-colors ${isOver ? 'bg-brand-50 ring-2 ring-brand-100' : 'bg-slate-50/70'}`}
     >
       <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
         {children}
@@ -372,7 +373,7 @@ export const MonthView: React.FC = () => {
     const range = getWeekDateRange(week);
     const tasks = tasksByWeek[week] ?? [];
     return (
-      <section key={week} className="rounded-lg border border-slate-200 bg-white p-2">
+      <section key={week} className="section-card p-2">
         <div className="mb-1 flex min-w-0 items-center gap-2 px-1">
           <h3 className="flex-shrink-0 text-sm font-semibold text-slate-700">{t('Week {week}', { week: week.split('-W')[1] })}</h3>
           <span className="flex-shrink-0 text-xs text-slate-400">{range.start}–{range.end}</span>
@@ -383,7 +384,7 @@ export const MonthView: React.FC = () => {
             compact
             className="min-w-0 flex-1"
           />
-          <button type="button" onClick={() => setQuickAddTarget(week)} className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add task to {week}', { week })}>
+          <button type="button" onClick={() => setQuickAddTarget(week)} className="icon-button-compact h-7 w-7 text-brand-600 hover:bg-brand-50" title={t('Add task to {week}', { week })}>
             <Plus className="h-4 w-4" />
           </button>
         </div>
@@ -395,27 +396,24 @@ export const MonthView: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-3xl pb-20">
-      <div className="mb-3 text-center">
-        <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Month')}</h2>
-        <p className="mt-1 text-sm text-slate-400">{t('{count} planned tasks', { count: todoTasks.length })}</p>
-      </div>
+    <div className="page-container">
+      <PageHeader title={t('Month')} subtitle={t('{count} planned tasks', { count: todoTasks.length })} />
 
-      <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
-        <button type="button" onClick={() => changeMonth(-1)} className="rounded p-2 hover:bg-slate-100" title={t('Previous month')}>
+      <div className="period-switcher">
+        <button type="button" onClick={() => changeMonth(-1)} className="icon-button" title={t('Previous month')}>
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="font-semibold text-slate-700">{monthLabel}</div>
-        <button type="button" onClick={() => changeMonth(1)} className="rounded p-2 hover:bg-slate-100" title={t('Next month')}>
+        <button type="button" onClick={() => changeMonth(1)} className="icon-button" title={t('Next month')}>
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <section className="rounded-lg border border-dashed border-slate-300 p-2">
+        <section className="section-card border-dashed p-2">
           <div className="mb-1 flex items-center justify-between px-1">
             <h3 className="text-sm font-semibold text-slate-600">{t('Month tasks (no week)')}</h3>
-            <button type="button" onClick={() => setQuickAddTarget(null)} className="flex h-7 w-7 items-center justify-center rounded text-indigo-600 hover:bg-indigo-50" title={t('Add month task')}>
+            <button type="button" onClick={() => setQuickAddTarget(null)} className="icon-button-compact h-7 w-7 text-brand-600 hover:bg-brand-50" title={t('Add month task')}>
               <Plus className="h-4 w-4" />
             </button>
           </div>
@@ -426,12 +424,12 @@ export const MonthView: React.FC = () => {
 
         <div className="mt-3 space-y-2">
           {pastWeeks.length > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-1.5">
+            <div className="surface-card bg-slate-50/60 p-1.5 shadow-none">
               <button
                 type="button"
                 aria-expanded={pastWeeksExpanded}
                 onClick={() => setPastWeeksExpanded(value => !value)}
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+                className="disclosure-button py-2 text-slate-500"
               >
                 <span>{t('Past weeks ({count})', { count: pastWeeks.length })}</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${pastWeeksExpanded ? 'rotate-180' : ''}`} />
@@ -448,18 +446,18 @@ export const MonthView: React.FC = () => {
       </DndContext>
 
       {moveTaskId && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/30 backdrop-blur-sm sm:items-center sm:justify-center" onClick={() => setMoveTaskId(null)}>
-          <div className="w-full space-y-3 rounded-t-2xl bg-white p-4 shadow-xl sm:w-[440px] sm:rounded-2xl" onClick={event => event.stopPropagation()}>
+        <div className="sheet-backdrop" onClick={() => setMoveTaskId(null)}>
+          <div className="sheet-panel sm:w-[440px]" onClick={event => event.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-800">{t('Where to move task?')}</h3>
               <button type="button" onClick={() => setMoveTaskId(null)} className="text-sm text-slate-400">{t('Close')}</button>
             </div>
             <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto">
-              <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="rounded-lg border border-slate-200 p-3 text-left text-sm hover:border-indigo-200">
+              <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">
                 {t('Month pool')}
               </button>
               {weeks.map(week => (
-                <button key={week} type="button" onClick={() => moveTaskTo(moveTaskId, week)} className="rounded-lg border border-slate-200 p-3 text-left text-sm hover:border-indigo-200">
+                <button key={week} type="button" onClick={() => moveTaskTo(moveTaskId, week)} className="button-secondary h-auto justify-start p-3 text-left">
                   {t('Week {week}', { week: week.split('-W')[1] })}
                 </button>
               ))}
@@ -469,34 +467,34 @@ export const MonthView: React.FC = () => {
       )}
 
       {quickAddTarget !== undefined && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/30 backdrop-blur-sm sm:items-center sm:justify-center" onClick={() => setQuickAddTarget(undefined)}>
-          <form onSubmit={addTask} className="w-full space-y-3 rounded-t-2xl bg-white p-4 shadow-xl sm:w-[440px] sm:rounded-2xl" onClick={event => event.stopPropagation()}>
+        <div className="sheet-backdrop" onClick={() => setQuickAddTarget(undefined)}>
+          <form onSubmit={addTask} className="sheet-panel sm:w-[440px]" onClick={event => event.stopPropagation()}>
             <h3 className="font-semibold text-slate-800">
               {quickAddTarget
                 ? t('Add task to week {week}', { week: quickAddTarget.split('-W')[1] })
                 : t('Add task to {month}', { month: monthLabel })}
             </h3>
-            <input autoFocus required value={quickAddTitle} onChange={event => setQuickAddTitle(event.target.value)} className="w-full rounded-lg border border-slate-300 p-2 outline-none focus:border-indigo-500" placeholder={t('Task title...')} />
+            <input autoFocus required value={quickAddTitle} onChange={event => setQuickAddTitle(event.target.value)} className="field w-full" placeholder={t('Task title...')} />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setQuickAddTarget(undefined)} className="rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">{t('Cancel')}</button>
-              <button type="submit" className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t('Add')}</button>
+              <button type="button" onClick={() => setQuickAddTarget(undefined)} className="button-secondary">{t('Cancel')}</button>
+              <button type="submit" className="button-primary">{t('Add')}</button>
             </div>
           </form>
         </div>
       )}
 
       {editingTask && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/30 backdrop-blur-sm sm:items-center sm:justify-center" onClick={() => setEditingTask(null)}>
-          <form onSubmit={saveEdit} className="w-full space-y-3 rounded-t-2xl bg-white p-4 shadow-xl sm:w-[440px] sm:rounded-2xl" onClick={event => event.stopPropagation()}>
+        <div className="sheet-backdrop" onClick={() => setEditingTask(null)}>
+          <form onSubmit={saveEdit} className="sheet-panel sm:w-[440px]" onClick={event => event.stopPropagation()}>
             <h3 className="font-semibold text-slate-800">{t('Edit task')}</h3>
-            <textarea autoFocus required rows={2} value={editTitle} onChange={event => setEditTitle(event.target.value)} className="w-full resize-none rounded-lg border border-slate-300 p-2 outline-none focus:border-indigo-500" />
+            <textarea autoFocus required rows={2} value={editTitle} onChange={event => setEditTitle(event.target.value)} className="field w-full resize-none" />
             <label className="block text-xs font-medium text-slate-500">
               {t('Planning month')}
-              <input type="month" value={editMonth} onChange={event => setEditMonth(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm" />
+              <input type="month" value={editMonth} onChange={event => setEditMonth(event.target.value)} className="field mt-1 block w-full" />
             </label>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setEditingTask(null)} className="rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">{t('Cancel')}</button>
-              <button type="submit" className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t('Save')}</button>
+              <button type="button" onClick={() => setEditingTask(null)} className="button-secondary">{t('Cancel')}</button>
+              <button type="submit" className="button-primary">{t('Save')}</button>
             </div>
           </form>
         </div>

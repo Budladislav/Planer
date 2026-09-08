@@ -52,7 +52,7 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
       )}
 
       {activeRewards.length === 0 && !formOpen ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
+        <div className="empty-state py-8">
           <Gift className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 font-medium text-slate-700">{t('No rewards yet')}</p>
           <button type="button" onClick={() => { setEditing(null); setFormOpen(true); }} className={`${primaryButton} mt-4`}><Plus className="h-4 w-4" />{t('Create first reward')}</button>

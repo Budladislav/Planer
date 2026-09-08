@@ -66,7 +66,7 @@ const PurchaseForm = ({ purchase, onCancel, onSubmit }: {
   };
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+    <form onSubmit={submit} className="rounded-2xl border border-brand-100 bg-brand-50/70 p-4">
       <div className="flex items-center justify-between gap-3"><h2 className="font-semibold text-slate-900">{purchase ? t('Edit purchase') : t('New purchase')}</h2><button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-500 hover:bg-white"><X className="h-4 w-4" /></button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_9rem]">
         <label className="text-sm font-medium text-slate-700">{t('Title')}<input value={title} onChange={event => setTitle(event.target.value)} className={`${fieldClass} mt-1`} maxLength={100} autoFocus /></label>
@@ -99,10 +99,10 @@ const PurchaseCard = ({ purchase, state, onEdit, onRedeem }: { purchase: Purchas
   }, new Date());
   const blocked = ['inactive', 'already-redeemed', 'insufficient-balance', 'missing-key', 'cooldown', 'limit-reached'].includes(availability.outcome);
   return (
-    <article className={`rounded-xl border bg-white p-4 shadow-sm ${gradeStyles[purchase.grade].border}`}>
+    <article className={`rounded-2xl border bg-white p-4 shadow-quiet ${gradeStyles[purchase.grade].border}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="break-words font-semibold text-slate-900">{purchase.title}</h3><span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${gradeStyles[purchase.grade].badge}`}>{t(REWARD_GRADES[purchase.grade].label)} · {t('key')}</span></div><p className="mt-1 text-xs text-slate-500">{t(statusLabels[purchase.status])} · {t('Added {date}', { date: new Date(purchase.createdAt).toLocaleDateString(locale) })}</p>{purchase.note && <p className="mt-2 text-sm text-slate-600">{purchase.note}</p>}</div>
-        <div className="shrink-0 text-right"><p className="text-xl font-bold text-indigo-700">≈{purchase.estimatedCost}</p><p className="text-xs text-slate-500">{state.currencyName}</p>{purchase.priceMin && purchase.priceMax && <p className="text-[11px] text-slate-400">{purchase.priceMin}–{purchase.priceMax}</p>}</div>
+        <div className="shrink-0 text-right"><p className="text-xl font-bold text-brand-700">≈{purchase.estimatedCost}</p><p className="text-xs text-slate-500">{state.currencyName}</p>{purchase.priceMin && purchase.priceMax && <p className="text-[11px] text-slate-400">{purchase.priceMin}–{purchase.priceMax}</p>}</div>
       </div>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3"><div className="flex items-center gap-1"><button type="button" onClick={onEdit} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Pencil className="h-4 w-4" /></button>{purchase.url && <a href={purchase.url} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title={t('Open link')}><ExternalLink className="h-4 w-4" /></a>}</div><button type="button" onClick={onRedeem} disabled={blocked} className={primaryButton}><ShoppingBag className="h-4 w-4" />{purchase.status === 'purchased' ? t('Purchased') : availability.outcome === 'missing-key' ? t('No matching key') : t('Buy')}</button></div>
     </article>
@@ -123,7 +123,7 @@ export const PurchasesTab = ({ state, onNotice, onConfirm }: { state: RewardsLab
   return (
     <div className="space-y-4">
       {formOpen ? <PurchaseForm key={editing?.id ?? 'new-purchase'} purchase={editing} onCancel={() => { setEditing(null); setFormOpen(false); }} onSubmit={save} /> : <div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{t('Optional purchases')}</h2><p className="text-xs text-slate-500">{t('A separate wishlist inside Rewards Lab.')}</p></div><button type="button" onClick={() => { setEditing(null); setFormOpen(true); }} className={secondaryButton}><Plus className="h-4 w-4" />{t('Add purchase')}</button></div>}
-      {sorted.length === 0 && !formOpen ? <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center"><ShoppingBag className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 font-medium text-slate-700">{t('No optional purchases yet')}</p></div> : <div className="grid gap-3 sm:grid-cols-2">{sorted.map(purchase => <PurchaseCard key={purchase.id} purchase={purchase} state={state} onEdit={() => { setEditing(purchase); setFormOpen(true); }} onRedeem={() => onConfirm({ kind: 'redeem-purchase', purchase })} />)}</div>}
+      {sorted.length === 0 && !formOpen ? <div className="empty-state py-10"><ShoppingBag className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 font-medium text-slate-700">{t('No optional purchases yet')}</p></div> : <div className="grid gap-3 sm:grid-cols-2">{sorted.map(purchase => <PurchaseCard key={purchase.id} purchase={purchase} state={state} onEdit={() => { setEditing(purchase); setFormOpen(true); }} onRedeem={() => onConfirm({ kind: 'redeem-purchase', purchase })} />)}</div>}
     </div>
   );
 };

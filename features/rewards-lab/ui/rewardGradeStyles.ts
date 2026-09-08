@@ -1,9 +1,9 @@
 import type { RewardGrade } from '../domain';
 
 export const gradeStyles: Record<RewardGrade, { dot: string; badge: string; border: string; keyText: string }> = {
-  common: { dot: 'bg-slate-400', badge: 'border-slate-200 bg-slate-50 text-slate-700', border: 'border-slate-300', keyText: 'text-slate-500' },
-  uncommon: { dot: 'bg-emerald-500', badge: 'border-emerald-200 bg-emerald-50 text-emerald-800', border: 'border-emerald-300', keyText: 'text-emerald-600' },
-  rare: { dot: 'bg-blue-500', badge: 'border-blue-200 bg-blue-50 text-blue-800', border: 'border-blue-300', keyText: 'text-blue-600' },
-  legendary: { dot: 'bg-amber-400', badge: 'border-amber-200 bg-amber-50 text-amber-900', border: 'border-amber-300', keyText: 'text-amber-500' },
-  mythic: { dot: 'bg-red-500', badge: 'border-red-200 bg-red-50 text-red-800', border: 'border-red-300', keyText: 'text-red-600' },
+  common: { dot: 'bg-[#94A3B8]', badge: 'border-[#94A3B8]/35 bg-[#F4F6F8] text-[#475569]', border: 'border-[#94A3B8]/60', keyText: 'text-[#475569]' },
+  uncommon: { dot: 'bg-[#2FB47C]', badge: 'border-[#2FB47C]/35 bg-[#EAF8F2] text-[#187A54]', border: 'border-[#2FB47C]/60', keyText: 'text-[#187A54]' },
+  rare: { dot: 'bg-[#3B82F6]', badge: 'border-[#3B82F6]/35 bg-[#EEF4FF] text-[#1D5FD1]', border: 'border-[#3B82F6]/60', keyText: 'text-[#1D5FD1]' },
+  legendary: { dot: 'bg-[#E09A17]', badge: 'border-[#E09A17]/35 bg-[#FFF6DD] text-[#925E00]', border: 'border-[#E09A17]/60', keyText: 'text-[#925E00]' },
+  mythic: { dot: 'bg-[#E4515E]', badge: 'border-[#E4515E]/35 bg-[#FDECEF] text-[#B52D3C]', border: 'border-[#E4515E]/60', keyText: 'text-[#B52D3C]' },
 };

@@ -60,7 +60,7 @@ export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-brand-100 bg-brand-50/70 p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="font-semibold text-slate-900">{reward ? t('Edit reward') : t('New reward')}</h3>
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-500 hover:bg-white" aria-label={t('Close reward form')}><X className="h-4 w-4" /></button>
@@ -112,7 +112,7 @@ export const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: {
   const available = availability.outcome === 'available' && !used;
   const currency = state.currencyName === 'points' ? t('points') : state.currencyName;
   return (
-    <article className={`rounded-xl border bg-white p-4 shadow-sm ${gradeStyles[reward.grade].border}`}>
+    <article className={`rounded-2xl border bg-white p-4 shadow-quiet ${gradeStyles[reward.grade].border}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><h3 className="break-words font-semibold text-slate-900">{reward.title}</h3><span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${gradeStyles[reward.grade].badge}`}>{t(REWARD_GRADES[reward.grade].label)} · {t('key')}</span></div>
@@ -123,7 +123,7 @@ export const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem }: {
             {reward.limitCount && reward.limitWindowDays && <span className="rounded bg-slate-100 px-1.5 py-0.5">{reward.limitCount}/{reward.limitWindowDays} {t('days')}</span>}
           </div>
         </div>
-        <div className="shrink-0 text-right"><p className="text-xl font-bold text-indigo-700">{reward.variableCost ? `≈${reward.cost}` : reward.cost}</p><p className="max-w-24 truncate text-xs text-slate-500">{currency}</p></div>
+        <div className="shrink-0 text-right"><p className="text-xl font-bold text-brand-700">{reward.variableCost ? `≈${reward.cost}` : reward.cost}</p><p className="max-w-24 truncate text-xs text-slate-500">{currency}</p></div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
         <div className="flex gap-1"><button type="button" onClick={() => onEdit(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Edit {title}', { title: reward.title })}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onArchive(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Archive {title}', { title: reward.title })}><Archive className="h-4 w-4" /></button></div>
@@ -140,7 +140,7 @@ export const ArchivedRewards = ({ rewards, state, onRestore }: { rewards: Reward
   return (
     <section className="border-t border-slate-200 pt-4">
       <button type="button" onClick={() => setOpen(value => !value)} className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100" aria-expanded={open}>{t('Archived rewards ({count})', { count: rewards.length })}<span>{open ? '−' : '+'}</span></button>
-      {open && <div className="mt-2 space-y-2">{rewards.map(reward => <div key={reward.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"><div><p className="text-sm font-medium text-slate-700">{reward.title}</p><p className="text-xs text-slate-500">{reward.cost} {state.currencyName}</p></div><button type="button" onClick={() => onRestore(reward)} className={secondaryButton}><RotateCcw className="h-4 w-4" />{t('Restore')}</button></div>)}</div>}
+      {open && <div className="mt-2 space-y-2">{rewards.map(reward => <div key={reward.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-slate-50 px-3 py-3"><div><p className="text-sm font-medium text-slate-700">{reward.title}</p><p className="text-xs text-slate-500">{reward.cost} {state.currencyName}</p></div><button type="button" onClick={() => onRestore(reward)} className={secondaryButton}><RotateCcw className="h-4 w-4" />{t('Restore')}</button></div>)}</div>}
     </section>
   );
 };

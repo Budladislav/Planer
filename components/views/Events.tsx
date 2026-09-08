@@ -8,6 +8,7 @@ import { formatDateShort, formatEventTitle, generateId, getTodayString, getWeekS
 import { EventsCalendar } from '../events/EventsCalendar';
 import { ConfirmModal, Modal } from '../Modal';
 import { useI18n } from '../../i18n';
+import { EmptyState, PageHeader } from '../ui/Primitives';
 
 interface EventItemProps {
   event: CalendarEvent;
@@ -20,7 +21,7 @@ const EventItem: React.FC<EventItemProps> = ({ event, onStartEdit, onDelete }) =
   const [showActions, setShowActions] = useState(false);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-all hover:shadow-sm">
+    <div className="task-card">
       <div
         className={`cursor-pointer ${showActions ? 'space-y-2' : ''}`}
         onClick={() => setShowActions(previous => !previous)}
@@ -43,14 +44,14 @@ const EventItem: React.FC<EventItemProps> = ({ event, onStartEdit, onDelete }) =
         <button
           type="button"
           onClick={() => onDelete(event.id)}
-          className="rounded bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
         >
           {t('Delete')}
         </button>
         <button
           type="button"
           onClick={() => onStartEdit(event)}
-          className="rounded bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+          className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
         >
           {t('Edit')}
         </button>
@@ -78,11 +79,11 @@ const CollapsibleEventSection: React.FC<CollapsibleEventSectionProps> = ({
 }) => {
   const { t } = useI18n();
   return (
-  <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <section className="surface-card">
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-slate-50"
+      className="disclosure-button px-4 py-3"
       aria-expanded={expanded}
     >
       <span className="text-sm font-semibold text-slate-700">{title} ({events.length})</span>
@@ -190,11 +191,8 @@ export const EventsView: React.FC = () => {
 
   return (
     <>
-      <div className="mx-auto max-w-3xl">
-        <div className="hidden text-center lg:mb-3 lg:block">
-          <h2 className="text-3xl font-bold text-slate-900">{t('Calendar')}</h2>
-          <p className="text-slate-500">{t('Events create a linked task on the corresponding day')}</p>
-        </div>
+      <div className="page-container">
+        <PageHeader title={t('Calendar')} subtitle={t('Events create a linked task on the corresponding day')} />
 
         <div className="space-y-3 pb-48 lg:pb-6">
           <EventsCalendar
@@ -210,9 +208,9 @@ export const EventsView: React.FC = () => {
               <span className="text-xs text-slate-400">{nearEvents.length}</span>
             </div>
             {nearEvents.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-6 text-center text-sm italic text-slate-400">
+              <EmptyState className="py-6">
                 {t('No upcoming events in the current or next month.')}
-              </div>
+              </EmptyState>
             ) : (
               <div className="space-y-1">
                 {nearEvents.map(event => (
@@ -241,15 +239,15 @@ export const EventsView: React.FC = () => {
           />
         </div>
 
-        <form onSubmit={handleAdd} className="fixed bottom-16 left-0 right-0 z-20 border-t border-slate-200 bg-slate-50 p-4 lg:hidden">
+        <form onSubmit={handleAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
           <div className="mx-auto max-w-3xl space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <input type="date" required value={newDate} onChange={event => setNewDate(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-              <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              <input type="date" required value={newDate} onChange={event => setNewDate(event.target.value)} className="field w-full" />
+              <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="field w-full" />
             </div>
             <div className="flex items-center gap-3">
-              <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-              <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title={t('Add event')}>
+              <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="field min-w-0 flex-1" />
+              <button type="submit" className="composer-submit" title={t('Add event')}>
                 <Plus className="h-6 w-6" />
               </button>
             </div>
@@ -258,12 +256,12 @@ export const EventsView: React.FC = () => {
 
         <form onSubmit={handleAdd} className="hidden space-y-3 lg:block">
           <div className="grid grid-cols-2 gap-3">
-            <input type="date" required value={newDate} onChange={event => setNewDate(event.target.value)} className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            <input type="date" required value={newDate} onChange={event => setNewDate(event.target.value)} className="field w-full" />
+            <input type="time" required value={newTime} onChange={event => setNewTime(event.target.value)} className="field w-full" />
           </div>
           <div className="flex items-center gap-3">
-            <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="min-w-0 flex-1 rounded-lg border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            <button type="submit" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800" title={t('Add event')}>
+            <input type="text" required value={newTitle} onChange={event => setNewTitle(event.target.value)} placeholder={t('Event title')} className="field min-w-0 flex-1" />
+            <button type="submit" className="composer-submit" title={t('Add event')}>
               <Plus className="h-6 w-6" />
             </button>
           </div>
@@ -273,7 +271,7 @@ export const EventsView: React.FC = () => {
       <Modal isOpen={editingId !== null} onClose={handleCancelEdit} title={t('Edit event')} hideFooter>
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <label className="block text-xs font-bold uppercase text-slate-500">
-            Title
+            {t('Title')}
             <textarea
               ref={textareaRef}
               required
@@ -284,7 +282,7 @@ export const EventsView: React.FC = () => {
                 textareaRef.current.style.height = 'auto';
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
               }}
-              className="mt-1 min-h-10 w-full resize-none overflow-hidden rounded-lg border border-slate-300 p-2 text-sm normal-case outline-none focus:border-indigo-500"
+              className="field mt-1 min-h-10 w-full resize-none overflow-hidden normal-case"
               rows={1}
               autoFocus
             />
@@ -292,16 +290,16 @@ export const EventsView: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <label className="text-xs font-bold uppercase text-slate-500">
               {t('Date')}
-              <input type="date" required value={editDate} onChange={event => setEditDate(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case outline-none focus:border-indigo-500" />
+              <input type="date" required value={editDate} onChange={event => setEditDate(event.target.value)} className="field-compact mt-1 w-full font-normal normal-case" />
             </label>
             <label className="text-xs font-bold uppercase text-slate-500">
               {t('Time')}
-              <input type="time" required value={editTime} onChange={event => setEditTime(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case outline-none focus:border-indigo-500" />
+              <input type="time" required value={editTime} onChange={event => setEditTime(event.target.value)} className="field-compact mt-1 w-full font-normal normal-case" />
             </label>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={handleCancelEdit} className="rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">{t('Cancel')}</button>
-            <button type="submit" className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t('Save')}</button>
+            <button type="button" onClick={handleCancelEdit} className="button-secondary">{t('Cancel')}</button>
+            <button type="submit" className="button-primary">{t('Save')}</button>
           </div>
         </form>
       </Modal>

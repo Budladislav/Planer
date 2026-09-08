@@ -31,7 +31,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
   return (
     <div className={`flex min-w-0 items-center gap-1.5 ${compact ? 'flex-nowrap overflow-hidden' : 'flex-wrap'} ${className}`}>
       {shift && (
-        <span className={`flex-shrink-0 rounded bg-indigo-50 font-semibold text-indigo-700 ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}>
+        <span className={`flex-shrink-0 rounded-lg bg-brand-50 font-semibold text-brand-700 ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}>
           {formatWorkShift(shift, language)}
         </span>
       )}
@@ -137,7 +137,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
             onChange={event => setDraft(event.target.value)}
             maxLength={240}
             rows={2}
-            className="w-full resize-none rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            className="field w-full resize-none"
             placeholder={t('Vacation, important goal, reminder…')}
           />
           <div className="flex items-center justify-between gap-2">
@@ -145,7 +145,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
             <button
               type="submit"
               disabled={!draft.trim()}
-              className="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="button-primary"
             >
               <Plus className="h-4 w-4" /> {t('Add note')}
             </button>
@@ -157,7 +157,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
             {t('Saved notes ({count})', { count: notes.length })}
           </div>
           {notes.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">
+            <div className="empty-state py-6">
               {t('No notes for this week yet.')}
             </div>
           ) : (
@@ -172,7 +172,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
                         onChange={event => setEditingText(event.target.value)}
                         maxLength={240}
                         rows={2}
-                        className="w-full resize-none rounded border border-amber-200 bg-white p-2 text-sm outline-none focus:border-amber-500"
+                        className="field-compact w-full resize-none"
                       />
                       <div className="flex justify-end gap-2">
                         <button
@@ -181,7 +181,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
                             setEditingId(null);
                             setEditingText('');
                           }}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white"
+                          className="button-secondary min-h-8 px-2 py-1 text-xs"
                         >
                           <X className="h-3.5 w-3.5" /> {t('Cancel')}
                         </button>
@@ -189,7 +189,7 @@ export const WeekNotesEditor: React.FC<WeekNotesEditorProps> = ({ week, onClose 
                           type="button"
                           onClick={() => saveEdit(note.id)}
                           disabled={!editingText.trim()}
-                          className="inline-flex items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                          className="button-primary min-h-8 px-2 py-1 text-xs"
                         >
                           <Save className="h-3.5 w-3.5" /> {t('Save')}
                         </button>

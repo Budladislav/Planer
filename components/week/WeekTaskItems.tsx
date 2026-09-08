@@ -13,6 +13,7 @@ import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
 import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
+import { TaskCard } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 
 type DayTaskItemProps = {
@@ -78,7 +79,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSaveEdit} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm space-y-3 text-sm">
+      <form onSubmit={handleSaveEdit} className="task-editor">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
@@ -92,7 +93,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
               }
             }}
-            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            className="field w-full min-h-[2.5rem] resize-none overflow-hidden"
             rows={1}
             autoFocus
           />
@@ -114,7 +115,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                   setEditWeek(`${nextYear}-W${week}`);
                 }
               }}
-              className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              className="field-compact w-20"
               placeholder={t('Year')}
             />
             <span className="self-center text-slate-400">-W</span>
@@ -139,7 +140,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
                 const week = String(num).padStart(2, '0');
                 setEditWeek(`${year}-W${week}`);
               }}
-              className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              className="field-compact w-16"
               placeholder={t('Week')}
             />
           </div>
@@ -148,11 +149,11 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="button-secondary"
             >
               {t('Cancel')}
             </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="submit" className="button-primary">
               {t('Save')}
             </button>
         </div>
@@ -161,8 +162,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
   }
 
   return (
-    <div
-      className="relative px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+    <TaskCard
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -216,7 +216,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             onTouchStart={(e) => {
               e.stopPropagation();
             }}
-            className={`px-2 py-1 bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 text-xs flex-shrink-0 ${
+            className={`button-subtle min-h-8 flex-shrink-0 px-2 py-1 text-xs ${
               showActions ? 'mt-0' : ''
             }`}
             title={t('Move')}
@@ -242,7 +242,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             e.stopPropagation();
             onDeleteConfirm(task.id);
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Delete')}
         >
           {t('Delete')}
@@ -252,7 +252,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             e.stopPropagation();
             setIsEditing(true);
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+          className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Edit')}
         >
           {t('Edit')}
@@ -264,13 +264,13 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
               plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
             });
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
+          className="button-success min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Mark Done')}
         >
           {t('Done')}
         </button>
       </div>
-    </div>
+    </TaskCard>
   );
 };
 
@@ -365,7 +365,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
+      <form onSubmit={handleSaveEdit} className="task-editor">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
           <textarea
@@ -379,7 +379,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
               }
             }}
-            className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none resize-none overflow-hidden min-h-[2.5rem]"
+            className="field w-full min-h-[2.5rem] resize-none overflow-hidden"
             rows={1}
             autoFocus
           />
@@ -401,7 +401,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                   setEditWeek(`${nextYear}-W${week}`);
                 }
               }}
-              className="w-20 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              className="field-compact w-20"
               placeholder={t('Year')}
             />
             <span className="self-center text-slate-400">-W</span>
@@ -426,7 +426,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
                 const week = String(num).padStart(2, '0');
                 setEditWeek(`${year}-W${week}`);
               }}
-              className="w-16 p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              className="field-compact w-16"
               placeholder={t('Week')}
             />
           </div>
@@ -435,11 +435,11 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="button-secondary"
             >
               {t('Cancel')}
             </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="submit" className="button-primary">
               {t('Save')}
             </button>
         </div>
@@ -448,8 +448,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
   }
 
   return (
-    <div
-      className="relative px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden text-sm"
+    <TaskCard
       onClick={() => {
         // Don't toggle actions if currently dragging or just finished dragging
         if (!isDragging && !wasDragging) {
@@ -507,7 +506,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             onTouchStart={(e) => {
               e.stopPropagation();
             }}
-            className={`px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded flex-shrink-0 ${
+            className={`button-subtle min-h-8 flex-shrink-0 px-2 py-1 text-xs ${
               showActions ? 'mt-0' : ''
             }`}
             title={t('Move')}
@@ -533,7 +532,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             e.stopPropagation();
             onDeleteConfirm(task.id);
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Delete')}
         >
           {t('Delete')}
@@ -543,7 +542,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             e.stopPropagation();
             setIsEditing(true);
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+          className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Edit')}
         >
           {t('Edit')}
@@ -554,13 +553,13 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
               plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) }, // Move to today when completed
             });
           }}
-          className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded hover:bg-green-100"
+          className="button-success min-h-8 px-2.5 py-1.5 text-xs"
           title={t('Mark Done')}
         >
           {t('Done')}
         </button>
       </div>
-    </div>
+    </TaskCard>
   );
 };
 
@@ -605,7 +604,7 @@ export const WeekTaskDropZone: React.FC<{
     <div
       ref={setNodeRef}
       data-container-id={id}
-      className={`${className} min-h-12 transition-colors ${isOver ? 'bg-indigo-50 ring-2 ring-indigo-200' : ''}`}
+      className={`${className} min-h-12 rounded-xl transition-colors ${isOver ? 'bg-brand-50 ring-2 ring-brand-100' : ''}`}
     >
       <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
         {children}

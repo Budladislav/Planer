@@ -123,7 +123,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
             onChange={event => setDraft(event.target.value)}
             maxLength={240}
             rows={2}
-            className="w-full resize-none rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            className="field w-full resize-none"
             placeholder={t('Reminder, context, plan…')}
           />
           <div className="flex items-center justify-between gap-2">
@@ -131,7 +131,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
             <button
               type="submit"
               disabled={!draft.trim()}
-              className="inline-flex items-center gap-1.5 rounded bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="button-primary"
             >
               <Plus className="h-4 w-4" /> {t('Add note')}
             </button>
@@ -141,7 +141,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
         <div className="border-t border-slate-100 pt-3">
           <div className="mb-2 text-xs font-bold uppercase text-slate-500">{t('Saved notes ({count})', { count: notes.length })}</div>
           {notes.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">
+            <div className="empty-state py-6">
               {t('No notes for this day yet.')}
             </div>
           ) : (
@@ -156,7 +156,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
                         onChange={event => setEditingText(event.target.value)}
                         maxLength={240}
                         rows={2}
-                        className="w-full resize-none rounded border border-sky-200 bg-white p-2 text-sm outline-none focus:border-sky-500"
+                        className="field-compact w-full resize-none"
                       />
                       <div className="flex justify-end gap-2">
                         <button
@@ -165,7 +165,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
                             setEditingId(null);
                             setEditingText('');
                           }}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white"
+                          className="button-secondary min-h-8 px-2 py-1 text-xs"
                         >
                           <X className="h-3.5 w-3.5" /> {t('Cancel')}
                         </button>
@@ -173,7 +173,7 @@ export const DayNotesEditor: React.FC<DayNotesEditorProps> = ({ date, onClose })
                           type="button"
                           onClick={() => saveEdit(note.id)}
                           disabled={!editingText.trim()}
-                          className="inline-flex items-center gap-1 rounded bg-sky-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                          className="button-primary min-h-8 px-2 py-1 text-xs"
                         >
                           <Save className="h-3.5 w-3.5" /> {t('Save')}
                         </button>

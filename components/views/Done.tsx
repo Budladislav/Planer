@@ -6,6 +6,7 @@ import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
+import { EmptyState, PageHeader, TaskCard } from '../ui/Primitives';
 import { RewardGradeMarker } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 export const DoneView: React.FC = () => {
@@ -127,7 +128,7 @@ export const DoneView: React.FC = () => {
 
     if (isEditing) {
       return (
-        <form onSubmit={handleSaveEdit} className="p-3 bg-white border-2 border-indigo-100 rounded-lg shadow-md space-y-3 text-sm">
+        <form onSubmit={handleSaveEdit} className="task-editor">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('Title')}</label>
             <input
@@ -135,7 +136,7 @@ export const DoneView: React.FC = () => {
               required
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none"
+              className="field w-full"
               autoFocus
             />
           </div>
@@ -143,11 +144,11 @@ export const DoneView: React.FC = () => {
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="button-secondary"
             >
               {t('Cancel')}
             </button>
-            <button type="submit" className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button type="submit" className="button-primary">
               {t('Save')}
             </button>
           </div>
@@ -156,8 +157,7 @@ export const DoneView: React.FC = () => {
     }
 
     return (
-      <div
-        className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-full max-w-full overflow-hidden"
+      <TaskCard
         onClick={() => setShowActions((prev) => !prev)}
       >
         <div className="flex items-center justify-between gap-2">
@@ -172,7 +172,7 @@ export const DoneView: React.FC = () => {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="px-2 py-1 bg-slate-100 text-slate-600 font-semibold rounded hover:bg-slate-200 text-xs flex-shrink-0"
+            className="button-secondary min-h-8 flex-shrink-0 px-2 py-1 text-xs"
             title={t('Edit')}
           >
             {t('Edit')}
@@ -187,7 +187,7 @@ export const DoneView: React.FC = () => {
         >
           <button
             onClick={() => handleDelete(task.id)}
-            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded hover:bg-red-100"
+            className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
             title={t('Delete')}
           >
             {t('Delete')}
@@ -195,35 +195,30 @@ export const DoneView: React.FC = () => {
           {canUndo && (
             <button
               onClick={() => handleUndo(task.id)}
-              className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100"
+              className="button-subtle min-h-8 px-2.5 py-1.5 text-xs"
               title={t('Mark as todo')}
             >
               {t('Undone')}
             </button>
           )}
         </div>
-      </div>
+      </TaskCard>
     );
   };
 
   return (
     <>
-    <div className="max-w-3xl mx-auto">
+    <div className="page-container">
       {/* Header - Centered */}
-      <div className="text-center mb-3">
-        <h2 className="text-3xl font-bold text-slate-900">{t('Completed Tasks')}</h2>
-        <p className="text-slate-500">
-          {t('Completed tasks: {count}', { count: doneTasks.length })}
-        </p>
-      </div>
+      <PageHeader title={t('Completed Tasks')} subtitle={t('Completed tasks: {count}', { count: doneTasks.length })} />
 
       {/* Tasks List - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {doneTasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl w-full">
+            <EmptyState className="py-12">
               <p className="text-slate-400 font-medium">{t('No completed tasks yet')}</p>
-            </div>
+            </EmptyState>
           </div>
         ) : (
           <div className="space-y-4">
@@ -232,10 +227,10 @@ export const DoneView: React.FC = () => {
               .map(([date, tasks]) => {
                 const isExpanded = expandedDates.has(date);
                 return (
-                  <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div key={date} className="surface-card shadow-none">
                     <button
                       onClick={() => toggleDate(date)}
-                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 transition-colors text-left"
+                      className="disclosure-button px-3 py-2"
                     >
                       <div className="flex items-center gap-3 flex-1">
                         {isExpanded ? (
@@ -271,18 +266,18 @@ export const DoneView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom */}
-      <form onSubmit={handleQuickAdd} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
+      <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input 
             type="text" 
             value={quickAdd}
             onChange={e => setQuickAdd(e.target.value)}
             placeholder={t('Add a completed task...')}
-            className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
+            className="field min-w-0 flex-1"
           />
           <button 
             type="submit" 
-            className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+            className="composer-submit"
             title={t('Add task')}
           >
             <Plus className="w-6 h-6" />
@@ -297,11 +292,11 @@ export const DoneView: React.FC = () => {
           value={quickAdd}
           onChange={e => setQuickAdd(e.target.value)}
           placeholder={t('Add a completed task...')}
-          className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
+          className="field min-w-0 flex-1"
         />
         <button 
           type="submit" 
-          className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+          className="composer-submit"
           title={t('Add task')}
         >
           <Plus className="w-6 h-6" />

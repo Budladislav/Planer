@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
+import { EmptyState, PageHeader } from '../ui/Primitives';
 
 const toDateInputValue = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -95,7 +96,7 @@ export const InboxView: React.FC = () => {
     const isEditing = editingCaptureId === item.id;
 
     return (
-      <article key={item.id} className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+      <article key={item.id} className="task-card py-3">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             {isEditing ? (
@@ -109,7 +110,7 @@ export const InboxView: React.FC = () => {
                   if (event.key === 'Escape') setEditingCaptureId(null);
                 }}
                 aria-label={`${t('Edit title')}: ${item.text}`}
-                className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
+                className="field-compact w-full font-medium"
               />
             ) : (
               <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
@@ -125,7 +126,7 @@ export const InboxView: React.FC = () => {
                   if (createdAt) dispatch({ type: 'UPDATE_CAPTURE_CREATED_AT', payload: { id: item.id, createdAt } });
                 }}
                 aria-label={t('Creation date for {title}', { title: item.text })}
-                className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
               />
             </label>
           </div>
@@ -166,22 +167,19 @@ export const InboxView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="page-container">
       {/* Header - Centered */}
-      <div className="text-center mb-3">
-        <h2 className="text-3xl font-bold text-slate-900">{t('I wish')}</h2>
-        <p className="text-slate-500">{t('Capture everything. Process later.')}</p>
-      </div>
+      <PageHeader title={t('I wish')} subtitle={t('Capture everything. Process later.')} />
 
       {/* Content - with bottom padding for fixed form */}
       <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
         {completedCaptures.length > 0 && (
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <section className="surface-card">
             <button
               type="button"
               onClick={() => setCompletedExpanded(value => !value)}
               aria-expanded={completedExpanded}
-              className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-slate-50"
+              className="disclosure-button py-3"
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" />
@@ -212,7 +210,7 @@ export const InboxView: React.FC = () => {
                               if (event.key === 'Escape') setEditingCaptureId(null);
                             }}
                             aria-label={`${t('Edit title')}: ${item.text}`}
-                            className="w-full rounded border border-indigo-300 px-2 py-1 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="field-compact w-full font-medium"
                           />
                         ) : (
                           <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
@@ -234,7 +232,7 @@ export const InboxView: React.FC = () => {
                                 }
                               }}
                               aria-label={t('Creation date for {title}', { title: item.text })}
-                              className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                              className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
                             />
                           </label>
                           <label className="flex items-center gap-1">
@@ -254,7 +252,7 @@ export const InboxView: React.FC = () => {
                                 }
                               }}
                               aria-label={t('Realized date for {title}', { title: item.text })}
-                              className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
+                              className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
                             />
                           </label>
                           <span className="basis-full font-medium text-emerald-600">
@@ -300,10 +298,10 @@ export const InboxView: React.FC = () => {
         )}
 
         {newCaptures.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
+          <EmptyState>
             <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-2" />
             <p className="text-slate-400 font-medium">{t('No ideas waiting to be processed')}</p>
-          </div>
+          </EmptyState>
         ) : (
           <div className="flex-1 space-y-3">
             {newCaptures.map(renderActiveWish)}
@@ -312,18 +310,18 @@ export const InboxView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom */}
-      <form onSubmit={handleCapture} className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-slate-50 border-t border-slate-200 z-20">
+      <form onSubmit={handleCapture} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input
             type="text"
             value={captureInput}
             onChange={(e) => setCaptureInput(e.target.value)}
             placeholder={t("What's on your mind?")}
-            className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow bg-white"
+            className="field min-w-0 flex-1"
           />
           <button 
             type="submit"
-            className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+            className="composer-submit"
             title={t('Add wish')}
           >
             <Plus className="w-6 h-6" />
@@ -338,11 +336,11 @@ export const InboxView: React.FC = () => {
           value={captureInput}
           onChange={(e) => setCaptureInput(e.target.value)}
           placeholder={t("What's on your mind?")}
-          className="flex-1 p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-shadow"
+          className="field min-w-0 flex-1"
         />
         <button 
           type="submit"
-          className="w-12 h-12 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+          className="composer-submit"
           title={t('Add wish')}
         >
           <Plus className="w-6 h-6" />

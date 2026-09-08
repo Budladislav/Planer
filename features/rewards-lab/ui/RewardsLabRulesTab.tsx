@@ -97,7 +97,7 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
         <div className="flex gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
           <div>
@@ -109,13 +109,13 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <section className="section-card bg-slate-50 p-4 shadow-none">
         <div className="flex items-start gap-3">
-          <Dice5 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
+          <Dice5 className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-semibold text-slate-900">{t('Credits and protected key randomness')}</h2>
-              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+              <span className="rounded-full border border-brand-100 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
                 {t('Economy v{version} · since {date}', { version: state.economyVersion, date: economyDate })}
               </span>
             </div>
@@ -134,9 +134,9 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <section className="section-card p-4">
         <div className="flex items-start gap-3">
-          <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+          <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold text-slate-900">{t('Key drop chances')}</h2>
             <p className="mt-1 text-sm text-slate-600">{t('At most one key drops per task. After five misses the Common chance grows; after seven misses the eighth attempt guarantees a Common key.')}</p>
@@ -151,7 +151,7 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <section className="section-card p-4">
         <div className="flex items-center gap-2">
           <Settings2 className="h-5 w-5 text-slate-500" aria-hidden="true" />
           <h2 className="font-semibold text-slate-900">{t('Preferences')}</h2>
@@ -180,16 +180,16 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
             type="checkbox"
             checked={state.animationsEnabled}
             onChange={(event) => runtime.updateAnimations(event.target.checked)}
-            className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
           />
         </label>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
+      <section className="surface-card shadow-none">
         <button
           type="button"
           onClick={() => setAdvancedOpen((value) => !value)}
-          className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+          className="disclosure-button px-4 py-3"
           aria-expanded={advancedOpen}
         >
           <span>

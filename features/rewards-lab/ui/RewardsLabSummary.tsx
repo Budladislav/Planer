@@ -22,7 +22,7 @@ const ResultPeriod = ({ label, summary, currencyName }: {
 }) => {
   const { t } = useI18n();
   return (
-    <div className="rounded-lg bg-white p-3">
+    <div className="rounded-xl bg-white p-3">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-xs font-semibold text-slate-600">{label}</p>
         <p className="text-lg font-bold tabular-nums text-slate-900">+{summary.amount} <span className="text-xs font-medium text-slate-400">{currencyName}</span></p>
@@ -65,12 +65,12 @@ export const RewardsLabSummary = ({
 
   return (
     <>
-      <section className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4">
+      <section className="rounded-2xl border border-brand-100 bg-brand-50/70 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{t('Available balance')}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{t('Available balance')}</p>
             <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-3xl font-bold text-slate-900">
-              <Coins className="h-6 w-6 text-indigo-500" />
+              <Coins className="h-6 w-6 text-brand-500" />
               <span className="break-all">{balance.toLocaleString(locale)}</span>
               <span className="max-w-full break-all text-base font-medium text-slate-500">{currencyName}</span>
             </p>
@@ -81,14 +81,14 @@ export const RewardsLabSummary = ({
             </button>
           )}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-indigo-100 pt-3">
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-brand-100 pt-3">
           <div><p className="text-[11px] text-slate-500">{t('Earned total')}</p><p className="mt-0.5 font-semibold tabular-nums text-slate-800">{earned.toLocaleString(locale)}</p></div>
           <div><p className="text-[11px] text-slate-500">{t('Spent')}</p><p className="mt-0.5 font-semibold tabular-nums text-slate-800">{spent.toLocaleString(locale)}</p></div>
           <div><p className="text-[11px] text-slate-500">{t('Rewards received')}</p><p className="mt-0.5 font-semibold tabular-nums text-slate-800">{activeRedemptions.toLocaleString(locale)}</p></div>
         </div>
       </section>
       <RewardsKeyInventory state={state} onUpgrade={onUpgrade} onUndoUpgrade={onUndoUpgrade} />
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <section className="section-card bg-slate-50 p-3 shadow-none">
         <h2 className="px-1 text-sm font-semibold text-slate-800">{t('Current results')}</h2>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <ResultPeriod label={t('This week')} summary={results.week} currencyName={currencyName} />

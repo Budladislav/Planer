@@ -20,7 +20,7 @@ const ViewLoading: React.FC = () => {
   const { t } = useI18n();
   return (
     <div className="flex min-h-48 items-center justify-center" role="status" aria-live="polite">
-      <span className="text-sm font-medium text-slate-400">{t('Loading…')}</span>
+      <span className="text-sm font-medium text-muted">{t('Loading…')}</span>
     </div>
   );
 };

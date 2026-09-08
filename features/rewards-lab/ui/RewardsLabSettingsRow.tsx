@@ -79,9 +79,9 @@ export const RewardsLabSettingsRow: React.FC = () => {
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded(value => !value)}
-        className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"
+        className="settings-row"
       >
-        <Dice5 className="h-5 w-5 flex-shrink-0 text-violet-500" />
+        <Dice5 className="h-5 w-5 flex-shrink-0 text-brand-500" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold text-slate-800">{t('Rewards Lab')}</h3>
@@ -125,7 +125,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                   type="button"
                   disabled={busy}
                   onClick={() => void withRuntime(runtime => runtime.openLab())}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700"
+                  className="button-primary min-h-8 px-2.5 py-1.5 text-xs"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   {t('Open Rewards Lab')}
@@ -134,14 +134,14 @@ export const RewardsLabSettingsRow: React.FC = () => {
                   type="button"
                   disabled={busy}
                   onClick={() => void withRuntime(runtime => runtime.disableKeepData())}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
                 >
                   {t('Disable, keep data')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmation('reset')}
-                  className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                  className="button-danger min-h-8 border border-red-200 bg-white px-2.5 py-1.5 text-xs"
                 >
                   {t('Reset experiment')}
                 </button>
@@ -151,7 +151,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                 type="button"
                 disabled={busy}
                 onClick={() => void withRuntime(runtime => runtime.disableKeepData())}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
               >
                 {t('Disable, keep data')}
               </button>
@@ -160,7 +160,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                 type="button"
                 disabled={snapshot.safeMode || busy}
                 onClick={() => setConfirmation('enable')}
-                className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="button-primary min-h-8 px-2.5 py-1.5 text-xs"
               >
                 {t('Enable Rewards Lab')}
               </button>
@@ -170,7 +170,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
               type="button"
               disabled={busy}
               onClick={() => setConfirmation('erase')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+              className="button-danger min-h-8 border border-red-200 bg-white px-2.5 py-1.5 text-xs"
             >
               <Trash2 className="h-3.5 w-3.5" />
               {t('Disable & erase')}
