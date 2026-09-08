@@ -1,6 +1,8 @@
 // Service Worker для MonoFocus Planner
 // Версия кэша - обновлять при изменении статики
-const STATIC_CACHE = 'monofocus-static-v4.3.0';
+const STATIC_CACHE = 'monofocus-static-v4.3.1';
+const STATIC_CACHE_PREFIX = 'monofocus-static-v';
+const RETAINED_VERSION_CACHES = 3;
 
 // Файлы для кэширования (статичные ресурсы)
 // Пути должны соответствовать base path из vite.config.ts
@@ -24,9 +26,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       console.log('[SW] Caching static assets');
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[SW] Failed to cache some assets:', err);
-      });
+      return cache.addAll(STATIC_ASSETS);
     })
   );
   // Активируем новый SW сразу, не дожидаясь закрытия всех вкладок
@@ -37,20 +37,36 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Удаляем старые кэши
-          if (cacheName !== STATIC_CACHE && cacheName.startsWith('monofocus-')) {
-            console.log('[SW] Deleting old cache:', cacheName);
+    caches.keys()
+      .then((cacheNames) => {
+        // Несколько предыдущих версий сохраняются намеренно: открытая вкладка
+        // может ещё запрашивать чанки из своего HTML во время обновления PWA.
+        const versionCaches = cacheNames
+          .filter(cacheName => cacheName.startsWith(STATIC_CACHE_PREFIX))
+          .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }));
+        const cachesToKeep = new Set([
+          STATIC_CACHE,
+          ...versionCaches.filter(cacheName => cacheName !== STATIC_CACHE).slice(0, RETAINED_VERSION_CACHES - 1),
+        ]);
+
+        return Promise.all(cacheNames.map((cacheName) => {
+          if (cacheName.startsWith(STATIC_CACHE_PREFIX) && !cachesToKeep.has(cacheName)) {
+            console.log('[SW] Deleting stale cache:', cacheName);
             return caches.delete(cacheName);
           }
-        })
-      );
-    })
+          return Promise.resolve(false);
+        }));
+      })
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => Promise.all(clients.map((client) => {
+        // Оживляет вкладку, которая успела получить старый HTML со ссылкой на
+        // уже удалённый сервером хешированный JS-файл.
+        return 'navigate' in client
+          ? client.navigate(client.url).catch(() => null)
+          : Promise.resolve(null);
+      })))
   );
-  // Берем контроль над всеми страницами сразу
-  return self.clients.claim();
 });
 
 // Перехват запросов
@@ -63,29 +79,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Стратегия: Network First для JS/CSS (чтобы всегда получать свежие версии), Cache First для остальной статики
   if (request.method === 'GET') {
     const isJS = request.url.includes('.js') || request.destination === 'script';
     const isCSS = request.url.includes('.css') || request.destination === 'style';
+    const isNavigation = request.mode === 'navigate' || request.destination === 'document';
+
+    if (isNavigation) {
+      // HTML всегда запрашиваем заново, иначе старый документ может ссылаться
+      // на хешированные assets, которых уже нет после нового Pages-деплоя.
+      event.respondWith(
+        fetch(request, { cache: 'no-cache' })
+          .then((response) => {
+            if (!response.ok) throw new Error(`Navigation failed with ${response.status}`);
+            const responseToCache = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(BASE_PATH + 'index.html', responseToCache));
+            return response;
+          })
+          .catch(() => caches.match(BASE_PATH + 'index.html'))
+      );
+      return;
+    }
     
     if (isJS || isCSS) {
       // Network First для JS/CSS - всегда проверяем сеть сначала
       event.respondWith(
         fetch(request)
-          .then((response) => {
-            // Кэшируем только успешные ответы
-            if (response.status === 200) {
-              const responseToCache = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => {
-                cache.put(request, responseToCache);
-              });
+          .then(async (response) => {
+            if (!response.ok) {
+              // 404 после нового деплоя тоже должен считаться сетевым сбоем:
+              // предыдущий хешированный чанк всё ещё лежит в старом кэше.
+              return (await caches.match(request)) ?? response;
             }
+            const responseToCache = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, responseToCache));
             return response;
           })
-          .catch(() => {
-            // Если сеть недоступна - используем кэш
-            return caches.match(request);
-          })
+          .catch(() => caches.match(request))
       );
     } else {
       // Cache First для остальной статики (HTML, изображения и т.д.)

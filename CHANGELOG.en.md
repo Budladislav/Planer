@@ -2,6 +2,22 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [4.3.1] — 08.09.2026 — Reliable PWA updates
+
+### Fixed
+
+- The installed PWA no longer remains blank when stale HTML references a JavaScript asset removed by a newer deployment. Failed network responses for JavaScript and CSS now correctly fall back to a cached copy.
+- The new service worker claims and reloads an open PWA once after activation, recovering the application without reinstallation.
+
+### Changed
+
+- The application document now uses network-first loading with an offline fallback, while service-worker registration lives in stable page bootstrap code outside the hashed application bundle.
+- The three latest available application caches are retained for safe release transitions; older versions are removed automatically.
+
+### Safety
+
+- This repair changes PWA file delivery only. Tasks, events, settings, and the separate Rewards Lab data are neither read nor modified nor reset.
+
 ## [4.3.0] — 08.09.2026 — Planner without a timer
 
 ### Removed

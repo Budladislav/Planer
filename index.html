@@ -10,6 +10,17 @@
 </head>
   <body>
     <div id="root"></div>
+  <script>
+    // This bootstrap deliberately lives outside the hashed app bundle. It can
+    // update a stale installed PWA even when that bundle no longer exists on
+    // the server after a deployment.
+    if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      navigator.serviceWorker
+        .register('/Planer/sw.js')
+        .then((registration) => registration.update())
+        .catch((error) => console.warn('[SW] Service Worker registration failed:', error));
+    }
+  </script>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
