@@ -124,6 +124,7 @@ const RU: Record<string, string> = {
   'Done yesterday': 'Выполнено вчера',
   'Mark Done': 'Завершить',
   '{todo} left • {done} done': 'Осталось: {todo} • Выполнено: {done}',
+  'I want...': 'Я хочу...',
   'No pending tasks for today. Check your Week plan?': 'На сегодня незавершённых задач нет. Заглянуть в план недели?',
   'Completed today ({count})': 'Выполнено сегодня: {count}',
   'No tasks completed today yet.': 'Сегодня пока нет выполненных задач.',

@@ -143,7 +143,7 @@ const SortableTaskItem: React.FC<{
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <RewardGradeIncrementButton taskId={task.id} />
-          <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-700 ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+          <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-950 ${task.status === 'done' ? 'line-through' : ''}`}>
             {task.title}
           </span>
         </div>
@@ -208,7 +208,7 @@ const SortableTaskItem: React.FC<{
       >
         {showActions && (
           <div className="space-y-2">
-            <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-700">{task.title}</p>
+            <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
@@ -401,18 +401,26 @@ export const TodayView: React.FC = () => {
   return (
     <>
       <div className="page-container">
-          <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2">
+          <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 lg:pr-0">
             <DayMetaBadges
               date={todayStr}
               onEdit={() => setNotesEditorDate(todayStr)}
-              maxNotes={2}
-              className="justify-center"
+              showNotes={false}
             />
             <p className="text-sm text-muted">
               {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
             </p>
             <RewardsBalancePill />
           </div>
+          {(state.dayNotes[todayStr]?.length ?? 0) > 0 && (
+            <DayMetaBadges
+              date={todayStr}
+              onEdit={() => setNotesEditorDate(todayStr)}
+              maxNotes={2}
+              showEditor={false}
+              className="mb-2 justify-center"
+            />
+          )}
 
           {/* Tasks List - with bottom padding for fixed form */}
           <div className="space-y-3 pb-20 lg:pb-4">
@@ -477,7 +485,7 @@ export const TodayView: React.FC = () => {
                       <RewardGradeSurface taskId={task.id} />
                       <RewardGradeMarker taskId={task.id} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
+                        <div className="truncate text-sm font-medium text-slate-950 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">
                           {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                         </div>

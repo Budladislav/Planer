@@ -12,6 +12,9 @@ interface WeekMetaBadgesProps {
   maxNotes?: number;
   compact?: boolean;
   className?: string;
+  showNotes?: boolean;
+  showEditor?: boolean;
+  showShift?: boolean;
 }
 
 export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
@@ -20,6 +23,9 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
   maxNotes = 2,
   compact = false,
   className = '',
+  showNotes = true,
+  showEditor = true,
+  showShift = true,
 }) => {
   const { state } = useAppStore();
   const { language, t } = useI18n();
@@ -30,12 +36,12 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
 
   return (
     <div className={`flex min-w-0 items-center gap-1.5 ${compact ? 'flex-nowrap overflow-hidden' : 'flex-wrap'} ${className}`}>
-      {shift && (
+      {showShift && shift && (
         <span className={`flex-shrink-0 rounded-lg bg-brand-50 font-semibold text-brand-700 ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}>
           {formatWorkShift(shift, language)}
         </span>
       )}
-      {visibleNotes.map(note => (
+      {showNotes && visibleNotes.map(note => (
         <button
           key={note.id}
           type="button"
@@ -49,7 +55,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
           <span className="truncate">{note.text}</span>
         </button>
       ))}
-      {hiddenCount > 0 && (
+      {showNotes && hiddenCount > 0 && (
         <button
           type="button"
           onClick={onEdit}
@@ -59,7 +65,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
           +{hiddenCount}
         </button>
       )}
-      {onEdit && (
+      {showEditor && onEdit && (
         <button
           type="button"
           onClick={onEdit}

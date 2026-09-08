@@ -88,6 +88,10 @@
     @apply border-slate-300 shadow-md;
   }
 
+  .task-card > :not(.reward-grade-surface) {
+    @apply relative z-[1];
+  }
+
   .task-editor {
     @apply space-y-3 rounded-xl border border-brand-100 bg-surface p-3 text-sm shadow-quiet;
   }

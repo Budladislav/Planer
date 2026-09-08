@@ -196,7 +196,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         >
           <RewardGradeIncrementButton taskId={task.id} />
           <span
-            className={`min-w-0 flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+            className={`min-w-0 flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
             title={task.title}
           >
             {task.title}
@@ -259,7 +259,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
       >
         {showActions && (
           <div className="space-y-2">
-            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
@@ -478,7 +478,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         >
           <RewardGradeIncrementButton taskId={task.id} />
           <span
-            className={`min-w-0 max-w-full flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+            className={`min-w-0 max-w-full flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
           >
             {task.title}
           </span>
@@ -540,7 +540,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
       >
         {showActions && (
           <div className="space-y-2">
-            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>

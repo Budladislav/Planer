@@ -6,6 +6,7 @@ import { formatDateReadable, getTodayString, getWeekString } from '../../utils';
 import { Modal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
+import { MonthMetaBadges, MonthNotesEditor } from '../MonthNotes';
 import { useAppStore } from '../../store';
 import { isFirstToSecondTransitionDay } from '../../week-shifts';
 import { useI18n } from '../../i18n';
@@ -39,6 +40,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editingWeek, setEditingWeek] = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [editingMonth, setEditingMonth] = useState<string | null>(null);
   const [pastWeeksExpanded, setPastWeeksExpanded] = useState(false);
   const today = getTodayString();
   const weeks = useMemo(() => buildEventCalendarMonth(month), [month]);
@@ -148,7 +150,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   return (
     <>
       <section className="surface-card">
-        <div className="flex items-center justify-between border-b border-line px-2 py-2 sm:px-3">
+        <div className="flex min-h-10 items-center justify-center gap-1 border-b border-line px-12 py-2 lg:px-3">
           <button
             type="button"
             onClick={() => onMonthChange(shiftMonth(month, -1))}
@@ -157,7 +159,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="flex min-w-0 items-center gap-2 font-semibold text-slate-700">
+          <div className="flex min-w-0 items-center gap-2 px-1 font-semibold text-slate-700">
             <CalendarDays className="h-4 w-4 flex-shrink-0 text-amber-600" />
             <span className="truncate">{monthLabel}</span>
           </div>
@@ -169,6 +171,14 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
           >
             <ChevronRight className="h-5 w-5" />
           </button>
+        </div>
+        <div className="flex min-h-9 items-center justify-center border-b border-line px-2 py-1.5">
+          <MonthMetaBadges
+            month={month}
+            onEdit={() => setEditingMonth(month)}
+            maxNotes={3}
+            className="justify-center"
+          />
         </div>
 
         <div className="grid grid-cols-7 border-b border-line bg-slate-50">
@@ -239,6 +249,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
 
       <WeekNotesEditor week={editingWeek} onClose={() => setEditingWeek(null)} />
       <DayNotesEditor date={editingDate} onClose={() => setEditingDate(null)} />
+      <MonthNotesEditor month={editingMonth} onClose={() => setEditingMonth(null)} />
     </>
   );
 };

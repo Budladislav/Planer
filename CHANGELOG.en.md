@@ -18,6 +18,9 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Day, week, and month task cards are aligned: grade promotion and primary actions are available as compact icons while collapsed, and expansion is reserved for the detailed grade selector.
 - Repeated page titles and explanatory subtitles are removed on both mobile and desktop; Today, Week, and Month retain only useful counters.
 - Calendar now precedes Month in the primary navigation, and note controls for every period use a notebook-with-pencil icon.
+- Today, Week, and Month now share one context row: the note control comes first, followed by Left / Done counts and the credits balance; existing notes move to their own row below.
+- Mobile content now leaves a safe area for Settings; I Wish gains a compact context label, and calendar arrows sit close to the month name.
+- Month notes are visible and editable directly above the event-calendar grid.
 - The current grade indicator is merged into the promotion button. Completed tasks retain their grade color and show the reward actually earned.
 - Grade colors are now consistent: Common stays neutral, Uncommon is green, Rare is blue, Legendary is amber, and Mythic is red.
 - Lazy-loaded screens and the local-first architecture remain intact; no new UI framework or external fonts were added.
@@ -26,6 +29,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - Dialogs now trap keyboard focus, close with Escape, and restore focus to the element that opened them.
 - Unified inconsistent spacing, radii, focus states, and empty-state treatments that had accumulated across screens.
+- Grade tint now stays beneath card content instead of muting it, and task titles use a consistently dark, high-contrast color.
 
 ### Safety
 

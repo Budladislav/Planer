@@ -11,6 +11,7 @@ import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import {
   DndContext,
   closestCenter,
@@ -467,7 +468,7 @@ export const WeekView: React.FC = () => {
               <RewardGradeSurface taskId={task.id} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
               <RewardGradeMarker taskId={task.id} />
-              <span className="min-w-0 flex-1 truncate text-slate-500 line-through" title={task.title}>{task.title}</span>
+              <span className="min-w-0 flex-1 truncate text-slate-950 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <RewardCompletionMeta taskId={task.id} />
               <button
@@ -532,16 +533,28 @@ export const WeekView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2 px-12 lg:px-0">
+      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 lg:pr-0">
         <WeekMetaBadges
           week={currentWeek}
           onEdit={() => setNotesEditorWeek(currentWeek)}
-          className="justify-center"
+          showNotes={false}
+          showShift={false}
         />
         <p className="text-sm text-muted">
           {t('{todo} left • {done} done', { todo: todoWeekTasks.length, done: doneWeekTasks.length })}
         </p>
+        <RewardsBalancePill />
       </div>
+      {((state.weekNotes[currentWeek]?.length ?? 0) > 0
+        || Boolean(state.workShiftSettings.baseWeek)
+        || Boolean(state.workShiftSettings.overrides[currentWeek])) && (
+        <WeekMetaBadges
+          week={currentWeek}
+          onEdit={() => setNotesEditorWeek(currentWeek)}
+          showEditor={false}
+          className="mb-2 justify-center"
+        />
+      )}
 
       {/* Content - with bottom padding for fixed forms */}
       <div className="pb-48 lg:pb-16 min-h-[60vh] flex flex-col">

@@ -11,6 +11,8 @@ interface DayMetaBadgesProps {
   maxNotes?: number;
   compact?: boolean;
   className?: string;
+  showNotes?: boolean;
+  showEditor?: boolean;
 }
 
 export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
@@ -19,6 +21,8 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
   maxNotes = 1,
   compact = false,
   className = '',
+  showNotes = true,
+  showEditor = true,
 }) => {
   const { state } = useAppStore();
   const { t } = useI18n();
@@ -28,7 +32,7 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
 
   return (
     <div className={`flex min-w-0 flex-wrap items-center gap-1.5 ${className}`}>
-      {visibleNotes.map(note => (
+      {showNotes && visibleNotes.map(note => (
         <button
           key={note.id}
           type="button"
@@ -42,7 +46,7 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
           <span className="truncate">{note.text}</span>
         </button>
       ))}
-      {hiddenCount > 0 && (
+      {showNotes && hiddenCount > 0 && (
         <button
           type="button"
           onClick={onEdit}
@@ -52,7 +56,7 @@ export const DayMetaBadges: React.FC<DayMetaBadgesProps> = ({
           +{hiddenCount}
         </button>
       )}
-      {onEdit && (
+      {showEditor && onEdit && (
         <button
           type="button"
           onClick={onEdit}

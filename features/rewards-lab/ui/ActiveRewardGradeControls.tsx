@@ -66,7 +66,7 @@ export const ActiveRewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId 
   if (grade === 'common') return null;
   return (
     <span
-      className={`pointer-events-none absolute inset-0 rounded-[inherit] border-l-[3px] ${GRADE_SURFACES[grade]}`}
+      className={`reward-grade-surface pointer-events-none absolute inset-0 rounded-[inherit] border-l-[3px] ${GRADE_SURFACES[grade]}`}
       aria-hidden="true"
     />
   );

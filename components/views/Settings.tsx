@@ -184,7 +184,7 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-8">
-      <section>
+      <section className="mr-12 lg:mr-0">
         <p className="settings-group-label">{t('Planning')}</p>
         <div className="surface-card divide-y divide-line">
          <button

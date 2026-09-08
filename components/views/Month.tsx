@@ -36,6 +36,7 @@ import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
+import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -90,7 +91,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
           title={t('Drag task')}
         >
           <RewardGradeIncrementButton taskId={task.id} />
-          <span className={`min-w-0 flex-1 text-slate-700 ${showActions ? 'sr-only' : 'truncate'}`}>
+          <span className={`min-w-0 flex-1 text-slate-950 ${showActions ? 'sr-only' : 'truncate'}`}>
             {task.title}
           </span>
           {task.plan.day && (
@@ -123,7 +124,7 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
       >
         {showActions && (
           <div className="space-y-2">
-            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
@@ -180,6 +181,10 @@ export const MonthView: React.FC = () => {
   );
   const todoTasks = useMemo(
     () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningMonth(task) === currentMonth),
+    [currentMonth, state.tasks],
+  );
+  const doneTasks = useMemo(
+    () => state.tasks.filter(task => task.status === 'done' && getTaskPlanningMonth(task) === currentMonth),
     [currentMonth, state.tasks],
   );
 
@@ -392,10 +397,20 @@ export const MonthView: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-center gap-2 text-sm text-muted">
-        <span>{t('{count} planned tasks', { count: todoTasks.length })}</span>
-        <MonthMetaBadges month={currentMonth} onEdit={() => setNotesEditorMonth(currentMonth)} maxNotes={2} />
+      <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 pr-12 text-sm text-muted lg:pr-0">
+        <MonthMetaBadges month={currentMonth} onEdit={() => setNotesEditorMonth(currentMonth)} showNotes={false} />
+        <span>{t('{todo} left • {done} done', { todo: todoTasks.length, done: doneTasks.length })}</span>
+        <RewardsBalancePill />
       </div>
+      {(state.monthNotes[currentMonth]?.length ?? 0) > 0 && (
+        <MonthMetaBadges
+          month={currentMonth}
+          onEdit={() => setNotesEditorMonth(currentMonth)}
+          maxNotes={2}
+          showEditor={false}
+          className="mb-2 justify-center"
+        />
+      )}
 
       <div className="period-switcher">
         <button type="button" onClick={() => changeMonth(-1)} className="icon-button" title={t('Previous month')}>

@@ -160,7 +160,7 @@ export const DoneView: React.FC = () => {
         <RewardGradeSurface taskId={task.id} />
         <div className="flex min-w-0 items-start gap-2">
           <RewardGradeMarker taskId={task.id} />
-          <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-500 line-through">
+          <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-950 line-through">
             {task.title}
           </span>
         </div>
@@ -201,7 +201,7 @@ export const DoneView: React.FC = () => {
     <>
     <div className="page-container">
       {/* Tasks List - with bottom padding for fixed form */}
-      <div className="pb-20 lg:pb-4 space-y-4 min-h-[60vh] flex flex-col">
+      <div className="flex min-h-[60vh] flex-col space-y-4 pb-20 pt-11 lg:pb-4 lg:pt-0">
         {doneTasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <EmptyState className="py-12">
