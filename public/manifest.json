@@ -1,13 +1,13 @@
 {
-  "name": "MonoFocus Planner",
-  "short_name": "MonoFocus",
+  "name": "Takt Planner",
+  "short_name": "Takt",
   "description": "A minimalist, high-performance planner combining GTD capture, month-to-day planning, events, and local-first task history.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#4f46e5",
-  "background_color": "#f9fafb",
+  "theme_color": "#171b26",
+  "background_color": "#f6f8fb",
   "icons": [
     {
       "src": "icon-192.png",
