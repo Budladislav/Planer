@@ -2,6 +2,20 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [4.2.1] — 08.09.2026 — Colored keys and quick grade promotion
+
+### Added
+
+- Collapsed Today, Week, and Month cards now have a compact one-step grade promotion button. It leaves the card collapsed and previews the next grade's color; the full five-grade selector remains available in expanded actions.
+
+### Changed
+
+- Common, Uncommon, Rare, Legendary, and Mythic key icons now use their grade colors in the inventory, transaction history, and drop notification.
+
+### Safety
+
+- This patch changes presentation and the quick grade-selection path only. The economy version, probabilities, accumulated credits, keys, and transaction history remain unchanged.
+
 ## [4.2.0] — 07.09.2026 — Reward keys and Economy v3
 
 ### Added
