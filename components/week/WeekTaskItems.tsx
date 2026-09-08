@@ -6,6 +6,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ArrowRightLeft, Check, Pencil, X } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
@@ -13,7 +14,7 @@ import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
 import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
-import { TaskCard } from '../ui/Primitives';
+import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 
 type DayTaskItemProps = {
@@ -171,9 +172,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
       }}
     >
       <RewardGradeSurface taskId={task.id} />
-      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'}`}>
+      <div className="flex items-center justify-between gap-2">
         <div 
-          className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
+          className="flex flex-1 min-w-0 items-center gap-2"
           {...(dragListeners || {})}
           onTouchStart={(e) => {
             if (dragListeners) {
@@ -194,20 +195,18 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           }}
         >
           <RewardGradeMarker taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} />
           <span
-            className={`block text-sm flex-1 min-w-0 ${
-              showActions
-                ? 'break-words whitespace-normal'
-                : 'truncate whitespace-nowrap overflow-hidden'
-            } ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+            className={`min-w-0 flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
             title={task.title}
           >
             {task.title}
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
-          <button
+          <TaskIconButton
+            label={t('Move')}
+            tone="primary"
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -216,59 +215,57 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             onTouchStart={(e) => {
               e.stopPropagation();
             }}
-            className={`button-subtle min-h-8 flex-shrink-0 px-2 py-1 text-xs ${
-              showActions ? 'mt-0' : ''
-            }`}
-            title={t('Move')}
           >
-            {t('Move')}
-          </button>
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Delete')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Edit task')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Mark as done')}
+            tone="success"
+            onClick={(e) => {
+              e.stopPropagation();
+              completeTask(dispatch, task, {
+                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
+              });
+            }}
+          >
+            <Check className="h-4 w-4" />
+          </TaskIconButton>
         </div>
       </div>
 
       <div
-        className={`flex flex-wrap items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-2 opacity-100 max-h-56' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`overflow-hidden px-4 transition-all duration-200 ${
+          showActions ? 'mt-2 max-h-96 opacity-100' : 'mt-0 max-h-0 opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {showActions && (
-          <div className="w-full">
-            <RewardGradeSelector taskId={task.id} compact />
+          <div className="space-y-2">
+            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <div className="mx-auto w-full max-w-sm">
+              <RewardGradeSelector taskId={task.id} compact />
+            </div>
           </div>
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteConfirm(task.id);
-          }}
-          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Delete')}
-        >
-          {t('Delete')}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(true);
-          }}
-          className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Edit')}
-        >
-          {t('Edit')}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            completeTask(dispatch, task, {
-              plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
-            });
-          }}
-          className="button-success min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Mark Done')}
-        >
-          {t('Done')}
-        </button>
       </div>
     </TaskCard>
   );
@@ -457,9 +454,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
       }}
     >
       <RewardGradeSurface taskId={task.id} />
-      <div className={`flex justify-between gap-2 ${showActions ? 'items-start' : 'items-center'} min-w-0`}>
+      <div className="flex min-w-0 items-center justify-between gap-2">
         <div 
-          className={`flex gap-2 flex-1 min-w-0 ${showActions ? 'items-start' : 'items-center'}`}
+          className="flex flex-1 min-w-0 items-center gap-2"
           {...(dragListeners || {})}
           onTouchStart={(e) => {
             if (dragListeners) {
@@ -481,23 +478,17 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           }}
         >
           <RewardGradeMarker taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} />
           <span
-            className={`block text-sm flex-1 min-w-0 max-w-full ${
-              showActions
-                ? 'break-words whitespace-normal'
-                : 'truncate whitespace-nowrap overflow-hidden'
-            } ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
-            style={{
-              wordBreak: showActions ? 'break-word' : 'normal',
-              overflowWrap: showActions ? 'break-word' : 'normal',
-            }}
+            className={`min-w-0 max-w-full flex-1 text-sm ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
           >
             {task.title}
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
-          <button
+          <TaskIconButton
+            label={t('Move')}
+            tone="primary"
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -506,58 +497,57 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             onTouchStart={(e) => {
               e.stopPropagation();
             }}
-            className={`button-subtle min-h-8 flex-shrink-0 px-2 py-1 text-xs ${
-              showActions ? 'mt-0' : ''
-            }`}
-            title={t('Move')}
           >
-            {t('Move')}
-          </button>
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Delete')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Edit task')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Mark as done')}
+            tone="success"
+            onClick={(e) => {
+              e.stopPropagation();
+              completeTask(dispatch, task, {
+                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
+              });
+            }}
+          >
+            <Check className="h-4 w-4" />
+          </TaskIconButton>
         </div>
       </div>
 
       <div
-        className={`flex flex-wrap items-center justify-between px-4 gap-3 transition-all duration-200 ${
-          showActions ? 'mt-2 opacity-100 max-h-56' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`overflow-hidden px-4 transition-all duration-200 ${
+          showActions ? 'mt-2 max-h-96 opacity-100' : 'mt-0 max-h-0 opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {showActions && (
-          <div className="w-full">
-            <RewardGradeSelector taskId={task.id} compact />
+          <div className="space-y-2">
+            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <div className="mx-auto w-full max-w-sm">
+              <RewardGradeSelector taskId={task.id} compact />
+            </div>
           </div>
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteConfirm(task.id);
-          }}
-          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Delete')}
-        >
-          {t('Delete')}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(true);
-          }}
-          className="button-secondary min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Edit')}
-        >
-          {t('Edit')}
-        </button>
-        <button
-          onClick={() => {
-            completeTask(dispatch, task, {
-              plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) }, // Move to today when completed
-            });
-          }}
-          className="button-success min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Mark Done')}
-        >
-          {t('Done')}
-        </button>
       </div>
     </TaskCard>
   );

@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, GripVertical, Plus } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, X } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import {
@@ -34,7 +34,7 @@ import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
-import { PageHeader, TaskCard } from '../ui/Primitives';
+import { PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -82,59 +82,53 @@ const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove
     >
       <RewardGradeSurface taskId={task.id} />
       <div className="flex min-w-0 items-center gap-2">
-        <button
-          type="button"
+        <div
           {...attributes}
           {...listeners}
-          onClick={event => event.stopPropagation()}
-          className="icon-button-compact w-7 touch-none text-slate-300 hover:text-slate-500"
+          className="flex min-w-0 flex-1 touch-none items-center gap-2 cursor-grab active:cursor-grabbing"
           title={t('Drag task')}
         >
-          <GripVertical className="h-4 w-4" />
-        </button>
-        <RewardGradeMarker taskId={task.id} />
-        <span className={`min-w-0 flex-1 ${showActions ? 'break-words' : 'truncate'} text-slate-700`}>
-          {task.title}
-        </span>
-        {task.plan.day && (
-          <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-            {formatDateShort(task.plan.day).slice(0, 5)}
+          <RewardGradeMarker taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} />
+          <span className={`min-w-0 flex-1 text-slate-700 ${showActions ? 'sr-only' : 'truncate'}`}>
+            {task.title}
           </span>
-        )}
-        {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
-        <button
-          type="button"
-          onClick={event => {
-            event.stopPropagation();
-            onComplete(task.id);
-          }}
-          className="icon-button-compact bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-          title={t('Mark as done')}
-        >
-          <Check className="h-4 w-4" />
-        </button>
+          {task.plan.day && (
+            <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+              {formatDateShort(task.plan.day).slice(0, 5)}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <TaskIconButton label={t('Move')} tone="primary" onClick={event => { event.stopPropagation(); onMove(task.id); }}>
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton label={t('Delete')} tone="danger" onClick={event => { event.stopPropagation(); onDelete(task.id); }}>
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton label={t('Edit task')} onClick={event => { event.stopPropagation(); onEdit(task); }}>
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton label={t('Mark as done')} tone="success" onClick={event => { event.stopPropagation(); onComplete(task.id); }}>
+            <Check className="h-4 w-4" />
+          </TaskIconButton>
+        </div>
       </div>
 
       <div
-        className={`flex flex-wrap items-center justify-between gap-2 overflow-hidden px-2 transition-all ${
-          showActions ? 'mt-2 max-h-40 opacity-100' : 'max-h-0 opacity-0'
+        className={`overflow-hidden px-2 transition-all ${
+          showActions ? 'mt-2 max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}
         onClick={event => event.stopPropagation()}
       >
         {showActions && (
-          <div className="w-full">
-            <RewardGradeSelector taskId={task.id} compact />
+          <div className="space-y-2">
+            <p className="break-words text-sm leading-relaxed text-slate-700">{task.title}</p>
+            <div className="mx-auto w-full max-w-sm">
+              <RewardGradeSelector taskId={task.id} compact />
+            </div>
           </div>
         )}
-        <button type="button" onClick={() => onDelete(task.id)} className="button-danger min-h-8 px-2.5 py-1 text-xs">
-          {t('Delete')}
-        </button>
-        <button type="button" onClick={() => onEdit(task)} className="button-secondary min-h-8 px-2.5 py-1 text-xs">
-          {t('Edit')}
-        </button>
-        <button type="button" onClick={() => onMove(task.id)} className="button-subtle min-h-8 px-2.5 py-1 text-xs">
-          {t('Move')}
-        </button>
       </div>
     </TaskCard>
   );

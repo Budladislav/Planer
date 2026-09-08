@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { CalendarArrowDown, Check, ChevronDown, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { CalendarArrowDown, CalendarCheck2, Check, ChevronDown, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import { getDateString, getTodayString, generateId, formatDateReadable, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
@@ -33,7 +33,7 @@ import { RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, Rew
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader, TaskCard } from '../ui/Primitives';
+import { EmptyState, PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -139,88 +139,82 @@ const SortableTaskItem: React.FC<{
       <div
         {...attributes}
         {...listeners}
-        className={`flex gap-2 flex-1 min-w-0 cursor-grab active:cursor-grabbing touch-none ${
-          showActions ? 'items-start' : 'items-center'
-        }`}
+        className="flex flex-1 min-w-0 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <RewardGradeMarker taskId={task.id} />
-          <span className={`text-sm text-slate-700 font-medium ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+          <RewardGradeIncrementButton taskId={task.id} />
+          <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-700 ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
-          {showActions && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              className="-my-1 flex h-10 w-10 items-center justify-center rounded-xl text-slate-600"
-              title={t('Edit task')}
-              aria-label={t('Edit task')}
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 transition-colors hover:bg-slate-200">
-                <Pencil className="h-4 w-4" />
-              </span>
-            </button>
-          )}
-          <button
+          <TaskIconButton
+            label={t('Delete task')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Move this task to tomorrow')}
+            tone="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveTomorrow(task.id);
+            }}
+          >
+            <CalendarArrowDown className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Record this task as completed yesterday')}
+            tone="warning"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompleteYesterday(task.id);
+            }}
+          >
+            <CalendarCheck2 className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Edit task')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Mark as done')}
+            tone="success"
             onClick={(e) => {
               e.stopPropagation();
               onComplete(task.id);
             }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            className={`-my-1 flex h-10 w-10 items-center justify-center rounded-xl text-emerald-700 ${showActions ? 'mt-0' : ''}`}
-            title={t('Mark as done')}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 transition-colors hover:bg-emerald-100">
-              <Check className="h-4 w-4" />
-            </span>
-          </button>
+            <Check className="h-4 w-4" />
+          </TaskIconButton>
         </div>
       </div>
 
       <div
-        className={`flex flex-wrap items-center justify-between gap-2 px-1 transition-all duration-200 sm:px-4 ${
-          showActions ? 'mt-2 opacity-100 max-h-64' : 'mt-0 opacity-0 max-h-0 overflow-hidden'
+        className={`overflow-hidden px-1 transition-all duration-200 sm:px-4 ${
+          showActions ? 'mt-2 max-h-96 opacity-100' : 'mt-0 max-h-0 opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {showActions && (
-          <div className="w-full">
-            <RewardGradeSelector taskId={task.id} compact />
+          <div className="space-y-2">
+            <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-700">{task.title}</p>
+            <div className="mx-auto w-full max-w-sm">
+              <RewardGradeSelector taskId={task.id} compact />
+            </div>
           </div>
         )}
-        <button
-          onClick={() => onDeleteConfirm(task.id)}
-          className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
-          title={t('Delete task')}
-        >
-          {t('Delete')}
-        </button>
-        <div className="flex items-center gap-2 flex-1 justify-center">
-          <button
-            onClick={() => onMoveTomorrow(task.id)}
-            className="button-subtle min-h-8 whitespace-nowrap px-2.5 py-1.5 text-xs"
-            title={t('Move this task to tomorrow')}
-          >
-            <CalendarArrowDown className="h-3.5 w-3.5" />
-            {t('Tomorrow')}
-          </button>
-          <button
-            onClick={() => onCompleteYesterday(task.id)}
-            className="button-base min-h-8 whitespace-nowrap bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 hover:bg-amber-100"
-            title={t('Record this task as completed yesterday')}
-          >
-            {t('Done yesterday')}
-          </button>
-        </div>
       </div>
     </TaskCard>
   );

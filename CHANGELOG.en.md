@@ -14,6 +14,8 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Refreshed the interface with a calm cool light palette, deep indigo core accent, clearer hierarchy, consistent rhythm, and restrained shadows.
 - Today, Week, Month, Events, Inbox, Goals, Done, Reports, Settings, and Rewards Lab now share one visual language without changing familiar structure or workflows.
 - Navigation is monochrome, mobile screens remain compact, and forms and sheets better account for the bottom dock and short viewports.
+- Day, week, and month task cards are aligned: grade promotion and primary actions are available as compact icons while collapsed, and expansion is reserved for the detailed grade selector.
+- Adding day and week notes now uses a pencil icon so it cannot be confused with adding a task.
 - Grade colors are now consistent: Common stays neutral, Uncommon is green, Rare is blue, Legendary is amber, and Mythic is red.
 - Lazy-loaded screens and the local-first architecture remain intact; no new UI framework or external fonts were added.
 

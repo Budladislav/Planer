@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { generateId, getDateString, getTodayString } from '../../utils';
-import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, Plus, ChevronDown, ChevronRight, Pencil, RotateCcw, X } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { EmptyState, PageHeader, TaskCard } from '../ui/Primitives';
+import { EmptyState, PageHeader, TaskCard, TaskIconButton } from '../ui/Primitives';
 import { RewardGradeMarker } from '../../features/rewards-lab/ui/RewardGradeControls';
 
 export const DoneView: React.FC = () => {
@@ -99,7 +99,6 @@ export const DoneView: React.FC = () => {
   };
 
   const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
-    const [showActions, setShowActions] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(task.title);
 
@@ -157,9 +156,7 @@ export const DoneView: React.FC = () => {
     }
 
     return (
-      <TaskCard
-        onClick={() => setShowActions((prev) => !prev)}
-      >
+      <TaskCard>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <RewardGradeMarker taskId={task.id} />
@@ -167,40 +164,32 @@ export const DoneView: React.FC = () => {
               {task.title}
             </span>
           </div>
-          <button
+          <div className="flex flex-shrink-0 items-center gap-1">
+          <TaskIconButton
+            label={t('Delete')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
+          <TaskIconButton
+            label={t('Edit task')}
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="button-secondary min-h-8 flex-shrink-0 px-2 py-1 text-xs"
-            title={t('Edit')}
           >
-            {t('Edit')}
-          </button>
-        </div>
-
-        <div
-          className={`flex items-center justify-between px-4 gap-3 transition-all duration-200 ${
-            showActions ? 'opacity-100 max-h-40 mt-2' : 'opacity-0 max-h-0 overflow-hidden'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => handleDelete(task.id)}
-            className="button-danger min-h-8 px-2.5 py-1.5 text-xs"
-            title={t('Delete')}
-          >
-            {t('Delete')}
-          </button>
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
           {canUndo && (
-            <button
-              onClick={() => handleUndo(task.id)}
-              className="button-subtle min-h-8 px-2.5 py-1.5 text-xs"
-              title={t('Mark as todo')}
-            >
-              {t('Undone')}
-            </button>
+            <TaskIconButton label={t('Mark as todo')} tone="primary" onClick={() => handleUndo(task.id)}>
+              <RotateCcw className="h-3.5 w-3.5" />
+            </TaskIconButton>
           )}
+          </div>
         </div>
       </TaskCard>
     );

@@ -65,3 +65,38 @@ export const TaskCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
 );
 
 TaskCard.displayName = 'TaskCard';
+
+type TaskActionTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
+
+interface TaskIconButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
+  label: string;
+  tone?: TaskActionTone;
+}
+
+const taskActionToneClass: Record<TaskActionTone, string> = {
+  neutral: 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700',
+  primary: 'bg-brand-50 text-brand-600 hover:bg-brand-100 hover:text-brand-700',
+  success: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800',
+  warning: 'bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800',
+  danger: 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700',
+};
+
+export const TaskIconButton: React.FC<TaskIconButtonProps> = ({
+  label,
+  tone = 'neutral',
+  className,
+  type = 'button',
+  ...props
+}) => (
+  <button
+    type={type}
+    title={label}
+    aria-label={label}
+    className={join(
+      'relative z-[1] flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+      taskActionToneClass[tone],
+      className,
+    )}
+    {...props}
+  />
+);

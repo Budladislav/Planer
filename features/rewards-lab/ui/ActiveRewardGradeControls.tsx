@@ -114,7 +114,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
 
   return (
     <div
-      className={`flex w-full min-w-0 items-center gap-2 rounded-lg bg-slate-50/80 ${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'}`}
+      className={`mx-auto flex w-full max-w-sm min-w-0 items-center gap-2 rounded-lg bg-slate-50/80 ${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'}`}
       onClick={event => event.stopPropagation()}
       onPointerDown={event => event.stopPropagation()}
     >

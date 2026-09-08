@@ -67,9 +67,7 @@ export const WeekMetaBadges: React.FC<WeekMetaBadgesProps> = ({
           title={notes.length ? t('Edit week notes') : t('Add week note')}
           aria-label={notes.length ? t('Edit week notes') : t('Add week note')}
         >
-          {notes.length
-            ? <Pencil className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
-            : <Plus className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />}
+          <Pencil className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
         </button>
       )}
     </div>
