@@ -75,7 +75,6 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
-  timeSpent?: number; // Time spent in seconds
 }
 
 export interface CalendarEvent {
@@ -91,8 +90,6 @@ export interface AppState {
   captures: Capture[];
   tasks: Task[];
   events: CalendarEvent[];
-  activeTaskId: string | null;
-  activeTaskStartedAt: number | null; // timestamp ms when active task started
   lastActiveView: ViewState;
   taskOrderByDay: Record<string, string[]>; // Maps day (YYYY-MM-DD) to ordered task IDs
   taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
@@ -111,12 +108,10 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   captures: [],
   tasks: [],
   events: [],
-  activeTaskId: null,
-  activeTaskStartedAt: null,
   lastActiveView: 'today',
   taskOrderByDay: {},
   taskOrderByWeekBucket: {},

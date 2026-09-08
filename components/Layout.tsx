@@ -1,5 +1,4 @@
 import React from 'react';
-import { useAppStore } from '../store';
 import { ViewState } from '../types';
 import {
   Target, Calendar, CalendarDays, Heart, List, Settings, type LucideIcon,
@@ -13,9 +12,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate }) => {
-  const { state } = useAppStore();
   const { language, t } = useI18n();
-  const isFocusMode = currentView === 'today' && state.activeTaskId !== null;
 
   React.useEffect(() => {
     document.documentElement.lang = language;
@@ -92,8 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 lg:flex-row">
       {/* Desktop Sidebar (Left) */}
-      {!isFocusMode && (
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:bg-white lg:border-r lg:border-slate-200">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:bg-white lg:border-r lg:border-slate-200">
           <div className="flex items-center justify-between h-16 px-6 border-b border-slate-100">
             <span className="text-xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
               <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center">
@@ -111,8 +107,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           <div className="border-t border-slate-100 p-4">
             <NavItem view="settings" icon={Settings} label={t('Settings')} />
           </div>
-        </aside>
-      )}
+      </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
@@ -121,8 +116,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         </main>
 
         {/* Mobile Bottom Navigation Bar */}
-        {!isFocusMode && (
-          <>
+        <>
           <button
             type="button"
             onClick={() => onNavigate('settings')}
@@ -143,8 +137,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
               ))}
             </div>
           </nav>
-          </>
-        )}
+        </>
       </div>
     </div>
   );

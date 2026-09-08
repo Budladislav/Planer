@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { generateId, getDateString, getTodayString, formatTime } from '../../utils';
+import { generateId, getDateString, getTodayString } from '../../utils';
 import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
@@ -166,11 +166,6 @@ export const DoneView: React.FC = () => {
             <span className="text-sm break-all line-through text-slate-500">
               {task.title}
             </span>
-            {task.timeSpent && task.timeSpent > 0 && (
-              <span className="text-xs text-slate-400 flex-shrink-0">
-                ({formatTime(task.timeSpent)})
-              </span>
-            )}
           </div>
           <button
             onClick={(e) => {
@@ -236,7 +231,6 @@ export const DoneView: React.FC = () => {
               .sort((a, b) => b[0].localeCompare(a[0])) // Most recent first
               .map(([date, tasks]) => {
                 const isExpanded = expandedDates.has(date);
-                const totalTime = tasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
                 return (
                   <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
                     <button
@@ -258,14 +252,6 @@ export const DoneView: React.FC = () => {
                             <span className="text-xs text-slate-500">
                               {t('Tasks: {count}', { count: tasks.length })}
                             </span>
-                            {totalTime > 0 && (
-                              <>
-                                <span className="text-xs text-slate-400">•</span>
-                                <span className="text-xs text-indigo-600 font-medium">
-                                  {formatTime(totalTime)}
-                                </span>
-                              </>
-                            )}
                           </div>
                         </div>
                       </div>

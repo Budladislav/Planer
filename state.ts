@@ -16,7 +16,7 @@ import {
 import { formatEventTitle, generateId, getDateString, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -170,9 +170,6 @@ export const migrateAppState = (value: unknown): AppState => {
           completedAt: status === 'done'
             ? asString(value.completedAt, updatedAt)
             : null,
-          timeSpent: typeof value.timeSpent === 'number' && value.timeSpent >= 0
-            ? value.timeSpent
-            : undefined,
         };
 
         if (task.status === 'todo' && task.plan.day && task.plan.day < today) {
@@ -214,11 +211,6 @@ export const migrateAppState = (value: unknown): AppState => {
       })
     : [];
 
-  const requestedActiveTaskId = asNullableString(parsed.activeTaskId);
-  const activeTaskId = tasks.some(task => task.id === requestedActiveTaskId && task.status === 'todo')
-    ? requestedActiveTaskId
-    : null;
-
   const rawShiftSettings = isRecord(parsed.workShiftSettings) ? parsed.workShiftSettings : {};
   const baseWeekCandidate = asNullableString(rawShiftSettings.baseWeek);
   const baseShiftCandidate = rawShiftSettings.baseShift;
@@ -241,10 +233,6 @@ export const migrateAppState = (value: unknown): AppState => {
     captures,
     tasks,
     events,
-    activeTaskId,
-    activeTaskStartedAt: activeTaskId && typeof parsed.activeTaskStartedAt === 'number'
-      ? parsed.activeTaskStartedAt
-      : null,
     lastActiveView,
     taskOrderByDay: migrateOrderMap(parsed.taskOrderByDay),
     taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
@@ -286,7 +274,6 @@ export type Action =
   | { type: 'ADD_EVENT'; payload: CalendarEvent }
   | { type: 'UPDATE_EVENT'; payload: Partial<CalendarEvent> & { id: string } }
   | { type: 'DELETE_EVENT'; payload: string }
-  | { type: 'SET_ACTIVE_TASK'; payload: { id: string | null; startedAt?: number | null } }
   | { type: 'UPDATE_TASK_ORDER'; payload: { day: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_WEEK_BUCKET'; payload: { week: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_MONTH_BUCKET'; payload: { month: string; order: string[] } }
@@ -435,12 +422,6 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         taskOrderByMonthWeek: planChanged
           ? removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload.id)
           : state.taskOrderByMonthWeek,
-        activeTaskId: action.payload.status === 'done' && state.activeTaskId === action.payload.id
-          ? null
-          : state.activeTaskId,
-        activeTaskStartedAt: action.payload.status === 'done' && state.activeTaskId === action.payload.id
-          ? null
-          : state.activeTaskStartedAt,
       };
     }
     case 'DELETE_TASK':
@@ -451,8 +432,6 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         taskOrderByWeekBucket: removeTaskFromOrderMap(state.taskOrderByWeekBucket, action.payload),
         taskOrderByMonthBucket: removeTaskFromOrderMap(state.taskOrderByMonthBucket, action.payload),
         taskOrderByMonthWeek: removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload),
-        activeTaskId: state.activeTaskId === action.payload ? null : state.activeTaskId,
-        activeTaskStartedAt: state.activeTaskId === action.payload ? null : state.activeTaskStartedAt,
       };
     case 'ADD_EVENT':
       return { ...state, events: [...state.events, action.payload] };
@@ -487,16 +466,8 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         events: state.events.filter(event => event.id !== action.payload),
         tasks: linkedTask ? state.tasks.filter(task => task.id !== linkedTask.id) : state.tasks,
-        activeTaskId: linkedTask?.id === state.activeTaskId ? null : state.activeTaskId,
-        activeTaskStartedAt: linkedTask?.id === state.activeTaskId ? null : state.activeTaskStartedAt,
       };
     }
-    case 'SET_ACTIVE_TASK':
-      return {
-        ...state,
-        activeTaskId: action.payload.id,
-        activeTaskStartedAt: action.payload.id ? action.payload.startedAt ?? Date.now() : null,
-      };
     case 'UPDATE_TASK_ORDER':
       if (hasSameOrder(state.taskOrderByDay[action.payload.day], action.payload.order)) return state;
       return {

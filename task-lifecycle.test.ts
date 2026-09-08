@@ -37,7 +37,6 @@ describe('task lifecycle commands', () => {
     });
 
     const completed = completeTask(dispatch, makeTask(), {
-      timeSpent: 90,
       plan: { day: '2026-08-28', week: null, month: '2026-08' },
     });
     unsubscribe();
@@ -50,7 +49,6 @@ describe('task lifecycle commands', () => {
         id: 'task-1',
         status: 'done',
         completedAt: '2026-08-28T10:30:00.000Z',
-        timeSpent: 90,
         plan: { day: '2026-08-28', week: null, month: '2026-08' },
       },
     }]);
@@ -64,7 +62,6 @@ describe('task lifecycle commands', () => {
         id: 'task-1',
         status: 'done',
         completedAt: '2026-08-28T10:30:00.000Z',
-        timeSpent: 90,
       }),
     })]);
   });

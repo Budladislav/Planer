@@ -104,7 +104,6 @@ export const buildProgressReport = (
   const realizedCaptures = getRealizedCapturesForRange(captures, range);
   const activeGoals = goals.filter(goal => goal.status === 'active');
   const completedGoals = getCompletedGoalsForRange(goals, range);
-  const totalFocusSeconds = completedTasks.reduce((sum, task) => sum + (task.timeSpent ?? 0), 0);
   const ru = language === 'ru';
   const lines = ru ? [
     'ОТЧЁТ О ПРОГРЕССЕ MONOFOCUS',
@@ -114,7 +113,6 @@ export const buildProgressReport = (
     `выполнено_задач: ${completedTasks.length}`,
     `реализовано_желаний: ${realizedCaptures.length}`,
     `завершено_больших_целей: ${completedGoals.length}`,
-    `секунд_фокусировки: ${totalFocusSeconds}`,
     '',
     '=== ВЫПОЛНЕННЫЕ ЗАДАЧИ ===',
   ] : [
@@ -125,7 +123,6 @@ export const buildProgressReport = (
     `completed_tasks_count: ${completedTasks.length}`,
     `realized_wishes_count: ${realizedCaptures.length}`,
     `completed_long_term_goals_count: ${completedGoals.length}`,
-    `total_focus_seconds: ${totalFocusSeconds}`,
     '',
     '=== COMPLETED TASKS ===',
   ];
@@ -137,11 +134,9 @@ export const buildProgressReport = (
       lines.push(...(ru ? [
         `${index + 1}. выполнено: ${formatTimestamp(task.completedAt as string)}`,
         `   название: ${singleLine(task.title)}`,
-        `   секунд_фокусировки: ${task.timeSpent ?? 0}`,
       ] : [
         `${index + 1}. completed_at: ${formatTimestamp(task.completedAt as string)}`,
         `   title: ${singleLine(task.title)}`,
-        `   focus_seconds: ${task.timeSpent ?? 0}`,
       ]));
     });
   }

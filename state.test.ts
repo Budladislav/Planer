@@ -34,11 +34,14 @@ describe('migrateAppState', () => {
         plan: { day: '2026-01-05', week: null },
         frog: true,
         difficulty: 'hard',
+        timeSpent: 5400,
         createdAt: '2026-01-05T08:00:00.000Z',
         updatedAt: '2026-01-05T09:00:00.000Z',
       }],
       captures: [],
       events: [],
+      activeTaskId: 'legacy-task',
+      activeTaskStartedAt: 123,
       lastActiveView: 'statistics',
     });
 
@@ -52,6 +55,9 @@ describe('migrateAppState', () => {
     }));
     expect(migrated.tasks[0]).not.toHaveProperty('frog');
     expect(migrated.tasks[0]).not.toHaveProperty('difficulty');
+    expect(migrated.tasks[0]).not.toHaveProperty('timeSpent');
+    expect(migrated).not.toHaveProperty('activeTaskId');
+    expect(migrated).not.toHaveProperty('activeTaskStartedAt');
   });
 
   it('sanitizes order maps without discarding valid task ids', () => {
@@ -123,7 +129,7 @@ describe('migrateAppState', () => {
       workShiftSettings: { baseWeek: '2026-W33', baseShift: 1, overrides: {} },
     });
 
-    expect(migrated.schemaVersion).toBe(6);
+    expect(migrated.schemaVersion).toBe(7);
     expect(migrated.tasks).toHaveLength(1);
     expect(migrated.captures).toHaveLength(1);
     expect(migrated.events).toHaveLength(1);
@@ -267,23 +273,16 @@ describe('appReducer Inbox captures', () => {
 });
 
 describe('appReducer task completion', () => {
-  it('records a dedicated completion timestamp and clears an active timer', () => {
+  it('records a dedicated completion timestamp', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-16T12:34:56.000Z'));
-    const state = {
-      ...withTask(makeTask()),
-      activeTaskId: 'task-1',
-      activeTaskStartedAt: 123,
-    };
 
-    const completed = appReducer(state, {
+    const completed = appReducer(withTask(makeTask()), {
       type: 'UPDATE_TASK',
       payload: { id: 'task-1', status: 'done' },
     });
 
     expect(completed.tasks[0].completedAt).toBe('2026-08-16T12:34:56.000Z');
-    expect(completed.activeTaskId).toBeNull();
-    expect(completed.activeTaskStartedAt).toBeNull();
   });
 
   it('clears completion time when a task is returned to todo', () => {

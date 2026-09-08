@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { CalendarArrowDown, Check, ChevronDown, Pause, Pencil, Play, Plus, RotateCcw } from 'lucide-react';
-import { getDateString, getTodayString, generateId, formatDateReadable, formatTime, getWeekString } from '../../utils';
+import { CalendarArrowDown, Check, ChevronDown, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { getDateString, getTodayString, generateId, formatDateReadable, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
   getLocalDateFromTimestamp,
@@ -37,13 +37,12 @@ import { useI18n } from '../../i18n';
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
   task: Task; 
-  onSetActive: (id: string) => void;
   onComplete: (id: string) => void;
   onCompleteYesterday: (id: string) => void;
   onMoveTomorrow: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
-}> = ({ task, onSetActive, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm }) => {
+}> = ({ task, onComplete, onCompleteYesterday, onMoveTomorrow, onUpdate, onDeleteConfirm }) => {
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -149,9 +148,6 @@ const SortableTaskItem: React.FC<{
           <span className={`text-sm text-slate-700 font-medium ${showActions ? 'break-all' : 'truncate'} ${task.status === 'done' ? 'line-through text-slate-400' : ''}`}>
             {task.title}
           </span>
-          {task.timeSpent && task.timeSpent > 0 && (
-            <span className="text-xs text-slate-500 flex-shrink-0">({formatTime(task.timeSpent)})</span>
-          )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {!showActions && <RewardGradeIncrementButton taskId={task.id} />}
@@ -225,17 +221,6 @@ const SortableTaskItem: React.FC<{
             {t('Done yesterday')}
           </button>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetActive(task.id);
-          }}
-          className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
-          title={t('Start focus')}
-        >
-          <Play className="w-3.5 h-3.5 fill-current" />
-          {t('Focus')}
-        </button>
       </div>
     </div>
   );
@@ -253,8 +238,6 @@ export const TodayView: React.FC = () => {
     taskId: null,
   });
 
-  const activeTask = state.tasks.find(t => t.id === state.activeTaskId);
-  
   // All tasks for today and past days that are not done
   // Show tasks scheduled for today OR past days that are still todo
   const allTodayTasks = state.tasks.filter(t => {
@@ -266,10 +249,7 @@ export const TodayView: React.FC = () => {
   });
   const todoTasks = allTodayTasks.filter(t => t.status === 'todo');
   const completedTodayTasks = getCompletedTasksForLocalDay(state.tasks, todayStr);
-  const completedTodayTime = completedTodayTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
-  
-  // Tasks for today that are todo and NOT the active task
-  const availableTasks = todoTasks.filter(t => t.id !== state.activeTaskId);
+  const availableTasks = todoTasks;
 
   // Order for today, stored in global state (persists across reloads)
   const savedOrder = state.taskOrderByDay[todayStr] || [];
@@ -286,18 +266,11 @@ export const TodayView: React.FC = () => {
     orderedIds = [...availableIds];
   }
   
-  // Timer state
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timerStartTimeRef = useRef<number | null>(null);
-  const [isCompleting, setIsCompleting] = useState(false);
-  
   // Get ordered tasks
   const orderedTasks = orderedIds
     .map(id => availableTasks.find(t => t.id === id))
     .filter(Boolean) as Task[];
 
-  // All tasks go to the list (no automatic focus card)
   const todayTasks = orderedTasks;
 
   const sensors = useSensors(
@@ -357,82 +330,6 @@ export const TodayView: React.FC = () => {
     const newOrder = [...orderedIds, newTaskId];
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     setQuickAdd('');
-  };
-
-  // Timer effect - start/stop timer based on active task (persistent via store)
-  useEffect(() => {
-    if (state.activeTaskId) {
-      const currentTask = state.tasks.find(t => t.id === state.activeTaskId);
-      if (currentTask) {
-        const existingTime = currentTask.timeSpent || 0;
-        const startedAt = state.activeTaskStartedAt ?? Date.now();
-        timerStartTimeRef.current = startedAt;
-
-        const compute = () => {
-          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-          setTimerSeconds(existingTime + Math.max(elapsed, 0));
-        };
-
-        compute();
-        timerIntervalRef.current = setInterval(compute, 1000);
-      }
-    } else {
-      // Stop timer
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      timerStartTimeRef.current = null;
-      setTimerSeconds(0);
-    }
-    
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, [state.activeTaskId, state.activeTaskStartedAt, state.tasks]);
-
-  const handleDone = () => {
-    if (activeTask && !isCompleting) {
-      setIsCompleting(true);
-      
-      // Add celebration effect
-      setTimeout(() => {
-        // Save accumulated time
-        const finalTime = timerSeconds;
-        // Always set plan.day to today when completing, so it appears in Done under today's date
-        completeTask(dispatch, activeTask, {
-          timeSpent: finalTime,
-          plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
-        });
-        // При завершении задачи она переходит в Done
-        dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
-        setIsCompleting(false);
-      }, 600);
-    }
-  };
-
-  const handleUnfocus = () => {
-    if (activeTask) {
-      // Save accumulated time when pausing
-      const finalTime = timerSeconds;
-      dispatch({ 
-        type: 'UPDATE_TASK', 
-        payload: { 
-          id: activeTask.id,
-          timeSpent: finalTime
-        } 
-      });
-    }
-    // Просто останавливаем фокус - задача остаётся на своём месте в порядке
-    dispatch({ type: 'SET_ACTIVE_TASK', payload: { id: null, startedAt: null } });
-  };
-
-  const handleSetActive = (id: string) => {
-    // Просто запускаем фокус для задачи по её id
-    // Не удаляем из порядка - экран фокуса всё равно перекрывает весь UI
-    dispatch({ type: 'SET_ACTIVE_TASK', payload: { id, startedAt: Date.now() } });
   };
 
   const handleDeleteConfirm = (id: string) => {
@@ -510,53 +407,7 @@ export const TodayView: React.FC = () => {
 
   return (
     <>
-      {activeTask ? (
-        // Active Task View - Centered with background
-        <div className={`fixed inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 transition-all duration-500 ${isCompleting ? 'scale-110 opacity-0' : ''}`}>
-          <div className="max-w-3xl w-full">
-            <div className="relative group">
-              <div className={`absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 opacity-60 blur-xl transition duration-1000 group-hover:opacity-80 ${isCompleting ? 'animate-ping' : ''}`}></div>
-              <div className={`relative bg-white/95 backdrop-blur-sm rounded-2xl p-12 shadow-2xl border border-white/50 transition-all duration-500 overflow-hidden ${
-                isCompleting ? 'scale-110 rotate-3' : ''
-              }`}>
-                <RewardGradeSurface taskId={activeTask.id} />
-                <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight text-center break-words overflow-hidden max-w-full px-4">
-                  {activeTask.title}
-                </h3>
-                <div className="mx-auto max-w-sm">
-                  <RewardGradeSelector taskId={activeTask.id} />
-                </div>
-                <div className="text-center mb-12">
-                  <div className={`text-4xl md:text-6xl font-mono font-bold text-indigo-600 transition-colors ${isCompleting ? 'text-green-500' : ''}`}>
-                    {formatTime(timerSeconds)}
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-4 justify-center">
-                  <button
-                    onClick={handleDone}
-                    disabled={isCompleting}
-                    className={`flex items-center gap-2 px-10 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 ${isCompleting ? 'animate-pulse scale-110' : ''}`}
-                  >
-                    <Check className={`w-6 h-6 ${isCompleting ? 'animate-spin' : ''}`} />
-                    {t('Mark Done')}
-                  </button>
-                  <button
-                    onClick={handleUnfocus}
-                    disabled={isCompleting}
-                    className="flex items-center gap-2 px-8 py-4 bg-white/80 border-2 border-slate-200 text-slate-600 rounded-xl hover:border-slate-300 hover:bg-white transition-all font-medium disabled:opacity-50"
-                  >
-                    <Pause className="w-5 h-5" />
-                    {t('Pause')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // No Active Task View - Combined Today + Focus layout
-        <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto">
           {/* Today Section - Header */}
           <div className="text-center mb-3">
             <h2 className="hidden text-3xl font-bold text-slate-900 lg:block">{t('Today')}</h2>
@@ -570,12 +421,6 @@ export const TodayView: React.FC = () => {
             <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
               <p className="text-sm text-slate-400">
                 {t('{todo} left • {done} done', { todo: todoTasks.length, done: completedTodayTasks.length })}
-                {completedTodayTime > 0 && (
-                  <span className="font-medium text-indigo-600">
-                    {' • '}
-                    {formatTime(completedTodayTime)}
-                  </span>
-                )}
               </p>
               <RewardsBalancePill />
             </div>
@@ -603,7 +448,6 @@ export const TodayView: React.FC = () => {
                         <SortableTaskItem 
                           key={task.id} 
                           task={task} 
-                          onSetActive={handleSetActive}
                           onComplete={handleComplete}
                           onCompleteYesterday={handleCompleteYesterday}
                           onMoveTomorrow={handleMoveTomorrow}
@@ -632,7 +476,6 @@ export const TodayView: React.FC = () => {
                   {t('Completed today ({count})', { count: completedTodayTasks.length })}
                 </span>
                 <span className="flex flex-shrink-0 items-center gap-2 text-xs text-slate-500">
-                  {completedTodayTime > 0 && formatTime(completedTodayTime)}
                   <ChevronDown className={`h-4 w-4 transition-transform ${state.uiPreferences.todayCompletedExpanded ? 'rotate-180' : ''}`} />
                 </span>
               </button>
@@ -648,7 +491,6 @@ export const TodayView: React.FC = () => {
                         <div className="truncate text-sm font-medium text-slate-500 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">
                           {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                          {task.timeSpent && task.timeSpent > 0 ? ` • ${formatTime(task.timeSpent)}` : ''}
                         </div>
                       </div>
                       <button
@@ -705,8 +547,7 @@ export const TodayView: React.FC = () => {
               <Plus className="w-6 h-6" />
             </button>
           </form>
-        </div>
-      )}
+      </div>
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}

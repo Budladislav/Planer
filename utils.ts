@@ -110,17 +110,6 @@ export const isTimeOverlap = (start1: string, end1: string, start2: string, end2
   return (start1 < end2 && end1 > start2);
 };
 
-export const formatTime = (seconds: number): string => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
-};
-
 // Event title format: "HH:MM Title"
 export const parseEventTitle = (title: string): { time: string; plain: string } => {
   const m = title.match(/^(\d{2}:\d{2})\s+(.*)$/);

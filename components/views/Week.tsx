@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, formatTime, shiftWeekString } from '../../utils';
+import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, shiftWeekString } from '../../utils';
 import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
@@ -465,9 +465,6 @@ export const WeekView: React.FC = () => {
             <div key={task.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-green-100 bg-green-50/60 px-3 py-2 text-sm">
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" />
               <span className="min-w-0 flex-1 truncate text-slate-500 line-through" title={task.title}>{task.title}</span>
-              {(task.timeSpent ?? 0) > 0 && (
-                <span className="flex-shrink-0 text-xs text-slate-400">{formatTime(task.timeSpent ?? 0)}</span>
-              )}
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <button
                 type="button"
@@ -541,15 +538,6 @@ export const WeekView: React.FC = () => {
         />
         <p className="text-slate-400 text-sm mt-1">
           {t('{todo} left • {done} done', { todo: todoWeekTasks.length, done: doneWeekTasks.length })}
-          {(() => {
-            const totalTime = doneWeekTasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
-            return totalTime > 0 ? (
-              <span className="text-indigo-600 font-medium">
-                {' • '}
-                {formatTime(totalTime)}
-              </span>
-            ) : null;
-          })()}
         </p>
       </div>
 

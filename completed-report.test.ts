@@ -7,7 +7,7 @@ import {
 } from './completed-report';
 import { Capture, LongTermGoal, Task } from './types';
 
-const task = (id: string, completedAt: string | null, timeSpent = 0): Task => ({
+const task = (id: string, completedAt: string | null): Task => ({
   id,
   title: `Task ${id}`,
   status: completedAt ? 'done' : 'todo',
@@ -17,7 +17,6 @@ const task = (id: string, completedAt: string | null, timeSpent = 0): Task => ({
   createdAt: '2026-08-01T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,
-  timeSpent,
 });
 
 const capture = (id: string, completedAt: string | null): Capture => ({
@@ -74,7 +73,7 @@ describe('completed task report', () => {
 
   it('creates a compact report with clearly separated task and Inbox sections', () => {
     const report = buildProgressReport(
-      [task('one', '2026-08-16T12:00:00.000Z', 90)],
+      [task('one', '2026-08-16T12:00:00.000Z')],
       [capture('one', '2026-08-15T12:00:00.000Z')],
       [goal('active', null), goal('done', '2026-08-14T12:00:00.000Z')],
       { start: '2026-08-10', end: '2026-08-16' },
@@ -85,10 +84,9 @@ describe('completed task report', () => {
     expect(report).toContain('completed_tasks_count: 1');
     expect(report).toContain('realized_wishes_count: 1');
     expect(report).toContain('completed_long_term_goals_count: 1');
-    expect(report).toContain('total_focus_seconds: 90');
     expect(report).toContain('=== COMPLETED TASKS ===');
     expect(report).toContain('title: Task one');
-    expect(report).toContain('focus_seconds: 90');
+    expect(report).not.toContain('focus_seconds');
     expect(report).toContain('=== REALIZED WISHES ===');
     expect(report).toContain('created_at: 2026-08-10');
     expect(report).toContain('realized_at: 2026-08-15');
@@ -111,5 +109,6 @@ describe('completed task report', () => {
     expect(report).toContain('ОТЧЁТ О ПРОГРЕССЕ MONOFOCUS');
     expect(report).toContain('=== БОЛЬШИЕ ЦЕЛИ ===');
     expect(report).toContain('текущая_ситуация: Halfway there');
+    expect(report).not.toContain('секунд_фокусировки');
   });
 });
