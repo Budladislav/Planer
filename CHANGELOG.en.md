@@ -2,6 +2,23 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [4.3.0] — 08.09.2026 — Planner without a timer
+
+### Removed
+
+- Removed Focus mode, the task timer, the full-screen focus view, and their related actions.
+- Completion duration no longer appears in Today, the week plan, completed-task history, or TXT reports.
+
+### Changed
+
+- The core data schema is now version 7. Loading or importing an older backup preserves its tasks while discarding obsolete timing and active-timer fields.
+- Product descriptions now reflect the current month-to-day planning workflow.
+
+### Safety
+
+- Migration leaves task titles, statuses, dates, plans, and event links unchanged. Rewards Lab credits, keys, and transaction history are unaffected.
+- New JSON backups contain no timer data, while older backups remain safe to import.
+
 ## [4.2.1] — 08.09.2026 — Colored keys and quick grade promotion
 
 ### Added
