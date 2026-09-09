@@ -30,13 +30,14 @@ describe('release metadata', () => {
     expect(packageJson.name).toBe('takt');
     expect(manifest).toMatchObject({ name: 'Takt Planner', short_name: 'Takt', id: '/' });
     expect(manifest.icons.map(icon => icon.src)).toEqual([
-      `takt-icon-192-v${packageJson.version}.png`,
-      `takt-icon-512-v${packageJson.version}.png`,
-      `takt-icon-maskable-v${packageJson.version}.svg`,
+      'takt-icon-192-r2.png',
+      'takt-icon-512-r2.png',
+      'takt-icon-maskable-r2.png',
     ]);
     expect(manifest.icons.at(-1)?.purpose).toBe('maskable');
     expect(html).toContain('<title>Takt Planner</title>');
-    expect(html).toContain(`takt-icon-192-v${packageJson.version}.png`);
+    expect(html).toContain('takt-icon-192-r2.png');
+    expect(serviceWorker).toContain("BASE_PATH + 'takt-icon-maskable-r2.png'");
     expect(store).toContain("localStorage.getItem('monofocus_v1')");
     expect(store).toContain("localStorage.setItem('monofocus_v1'");
     expect(serviceWorker).toContain("const STATIC_CACHE_PREFIX = 'monofocus-static-v'");

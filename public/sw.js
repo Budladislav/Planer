@@ -16,9 +16,9 @@ const STATIC_ASSETS = [
   BASE_PATH + 'index.html',
   BASE_PATH + 'manifest.json',
   BASE_PATH + 'favicon.svg',
-  BASE_PATH + 'takt-icon-192-v5.3.0.png',
-  BASE_PATH + 'takt-icon-512-v5.3.0.png',
-  BASE_PATH + 'takt-icon-maskable-v5.3.0.svg',
+  BASE_PATH + 'takt-icon-192-r2.png',
+  BASE_PATH + 'takt-icon-512-r2.png',
+  BASE_PATH + 'takt-icon-maskable-r2.png',
   ...BUILD_ASSETS.map((asset) => BASE_PATH + asset),
 ];
 
