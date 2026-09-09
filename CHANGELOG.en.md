@@ -2,6 +2,23 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.3.6] — 09.09.2026 — “No Starting Point”
+
+### Added
+
+- Wishes and long-term goals can now be created without a start date for old, background, or otherwise undated intentions.
+- A shared compact control allows the start date to be assigned, changed, or removed later.
+
+### Changed
+
+- Wish realization time and goal completion time are calculated only when the start date is known.
+- TXT reports mark an unknown start explicitly and omit invented elapsed time for those entries.
+
+### Safety
+
+- Planner schema advanced from 11 to 12. Existing wishes and goals retain their former date as the start date, preserving their history and elapsed time.
+- The technical creation timestamp remains separate from the user-defined start date for data integrity and future migrations.
+
 ## [5.3.5] — 09.09.2026 — “Weekly Sets”
 
 ### Added

@@ -1,6 +1,6 @@
 // Service Worker для Takt Planner
 // Версия кэша - обновлять при изменении статики
-const STATIC_CACHE = 'monofocus-static-v5.3.5';
+const STATIC_CACHE = 'monofocus-static-v5.3.6';
 // Стабильное legacy-пространство кэшей сохраняется для бесшовного обновления установленной PWA.
 const STATIC_CACHE_PREFIX = 'monofocus-static-v';
 const RETAINED_VERSION_CACHES = 3;
