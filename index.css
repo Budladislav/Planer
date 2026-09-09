@@ -95,14 +95,23 @@
   }
 
   .task-card {
-    @apply relative w-full max-w-full overflow-hidden rounded-xl border border-line bg-surface px-3 py-2 text-sm shadow-quiet transition-[border-color,box-shadow,transform] duration-150;
+    @apply relative isolate w-full max-w-full overflow-hidden rounded-xl border border-line bg-surface px-3 py-2 text-sm shadow-quiet transition-[border-color,box-shadow,transform] duration-150;
   }
 
   .task-card:hover {
     @apply border-slate-300 shadow-md;
   }
 
-  .task-card > :not(.reward-grade-surface) {
+  .graded-task-row {
+    @apply relative isolate;
+  }
+
+  .reward-grade-surface {
+    @apply z-0;
+  }
+
+  .task-card > :not(.reward-grade-surface),
+  .graded-task-row > :not(.reward-grade-surface) {
     @apply relative z-[1];
   }
 
@@ -224,12 +233,82 @@
   }
 }
 
+@keyframes rewards-reveal-pulse {
+  0%, 100% {
+    box-shadow: 0 18px 45px -22px rgb(var(--reward-reveal-color) / 0.28);
+  }
+  45% {
+    box-shadow: 0 20px 52px -16px rgb(var(--reward-reveal-color) / 0.5);
+  }
+}
+
+@keyframes rewards-reveal-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-135%) skewX(-18deg);
+  }
+  25% {
+    opacity: 0.7;
+  }
+  70%, 100% {
+    opacity: 0;
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+.rewards-reveal::before {
+  position: absolute;
+  inset: -35% auto -35% -30%;
+  width: 28%;
+  content: '';
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgb(var(--reward-reveal-color) / 0.24), transparent);
+}
+
+.reward-reveal-content {
+  position: relative;
+  z-index: 1;
+}
+
+.rewards-reveal-level-1 {
+  box-shadow: 0 18px 45px -24px rgb(var(--reward-reveal-color) / 0.22);
+}
+
+.rewards-reveal-level-2 {
+  box-shadow: 0 18px 48px -20px rgb(var(--reward-reveal-color) / 0.34);
+}
+
+.rewards-toast-enter.rewards-reveal-level-3,
+.rewards-toast-enter.rewards-reveal-level-4 {
+  animation:
+    rewards-toast-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both,
+    rewards-reveal-pulse 900ms 160ms ease-out both;
+}
+
+.rewards-reveal-level-3::before,
+.rewards-reveal-level-4::before {
+  animation: rewards-reveal-sweep 900ms 180ms ease-out both;
+}
+
+.rewards-reveal-level-4 {
+  background-image:
+    radial-gradient(circle at 14% 18%, rgb(var(--reward-reveal-color) / 0.18) 0 2px, transparent 3px),
+    radial-gradient(circle at 84% 22%, rgb(var(--reward-reveal-color) / 0.2) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 74% 82%, rgb(var(--reward-reveal-color) / 0.16) 0 2px, transparent 3px);
+}
+
 .rewards-toast-enter {
   animation: rewards-toast-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .rewards-toast-enter.rewards-toast-static {
-  animation: none;
+  animation: none !important;
+}
+
+.rewards-toast-static::before {
+  animation: none !important;
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -243,6 +322,11 @@
   }
 
   .rewards-toast-enter {
-    animation: none;
+    animation: none !important;
+  }
+
+  .rewards-reveal::before {
+    animation: none !important;
+    opacity: 0;
   }
 }

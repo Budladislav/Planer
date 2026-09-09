@@ -269,6 +269,7 @@ describe('Rewards Lab task lifecycle', () => {
     expect(earned.toast).toMatchObject({
       kind: 'earned', taskId: 'task-1', grade: 'rare', amount: 5, currencyName: 'Креды', economyVersion: 3, keyGrade: 'common',
     });
+    expect(earned.toast?.keyDropWasProtected).toBeUndefined();
 
     runtime.handleTaskLifecycle(completedEvent({ title: 'Renamed task' }));
     expect(runtime.getSnapshot()).toBe(earned);
@@ -284,6 +285,7 @@ describe('Rewards Lab task lifecycle', () => {
     }));
     const restored = runtime.getSnapshot();
     expect(restored.toast?.kind).toBe('restored');
+    expect(restored.toast?.keyDropWasProtected).toBeUndefined();
     expect(restored.state!.claims['task-1']).toMatchObject({
       id: claim.id, grade: 'rare', luckSlot: 0, amount: 5,
       completedAt: '2026-08-29T10:00:00.000Z',
@@ -291,6 +293,27 @@ describe('Rewards Lab task lifecycle', () => {
     expect(restored.state!.fairBag).toEqual(bagAfterClaim);
     expect(restored.state!.ledger).toHaveLength(3);
     expect(getWalletBalance(restored.state!)).toBe(5);
+  });
+
+  it('passes a protected key marker to the one-time reward reveal', () => {
+    const storage = new MemoryStorage();
+    storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
+    storage.values.set(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
+      ...createDefaultRewardsLabState(),
+      keyDropState: { dryStreak: 7 },
+    }));
+    const runtime = createRewardsLabRuntime(storage, '', {
+      ...deterministicEconomy(),
+      random: () => 0.99,
+    });
+
+    runtime.handleTaskLifecycle(completedEvent());
+
+    expect(runtime.getSnapshot().toast).toMatchObject({
+      kind: 'earned',
+      keyGrade: 'common',
+      keyDropWasProtected: true,
+    });
   });
 
   it('unlocks grade correction after Undo without rerolling', () => {

@@ -93,6 +93,16 @@ describe('protected reward keys', () => {
     });
   });
 
+  it('reports a protected key separately from a lucky random drop', () => {
+    const state = { ...createDefaultRewardsLabState(), keyDropState: { dryStreak: 7 } };
+    const result = claimTaskCompletion(state, {
+      taskId: 'protected-task', taskTitle: 'Protected', completedAt: '2026-08-28T10:00:00.000Z',
+    }, { ...makeRuntime(), random: () => 0.99 });
+
+    expect(result.key).toMatchObject({ grade: 'common' });
+    expect(result.keyDropWasProtected).toBe(true);
+  });
+
   it('upgrades five exact keys and can undo while the output is unused', () => {
     const initial = {
       ...createDefaultRewardsLabState(),

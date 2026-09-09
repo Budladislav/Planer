@@ -56,6 +56,7 @@ export interface RewardsLabToast {
   amount: number;
   economyVersion: 1 | 2 | 3;
   keyGrade?: RewardGrade;
+  keyDropWasProtected?: boolean;
   roll?: number;
   multiplier?: number;
   currencyName: string;
@@ -372,6 +373,7 @@ export const createRewardsLabRuntime = (
             amount: result.claim.amount,
             economyVersion: result.claim.economyVersion,
             ...(result.key?.status === 'available' ? { keyGrade: result.key.grade } : {}),
+            ...(result.outcome === 'earned' && result.keyDropWasProtected ? { keyDropWasProtected: true } : {}),
             ...(result.claim.economyVersion === 1
               ? { roll: result.claim.roll, multiplier: result.claim.multiplier }
               : {}),

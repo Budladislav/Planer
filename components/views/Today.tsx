@@ -33,7 +33,7 @@ import { RewardCompletionMeta, RewardGradeIncrementButton, RewardGradeMarker, Re
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
-import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
+import { EmptyState, GradedTaskRow, TaskCard, TaskIconButton } from '../ui/Primitives';
 import { WeekTaskMoveButton, WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
 import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
@@ -525,7 +525,7 @@ export const TodayView: React.FC = () => {
                   {completedTodayTasks.length === 0 ? (
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
                   ) : completedTodayTasks.map(task => (
-                    <div key={task.id} className="relative flex items-center gap-2 overflow-hidden px-3 py-2.5">
+                    <GradedTaskRow key={task.id} className="flex items-center gap-2 overflow-hidden px-3 py-2.5">
                       <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
                       <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
                       <div className="min-w-0 flex-1">
@@ -542,7 +542,7 @@ export const TodayView: React.FC = () => {
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
                       </TaskIconButton>
-                    </div>
+                    </GradedTaskRow>
                   ))}
                 </div>
               )}

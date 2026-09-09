@@ -12,6 +12,7 @@ import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
+import { GradedTaskRow } from '../ui/Primitives';
 import {
   DndContext,
   closestCenter,
@@ -468,7 +469,7 @@ export const WeekView: React.FC = () => {
             ? new Date(completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : null;
           return (
-            <div key={task.id} className="relative flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
+            <GradedTaskRow key={task.id} className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
               <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
               <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
@@ -484,7 +485,7 @@ export const WeekView: React.FC = () => {
               >
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>
-            </div>
+            </GradedTaskRow>
           );
         })}
         {!canPlanDay && completedTasks.length === 0 && (

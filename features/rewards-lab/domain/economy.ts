@@ -209,6 +209,7 @@ export interface CompletionRewardResult {
   claim: RewardClaim;
   transaction: WalletTransaction | null;
   key: RewardKey | null;
+  keyDropWasProtected: boolean;
   outcome: 'earned' | 'restored' | 'already-posted';
 }
 
@@ -223,7 +224,7 @@ export const claimTaskCompletion = (
       const key = existingClaim.economyVersion === 3 && existingClaim.keyId
         ? state.keys.find(item => item.id === existingClaim.keyId) ?? null
         : null;
-      return { state, claim: existingClaim, transaction: null, key, outcome: 'already-posted' };
+      return { state, claim: existingClaim, transaction: null, key, keyDropWasProtected: false, outcome: 'already-posted' };
     }
 
     const restoredClaim: RewardClaim = { ...existingClaim, taskTitle: input.taskTitle, completedAt: input.completedAt };
@@ -252,6 +253,7 @@ export const claimTaskCompletion = (
       claim: restoredClaim,
       transaction: restored,
       key,
+      keyDropWasProtected: false,
       outcome: 'restored',
     };
   }
@@ -300,6 +302,7 @@ export const claimTaskCompletion = (
     claim,
     transaction: earned,
     key,
+    keyDropWasProtected: keyDraw.protectedDrop,
     outcome: 'earned',
   };
 };

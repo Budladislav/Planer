@@ -44,6 +44,12 @@ export const TaskCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
 
 TaskCard.displayName = 'TaskCard';
 
+export const GradedTaskRow = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => <div ref={ref} className={join('graded-task-row', className)} {...props} />,
+);
+
+GradedTaskRow.displayName = 'GradedTaskRow';
+
 type TaskActionTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 interface TaskIconButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {

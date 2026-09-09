@@ -418,7 +418,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, linkedTasks, highlighted, onD
                         ? <CalendarDays className="h-4 w-4 flex-shrink-0 text-brand-500" aria-hidden="true" />
                         : <CalendarRange className="h-4 w-4 flex-shrink-0 text-brand-500" aria-hidden="true" />}
                     <div className="min-w-0 flex-1">
-                      <p className={`break-words text-sm ${task.status === 'done' ? 'text-slate-500 line-through' : 'text-slate-700'}`}>{task.title}</p>
+                      <p className={`break-words text-sm ${task.status === 'done' ? 'text-slate-950 line-through' : 'text-slate-700'}`}>{task.title}</p>
                       <p className="text-[10px] text-slate-400">{taskDestinationLabel(task, locale, t)}</p>
                     </div>
                     <button
