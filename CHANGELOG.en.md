@@ -2,6 +2,25 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.3.0] — 09.09.2026 — “Control Center”
+
+### Added
+
+- Settings now has seven focused sections: Planning, History and reports, Calendar and schedule, Rewards, Interface, Data and privacy, and About Takt.
+- Child Settings screens now share a clear return to the control center while Settings remains the active navigation item.
+- About Takt provides both the in-app release history and the complete `CHANGELOG.md` file.
+
+### Changed
+
+- On mobile, Settings opens as a compact section list and each section has its own focused screen with an explicit back action.
+- On desktop, Settings uses a wider two-column layout with persistent section navigation and a workspace on the right.
+- The former large Settings component is split into small responsibility-based modules without changing user data.
+
+### Safety
+
+- Export, import, and planner reset moved into a dedicated section without changing their behavior, JSON backup format, or legacy storage keys.
+- This release does not change the data schema or modify existing tasks, events, notes, goals, or isolated Rewards Lab storage.
+
 ## [5.2.5] — 09.09.2026 — “Weekly Template”
 
 ### Added
