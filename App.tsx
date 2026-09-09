@@ -12,6 +12,7 @@ import { useI18n } from './i18n';
 const DoneView = lazy(() => import('./components/views/Done').then(module => ({ default: module.DoneView })));
 const InboxView = lazy(() => import('./components/views/Inbox').then(module => ({ default: module.InboxView })));
 const MonthView = lazy(() => import('./components/views/Month').then(module => ({ default: module.MonthView })));
+const YearView = lazy(() => import('./components/views/Year').then(module => ({ default: module.YearView })));
 const SettingsView = lazy(() => import('./components/views/Settings').then(module => ({ default: module.SettingsView })));
 const ReportsView = lazy(() => import('./components/views/Reports').then(module => ({ default: module.ReportsView })));
 const GoalsView = lazy(() => import('./components/views/Goals').then(module => ({ default: module.GoalsView })));
@@ -39,6 +40,7 @@ const Main: React.FC = () => {
       case 'inbox': return <InboxView />;
       case 'week': return <WeekView />;
       case 'month': return <MonthView />;
+      case 'year': return <YearView />;
       case 'events': return <EventsView />;
       case 'done': return <DoneView />;
       case 'reports': return <ReportsView />;

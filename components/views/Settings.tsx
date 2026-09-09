@@ -215,6 +215,19 @@ export const SettingsView: React.FC = () => {
 
          <button
            type="button"
+           onClick={() => dispatch({ type: 'SET_VIEW', payload: 'year' })}
+           className="settings-row"
+         >
+           <CalendarRange className="h-5 w-5 flex-shrink-0 text-brand-500" />
+           <div className="flex-1">
+             <h3 className="font-semibold text-slate-800">{t('Year')}</h3>
+             <p className="text-sm text-slate-500">{t('Open the year planning horizon.')}</p>
+           </div>
+           <ChevronRight className="h-5 w-5 text-slate-400" />
+         </button>
+
+         <button
+           type="button"
            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'done' })}
            className="settings-row"
          >

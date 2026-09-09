@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import monthViewSource from './components/views/Month.tsx?raw';
+import yearViewSource from './components/views/Year.tsx?raw';
 import todayViewSource from './components/views/Today.tsx?raw';
 import weekTaskItemsSource from './components/week/WeekTaskItems.tsx?raw';
 import weekTaskMoveControlSource from './components/week/WeekTaskMoveControl.tsx?raw';
+import periodTaskCardSource from './components/planning/PeriodTaskCard.tsx?raw';
 import dayNotesSource from './components/DayNotes.tsx?raw';
 import weekNotesSource from './components/WeekNotes.tsx?raw';
 import monthNotesSource from './components/MonthNotes.tsx?raw';
@@ -15,24 +17,26 @@ describe('Today task card presentation', () => {
 
   it('keeps one-step grade promotion available on collapsed planning cards', () => {
     expect(todayViewSource).toContain('<RewardGradeIncrementButton taskId={task.id} />');
-    expect(monthViewSource).toContain('<RewardGradeIncrementButton taskId={task.id} />');
+    expect(periodTaskCardSource).toContain('<RewardGradeIncrementButton taskId={task.id} />');
+    expect(monthViewSource).toContain('<PeriodTaskCard');
+    expect(yearViewSource).toContain('<PeriodTaskCard');
     expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} \/>/g)).toHaveLength(2);
   });
 
   it('keeps frequent actions collapsed and moves secondary actions under the grade selector', () => {
     expect(todayViewSource.match(/<TaskIconButton/g)).toHaveLength(5);
-    expect(monthViewSource.match(/<TaskIconButton/g)).toHaveLength(4);
+    expect(periodTaskCardSource.match(/<TaskIconButton/g)).toHaveLength(4);
     expect(weekTaskItemsSource.match(/<TaskIconButton/g)).toHaveLength(6);
     expect(todayViewSource.match(/<WeekTaskMoveButton/g)).toHaveLength(1);
     expect(weekTaskItemsSource.match(/<WeekTaskMoveButton/g)).toHaveLength(2);
     expect(weekTaskItemsSource.match(/label=\{t\('Mark as done'\)\}/g)).toHaveLength(2);
     expect(todayViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
-    expect(monthViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
+    expect(periodTaskCardSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
     expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(2);
     expect(todayViewSource.indexOf('<WeekTaskMoveButton')).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
     expect(todayViewSource.indexOf("label={t('Record this task as completed yesterday')}")).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
-    expect(monthViewSource.indexOf("label={t('Delete')}")).toBeGreaterThan(monthViewSource.indexOf('showActions &&'));
-    expect(monthViewSource.indexOf("label={t('Edit task')}")).toBeGreaterThan(monthViewSource.indexOf('showActions &&'));
+    expect(periodTaskCardSource.indexOf("label={t('Delete')}")).toBeGreaterThan(periodTaskCardSource.indexOf('showActions &&'));
+    expect(periodTaskCardSource.indexOf("label={t('Edit task')}")).toBeGreaterThan(periodTaskCardSource.indexOf('showActions &&'));
     expect(weekTaskItemsSource.indexOf("label={t('Delete')}")).toBeGreaterThan(weekTaskItemsSource.indexOf('showActions &&'));
     expect(weekTaskItemsSource.indexOf("label={t('Edit task')}")).toBeGreaterThan(weekTaskItemsSource.indexOf('showActions &&'));
   });
@@ -47,7 +51,7 @@ describe('Today task card presentation', () => {
   it('combines the active grade marker with its promotion button', () => {
     const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('export const TodayView'));
     expect(activeTodayCard).not.toContain('<RewardGradeMarker');
-    expect(monthViewSource).not.toContain('<RewardGradeMarker');
+    expect(periodTaskCardSource).not.toContain('<RewardGradeMarker');
     expect(weekTaskItemsSource).not.toContain('<RewardGradeMarker');
   });
 

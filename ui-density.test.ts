@@ -4,6 +4,9 @@ import primitivesSource from './components/ui/Primitives.tsx?raw';
 import todaySource from './components/views/Today.tsx?raw';
 import weekSource from './components/views/Week.tsx?raw';
 import monthSource from './components/views/Month.tsx?raw';
+import yearSource from './components/views/Year.tsx?raw';
+import appSource from './App.tsx?raw';
+import settingsSource from './components/views/Settings.tsx?raw';
 import calendarSource from './components/events/EventsCalendar.tsx?raw';
 import gradeControlsSource from './features/rewards-lab/ui/ActiveRewardGradeControls.tsx?raw';
 
@@ -36,17 +39,24 @@ describe('compact planner hierarchy', () => {
     expect(primaryNavigation).toContain("view: 'today'");
     expect(primaryNavigation).not.toContain("view: 'inbox'");
     expect(primaryNavigation).not.toContain("view: 'month'");
+    expect(primaryNavigation).not.toContain("view: 'year'");
     expect(mobileNavigation.indexOf("view: 'settings'")).toBeLessThan(mobileNavigation.indexOf('...primaryNavItems'));
     expect(layoutSource).not.toContain('fixed right-3 top-3');
     expect(layoutSource).toContain('fixed bottom-0 left-0 right-0');
   });
 
   it('uses the full planning context width after Settings moves into navigation', () => {
-    [todaySource, weekSource, monthSource].forEach(source => {
+    [todaySource, weekSource, monthSource, yearSource].forEach(source => {
       expect(source).toContain('min-h-10');
       expect(source).not.toContain('pr-12');
       expect(source).toContain('<RewardsBalancePill />');
     });
+  });
+
+  it('keeps Year Plan behind Settings and loads it lazily', () => {
+    expect(settingsSource).toContain("payload: 'year'");
+    expect(appSource).toContain("const YearView = lazy(");
+    expect(appSource).toContain("case 'year': return <YearView />");
   });
 
   it('keeps calendar navigation compact and exposes month notes', () => {

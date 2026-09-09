@@ -6,19 +6,11 @@ import {
   PointerSensor,
   TouchSensor,
   closestCenter,
-  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { ArrowRightLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, X } from 'lucide-react';
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import {
@@ -28,15 +20,14 @@ import {
   partitionMonthWeeks,
   planTaskForMonth,
 } from '../../month-planning';
-import { formatDateShort, generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
+import { generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { MonthMetaBadges, MonthNotesEditor } from '../MonthNotes';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
-import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
+import { PeriodTaskCard, PeriodTaskContainer } from '../planning/PeriodTaskCard';
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -51,113 +42,6 @@ const applyOrder = (tasks: Task[], savedOrder: string[] | undefined): Task[] => 
     return [task];
   });
   return [...ordered, ...taskMap.values()];
-};
-
-interface MonthTaskCardProps {
-  task: Task;
-  containerId: string;
-  onMove: (taskId: string) => void;
-  onEdit: (task: Task) => void;
-  onComplete: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
-}
-
-const MonthTaskCard: React.FC<MonthTaskCardProps> = ({ task, containerId, onMove, onEdit, onComplete, onDelete }) => {
-  const { t } = useI18n();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
-    data: { containerId },
-  });
-  const [showActions, setShowActions] = useState(false);
-
-  return (
-    <TaskCard
-      ref={setNodeRef}
-      data-task-id={task.id}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.45 : 1,
-      }}
-      className="px-2"
-      onClick={() => setShowActions(value => !value)}
-    >
-      <RewardGradeSurface taskId={task.id} />
-      <div className="flex min-w-0 items-center gap-2">
-        <div
-          {...attributes}
-          {...listeners}
-          className="flex min-w-0 flex-1 touch-none items-center gap-2 cursor-grab active:cursor-grabbing"
-          title={t('Drag task')}
-        >
-          <RewardGradeIncrementButton taskId={task.id} />
-          <span className={`min-w-0 flex-1 text-slate-950 ${showActions ? 'sr-only' : 'truncate'}`}>
-            {task.title}
-          </span>
-          {task.plan.day && (
-            <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-              {formatDateShort(task.plan.day).slice(0, 5)}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-1">
-          <TaskIconButton label={t('Move')} tone="primary" onClick={event => { event.stopPropagation(); onMove(task.id); }}>
-            <ArrowRightLeft className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton label={t('Mark as done')} tone="success" onClick={event => { event.stopPropagation(); onComplete(task.id); }}>
-            <Check className="h-4 w-4" />
-          </TaskIconButton>
-        </div>
-      </div>
-
-      <div
-        className={`overflow-hidden px-2 transition-all ${
-          showActions ? 'mt-2 max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        }`}
-        onClick={event => event.stopPropagation()}
-      >
-        {showActions && (
-          <div className="space-y-2">
-            <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
-            <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact />
-            </div>
-            <div className="flex justify-center gap-1">
-              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDelete(task.id)}>
-                <X className="h-3.5 w-3.5" />
-              </TaskIconButton>
-              <TaskIconButton label={t('Edit task')} onClick={() => onEdit(task)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </TaskIconButton>
-            </div>
-          </div>
-        )}
-      </div>
-    </TaskCard>
-  );
-};
-
-interface TaskContainerProps {
-  id: string;
-  tasks: Task[];
-  children: React.ReactNode;
-  emptyText: string;
-}
-
-const TaskContainer: React.FC<TaskContainerProps> = ({ id, tasks, children, emptyText }) => {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { containerId: id } });
-  return (
-    <div
-      ref={setNodeRef}
-      data-container-id={id}
-      className={`min-h-14 space-y-2 rounded-xl p-2 transition-colors ${isOver ? 'bg-brand-50 ring-2 ring-brand-100' : 'bg-slate-50/70'}`}
-    >
-      <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
-        {children}
-      </SortableContext>
-      {tasks.length === 0 && <div className="py-2 text-center text-xs italic text-slate-400">{emptyText}</div>}
-    </div>
-  );
 };
 
 export const MonthView: React.FC = () => {
@@ -242,8 +126,8 @@ export const MonthView: React.FC = () => {
       payload: {
         id: taskId,
         plan: targetWeek
-          ? { month: currentMonth, week: targetWeek, day: null }
-          : { month: currentMonth, week: null, day: null },
+          ? { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null }
+          : { year: currentMonth.slice(0, 4), month: currentMonth, week: null, day: null },
       },
     });
 
@@ -325,7 +209,7 @@ export const MonthView: React.FC = () => {
         id,
         title: quickAddTitle.trim(),
         status: 'todo',
-        plan: { month: currentMonth, week: targetWeek, day: null },
+        plan: { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null },
         projectId: null,
         eventId: null,
         createdAt: new Date().toISOString(),
@@ -356,7 +240,7 @@ export const MonthView: React.FC = () => {
   };
 
   const renderTask = (task: Task, containerId: string) => (
-    <MonthTaskCard
+    <PeriodTaskCard
       key={task.id}
       task={task}
       containerId={containerId}
@@ -390,9 +274,9 @@ export const MonthView: React.FC = () => {
             <Plus className="h-4 w-4" />
           </button>
         </div>
-        <TaskContainer id={weekContainer(week)} tasks={tasks} emptyText={t('Drop a month task into this week')}>
+        <PeriodTaskContainer id={weekContainer(week)} tasks={tasks} emptyText={t('Drop a month task into this week')}>
           {tasks.map(task => renderTask(task, weekContainer(week)))}
-        </TaskContainer>
+        </PeriodTaskContainer>
       </section>
     );
   };
@@ -432,9 +316,9 @@ export const MonthView: React.FC = () => {
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <TaskContainer id={poolContainer(currentMonth)} tasks={monthPoolTasks} emptyText={t('Drop tasks here to choose their week later')}>
+          <PeriodTaskContainer id={poolContainer(currentMonth)} tasks={monthPoolTasks} emptyText={t('Drop tasks here to choose their week later')}>
             {monthPoolTasks.map(task => renderTask(task, poolContainer(currentMonth)))}
-          </TaskContainer>
+          </PeriodTaskContainer>
         </section>
 
         <div className="mt-3 space-y-2">

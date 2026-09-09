@@ -35,7 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { view: 'settings', icon: Settings, label: t('Settings') },
     ...primaryNavItems,
   ];
-  const settingsViews: ViewState[] = ['settings', 'inbox', 'month', 'done', 'reports', 'goals'];
+  const settingsViews: ViewState[] = ['settings', 'inbox', 'month', 'year', 'done', 'reports', 'goals'];
   const isNavigationActive = (view: ViewState) => view === 'settings'
     ? settingsViews.includes(currentView)
     : currentView === view;
