@@ -2,6 +2,25 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.4.0] — 09.09.2026 — “Goal Vertical”
+
+### Added
+
+- A day, week, month, or year task can now be linked to an active long-term goal, with one action to open that goal from the task.
+- A goal's filled “Next step” can create a normal shared task with a Today, Week, Month, or Year horizon.
+- Goals now show their linked active and completed tasks, planning destinations, and simple progress counts.
+
+### Changed
+
+- Long-term goals graduated from experimental status into Takt's core planning model.
+- TXT reports show a completed task's linked goal and active/completed task counts for every goal.
+- The TXT report heading now uses the current Takt name.
+
+### Safety
+
+- Planner schema advanced from 12 to 13. Legacy tasks receive an empty link while existing tasks, wishes, goals, and history remain unchanged.
+- Goal links are included in the normal JSON backup. Deleting a goal never deletes its tasks: they stay in the planner and are only unlinked.
+
 ## [5.3.6] — 09.09.2026 — “No Starting Point”
 
 ### Added
