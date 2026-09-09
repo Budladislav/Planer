@@ -48,6 +48,14 @@ describe('Today task card presentation', () => {
     expect(weekTaskMoveControlSource).toContain('day.date >= today');
   });
 
+  it('offers distinct quick-add controls for the start and end of Today', () => {
+    expect(todayViewSource).toContain('const AddToStartIcon');
+    expect(todayViewSource).toContain('const AddToEndIcon');
+    expect(todayViewSource.match(/Add task to start/g)).toHaveLength(4);
+    expect(todayViewSource.match(/Add task to end/g)).toHaveLength(4);
+    expect(todayViewSource).toContain("position === 'start' ? [newTaskId, ...orderedIds] : [...orderedIds, newTaskId]");
+  });
+
   it('combines the active grade marker with its promotion button', () => {
     const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('export const TodayView'));
     expect(activeTodayCard).not.toContain('<RewardGradeMarker');

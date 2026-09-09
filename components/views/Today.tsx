@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { CalendarCheck2, Check, ChevronDown, Pencil, Plus, RotateCcw, X } from 'lucide-react';
+import { CalendarCheck2, Check, ChevronDown, Pencil, RotateCcw, X } from 'lucide-react';
 import { getTodayString, generateId, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
@@ -36,6 +36,20 @@ import { useI18n } from '../../i18n';
 import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
 import { WeekTaskMoveButton, WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+
+const AddToStartIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <path d="M5 13h14M12 20V5" />
+    <path d="m8 8 4-4 4 4" />
+  </svg>
+);
+
+const AddToEndIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <path d="M5 11h14M12 4v15" />
+    <path d="m8 16 4 4 4-4" />
+  </svg>
+);
 
 // Sortable Task Item Component
 const SortableTaskItem: React.FC<{ 
@@ -293,7 +307,7 @@ export const TodayView: React.FC = () => {
     }
   };
 
-  const handleQuickAdd = (e: React.FormEvent) => {
+  const handleQuickAdd = (e: React.FormEvent, position: 'start' | 'end' = 'end') => {
     e.preventDefault();
     if (!quickAdd.trim()) return;
     
@@ -312,8 +326,7 @@ export const TodayView: React.FC = () => {
         completedAt: null,
       }
     });
-    // Add new task to the end of the order (based on current orderedIds)
-    const newOrder = [...orderedIds, newTaskId];
+    const newOrder = position === 'start' ? [newTaskId, ...orderedIds] : [...orderedIds, newTaskId];
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     setQuickAdd('');
   };
@@ -543,13 +556,25 @@ export const TodayView: React.FC = () => {
                 placeholder={t('Add a task for today...')}
                 className="field min-w-0 flex-1"
               />
-              <button 
-                type="submit" 
-                className="composer-submit"
-                title={t('Add task')}
-              >
-                <Plus className="w-6 h-6" />
-              </button>
+              <div className="flex flex-shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  className="composer-submit"
+                  title={t('Add task to start')}
+                  aria-label={t('Add task to start')}
+                  onClick={(event) => handleQuickAdd(event, 'start')}
+                >
+                  <AddToStartIcon className="h-6 w-6" />
+                </button>
+                <button
+                  type="submit"
+                  className="composer-submit"
+                  title={t('Add task to end')}
+                  aria-label={t('Add task to end')}
+                >
+                  <AddToEndIcon className="h-6 w-6" />
+                </button>
+              </div>
             </div>
           </form>
           <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
@@ -563,13 +588,25 @@ export const TodayView: React.FC = () => {
               placeholder={t('Add a task for today...')}
               className="field min-w-0 flex-1"
             />
-            <button 
-              type="submit" 
-              className="composer-submit"
-              title={t('Add task')}
-            >
-              <Plus className="w-6 h-6" />
-            </button>
+            <div className="flex flex-shrink-0 gap-1.5">
+              <button
+                type="button"
+                className="composer-submit"
+                title={t('Add task to start')}
+                aria-label={t('Add task to start')}
+                onClick={(event) => handleQuickAdd(event, 'start')}
+              >
+                <AddToStartIcon className="h-6 w-6" />
+              </button>
+              <button
+                type="submit"
+                className="composer-submit"
+                title={t('Add task to end')}
+                aria-label={t('Add task to end')}
+              >
+                <AddToEndIcon className="h-6 w-6" />
+              </button>
+            </div>
           </form>
       </div>
 
