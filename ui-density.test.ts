@@ -8,6 +8,8 @@ import yearSource from './components/views/Year.tsx?raw';
 import weeklyTemplateSource from './components/views/WeeklyTemplate.tsx?raw';
 import appSource from './App.tsx?raw';
 import settingsSource from './components/views/Settings.tsx?raw';
+import planningSettingsSource from './components/settings/PlanningSettings.tsx?raw';
+import dataSettingsSource from './components/settings/DataSettings.tsx?raw';
 import calendarSource from './components/events/EventsCalendar.tsx?raw';
 import gradeControlsSource from './features/rewards-lab/ui/ActiveRewardGradeControls.tsx?raw';
 
@@ -55,13 +57,13 @@ describe('compact planner hierarchy', () => {
   });
 
   it('keeps Year Plan behind Settings and loads it lazily', () => {
-    expect(settingsSource).toContain("payload: 'year'");
+    expect(planningSettingsSource).toContain("navigate('year')");
     expect(appSource).toContain("const YearView = lazy(");
     expect(appSource).toContain("case 'year': return <YearView />");
   });
 
   it('keeps the weekly template behind Settings and visually separates template mode', () => {
-    expect(settingsSource).toContain("payload: 'weekly-template'");
+    expect(planningSettingsSource).toContain("navigate('weekly-template')");
     expect(appSource).toContain('const WeeklyTemplateView = lazy(');
     expect(appSource).toContain("case 'weekly-template': return <WeeklyTemplateView />");
     expect(weeklyTemplateSource).toContain("t('Template mode')");
@@ -86,5 +88,23 @@ describe('compact planner hierarchy', () => {
 
   it('renders grade color beneath task content', () => {
     expect(gradeControlsSource).toContain('reward-grade-surface');
+  });
+
+  it('splits Settings into seven focused responsive sections', () => {
+    ['planning', 'history', 'calendar', 'rewards', 'interface', 'data', 'about'].forEach(section => {
+      expect(settingsSource).toContain(`id: '${section}'`);
+    });
+    expect(settingsSource).toContain('lg:grid-cols-[280px_minmax(0,1fr)]');
+    expect(settingsSource).toContain("t('Back to settings sections')");
+    expect(layoutSource).toContain('isSettingsChildView');
+    expect(layoutSource).toContain("t('Back to Settings')");
+  });
+
+  it('keeps data operations in their own settings module', () => {
+    expect(dataSettingsSource).toContain("dispatch({ type: 'IMPORT_DATA'");
+    expect(dataSettingsSource).toContain("dispatch({ type: 'RESET_DATA' })");
+    expect(settingsSource).not.toContain('JSON.stringify(state');
+    expect(settingsSource).not.toContain('RewardsLabSettingsRow');
+    expect(settingsSource).not.toContain('WorkShiftSettingsPanel');
   });
 });

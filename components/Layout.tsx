@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewState } from '../types';
 import {
-  Target, Calendar, List, Settings, type LucideIcon,
+  Target, Calendar, ChevronLeft, List, Settings, type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
@@ -35,7 +35,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { view: 'settings', icon: Settings, label: t('Settings') },
     ...primaryNavItems,
   ];
-  const settingsViews: ViewState[] = ['settings', 'inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals'];
+  const settingsChildViews: ViewState[] = ['inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals'];
+  const settingsViews: ViewState[] = ['settings', ...settingsChildViews];
+  const isSettingsChildView = settingsChildViews.includes(currentView);
   const isNavigationActive = (view: ViewState) => view === 'settings'
     ? settingsViews.includes(currentView)
     : currentView === view;
@@ -102,7 +104,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       </aside>
 
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <main className="app-main mx-auto w-full max-w-4xl flex-1 overflow-y-auto px-3 pt-3 lg:px-6 lg:pt-5">
+        <main className={`app-main mx-auto w-full flex-1 overflow-y-auto px-3 pt-3 lg:px-6 lg:pt-5 ${currentView === 'settings' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+          {isSettingsChildView && (
+            <button
+              type="button"
+              onClick={() => onNavigate('settings')}
+              className="mb-2 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 lg:mb-3"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {t('Back to Settings')}
+            </button>
+          )}
           {children}
         </main>
 
