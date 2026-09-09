@@ -2,6 +2,23 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.3.5] — 09.09.2026 — “Weekly Sets”
+
+### Added
+
+- Weekly autofill now supports multiple independent named templates for different kinds of weeks.
+- Templates can be created from scratch, duplicated with their tasks and grades, renamed, selected, and deleted.
+
+### Changed
+
+- Applying a template to a selected week and duplicate protection now operate independently for each template.
+- PWA icons now use a stable asset revision and a dedicated maskable PNG so Android/Chrome requests the current Takt mark again without changing icon URLs on every routine release.
+
+### Safety
+
+- Planner schema advanced from 10 to 11. The existing weekly template becomes the first named template automatically while preserving tasks, ordering, application history, and linked grades.
+- Deleting a template never removes planner tasks previously created from it, and the final remaining template cannot be deleted.
+
 ## [5.3.0] — 09.09.2026 — “Control Center”
 
 ### Added
