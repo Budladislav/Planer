@@ -2,6 +2,27 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.4.1] — 09.09.2026 — “Moment of Luck”
+
+### Added
+
+- Task completion now reveals its result according to actual luck, from a quiet minimum roll to a colorful maximum result marked `MAX`.
+- A dropped key keeps its grade color while the reveal communicates how unlikely that exact drop was for the completed task grade, including its precise chance.
+- Protected randomness is labeled honestly as a guaranteed key instead of being presented as a rare lucky roll.
+
+### Changed
+
+- Recompletion after Undo calmly restores the original result without replaying its celebration.
+- Reveal animations stay short and local, respecting both the Lab preference and the system reduced-motion setting.
+
+### Fixed
+
+- Grade tint layers no longer wash out completed task titles: every grade stays readable in Today, Week, history, and linked long-term goal tasks.
+
+### Safety
+
+- Economy rules and version are unchanged: credit corridors, key probabilities, protected randomness, wallet balance, and stored results are not recalculated.
+
 ## [5.4.0] — 09.09.2026 — “Goal Vertical”
 
 ### Added
