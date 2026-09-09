@@ -389,7 +389,6 @@ const RU: Record<string, string> = {
   'Open Rewards Lab. Balance: {balance} {currency}': 'Открыть лабораторию наград. Баланс: {balance} {currency}',
   'Reward restored': 'Награда восстановлена',
   'Task reward': 'Награда за задачу',
-  'Key drop': 'Выпал ключ',
   'Lucky drop': 'Удачный дроп',
   'Rare drop': 'Редкий дроп',
   'Exceptional drop': 'Исключительный дроп',

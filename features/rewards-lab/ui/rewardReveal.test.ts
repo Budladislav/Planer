@@ -41,4 +41,3 @@ describe('reward reveal presentation', () => {
     expect(getRewardRevealIntensity(credit, key, false)).toBe(4);
   });
 });
-

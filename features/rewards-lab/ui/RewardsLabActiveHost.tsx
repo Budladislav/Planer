@@ -22,8 +22,8 @@ const REVEAL_THEMES: Record<RewardGrade, { rgb: string; surface: string; icon: s
   mythic: { rgb: '228 81 94', surface: 'border-rose-300 bg-rose-50/90', icon: 'bg-rose-100 text-rose-700', amount: 'text-rose-700' },
 };
 
-const KEY_REVEAL_LABELS: Record<KeyRevealTier, string> = {
-  standard: 'Key drop',
+const KEY_REVEAL_LABELS: Record<KeyRevealTier, string | null> = {
+  standard: null,
   lucky: 'Lucky drop',
   rare: 'Rare drop',
   exceptional: 'Exceptional drop',
@@ -66,6 +66,7 @@ const RewardsLabActiveHost: React.FC = () => {
         maximumFractionDigits: 2,
         minimumFractionDigits: keyReveal.probability < 0.01 ? 2 : 0,
       }).format(keyReveal.probability);
+  const keyRevealLabel = keyReveal ? KEY_REVEAL_LABELS[keyReveal.tier] : null;
   const toastTitle = toast?.kind === 'restored' ? t('Reward restored') : t('Task reward');
   const toastDescription = toast && grade
     ? toast.kind === 'restored'
@@ -90,11 +91,8 @@ const RewardsLabActiveHost: React.FC = () => {
               {revealIntensity >= 3 ? <Sparkles className="h-5 w-5" /> : <Dice5 className="h-5 w-5" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-900">
+              <span className="block text-sm font-semibold text-slate-900">
                 {toastTitle}
-                {toast.kind === 'earned' && creditReveal?.maximum && (
-                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black tracking-[0.14em] ${gradeStyles[toast.grade].badge}`}>MAX</span>
-                )}
               </span>
               <span className="mt-0.5 block text-xs text-slate-600">
                 {toastDescription}
@@ -103,13 +101,22 @@ const RewardsLabActiveHost: React.FC = () => {
                 <span className={`mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs font-semibold ${gradeStyles[toast.keyGrade].keyText}`}>
                   <KeyRound className="h-3 w-3" />
                   <span>{t('{grade} key', { grade: t(REWARD_GRADES[toast.keyGrade].label) })}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{t(KEY_REVEAL_LABELS[keyReveal.tier])}</span>
+                  {keyRevealLabel && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span>{t(keyRevealLabel)}</span>
+                    </>
+                  )}
                   {keyChance && <span className="font-medium opacity-80">· {t('chance {chance}', { chance: keyChance })}</span>}
                 </span>
               )}
             </span>
-            <span className={`flex-shrink-0 text-sm font-black tabular-nums ${revealIntensity === 0 ? 'text-brand-700' : revealTheme.amount}`}>+{toast.amount}</span>
+            <span className="flex flex-shrink-0 items-center gap-1.5">
+              <span className={`text-sm font-black tabular-nums ${revealIntensity === 0 ? 'text-brand-700' : revealTheme.amount}`}>+{toast.amount}</span>
+              {toast.kind === 'earned' && creditReveal?.maximum && (
+                <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black tracking-[0.14em] ${gradeStyles[toast.grade].badge}`}>MAX</span>
+              )}
+            </span>
           </span>
         </button>
       )}

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, KeyRound } from 'lucide-react';
 import { getTaskGrade, isRewardClaimActive, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
@@ -91,14 +91,17 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; goalLi
 
   const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
   const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
-  const label = nextGrade
-    ? t('Increase task grade: {from} to {to}', { from: t(REWARD_GRADES[grade].label), to: t(REWARD_GRADES[nextGrade].label) })
-    : t('Maximum task grade: {grade}', { grade: t(REWARD_GRADES[grade].label) });
+  if (!nextGrade) return null;
+
+  const label = t('Increase task grade: {from} to {to}', {
+    from: t(REWARD_GRADES[grade].label),
+    to: t(REWARD_GRADES[nextGrade].label),
+  });
 
   return (
     <button
       type="button"
-      disabled={locked || !nextGrade}
+      disabled={locked}
       onClick={event => {
         event.stopPropagation();
         if (nextGrade) runtime.setTaskGrade(taskId, nextGrade);
@@ -106,26 +109,40 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; goalLi
       onPointerDown={event => event.stopPropagation()}
       onMouseDown={event => event.stopPropagation()}
       onTouchStart={event => event.stopPropagation()}
-      className={`flex h-8 w-9 flex-shrink-0 items-center justify-center gap-0.5 rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[grade]}`}
+      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${GRADE_STEP_STYLES[grade]}`}
       aria-label={label}
       title={locked ? t('Grade is locked while the task is completed.') : label}
     >
-      <span className={`h-2.5 w-2.5 rotate-45 rounded-[2px] ${GRADE_STYLES[grade].dot}`} aria-hidden="true" />
       <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
     </button>
   );
 };
 
 export const ActiveRewardCompletionMeta: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const { t } = useI18n();
   const { snapshot } = useRewardsLab();
   if (!snapshot.enabled || !snapshot.state) return null;
   const claim = snapshot.state.claims[taskId];
   if (!claim || !isRewardClaimActive(snapshot.state, taskId)) return null;
+  const key = claim.economyVersion === 3 && claim.keyId
+    ? snapshot.state.keys.find(item => item.id === claim.keyId) ?? null
+    : null;
 
   return (
-    <span className={`inline-flex flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${GRADE_META_STYLES[claim.grade]}`}>
-      +{claim.amount} {snapshot.state.currencyName}
-    </span>
+    <>
+      {key && (
+        <span
+          className={`inline-flex flex-shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${GRADE_META_STYLES[key.grade]}`}
+          title={t('{grade} key', { grade: t(REWARD_GRADES[key.grade].label) })}
+        >
+          <KeyRound className="h-3 w-3" aria-hidden="true" />
+          <span>{t(REWARD_GRADES[key.grade].label)}</span>
+        </span>
+      )}
+      <span className={`inline-flex flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${GRADE_META_STYLES[claim.grade]}`}>
+        +{claim.amount} {snapshot.state.currencyName}
+      </span>
+    </>
   );
 };
 

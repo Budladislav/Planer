@@ -196,7 +196,16 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <TaskIconButton
+            label={t('Delete')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
           <span
             className={`min-w-0 flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
             title={task.title}
@@ -205,7 +214,17 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
+          <TaskIconButton
+            label={t('Edit task')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
@@ -234,14 +253,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
               <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
-            <div className="flex justify-center gap-1">
-              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
-                <X className="h-3.5 w-3.5" />
-              </TaskIconButton>
-              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </TaskIconButton>
-            </div>
           </div>
         )}
       </div>
@@ -455,7 +466,16 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <TaskIconButton
+            label={t('Delete')}
+            tone="danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm(task.id);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </TaskIconButton>
           <span
             className={`min-w-0 max-w-full flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
           >
@@ -463,7 +483,17 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
+          <TaskIconButton
+            label={t('Edit task')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </TaskIconButton>
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
@@ -492,14 +522,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
               <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
-            <div className="flex justify-center gap-1">
-              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
-                <X className="h-3.5 w-3.5" />
-              </TaskIconButton>
-              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </TaskIconButton>
-            </div>
           </div>
         )}
       </div>

@@ -8,9 +8,12 @@ describe('reward reveal UI', () => {
   it('shows maximum credits, exact key chance and protected randomness honestly', () => {
     expect(hostSource).toContain("creditReveal?.maximum");
     expect(hostSource).toContain('>MAX</span>');
+    expect(hostSource.indexOf('+{toast.amount}')).toBeLessThan(hostSource.indexOf('>MAX</span>'));
     expect(hostSource).toContain('classifyKeyReveal(toast.grade, toast.keyGrade, toast.keyDropWasProtected)');
     expect(hostSource).toContain("t('chance {chance}'");
     expect(hostSource).toContain("guaranteed: 'Guaranteed key'");
+    expect(hostSource).toContain('standard: null');
+    expect(hostSource).not.toContain("standard: 'Key drop'");
   });
 
   it('suppresses celebration for restored results and disabled animation', () => {

@@ -159,12 +159,6 @@ const SortableTaskItem: React.FC<{
         className="flex flex-1 min-w-0 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
-          <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-950 ${task.status === 'done' ? 'line-through' : ''}`}>
-            {task.title}
-          </span>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-1">
           <TaskIconButton
             label={t('Delete task')}
             tone="danger"
@@ -175,6 +169,12 @@ const SortableTaskItem: React.FC<{
           >
             <X className="h-3.5 w-3.5" />
           </TaskIconButton>
+          <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-950 ${task.status === 'done' ? 'line-through' : ''}`}>
+            {task.title}
+          </span>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <TaskIconButton
             label={t('Edit task')}
             onClick={(e) => {

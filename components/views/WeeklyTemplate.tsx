@@ -104,22 +104,22 @@ const TemplateTaskCard: React.FC<{
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <RewardGradeIncrementButton taskId={rewardTaskId} />
-        <span className={`${expanded ? 'sr-only' : 'truncate'} min-w-0 flex-1 text-sm font-medium text-slate-950`} title={task.title}>
-          {task.title}
-        </span>
-        <TaskIconButton
-          label={t('Edit template task')}
-          onClick={event => { event.stopPropagation(); setEditing(true); }}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </TaskIconButton>
         <TaskIconButton
           label={t('Delete template task')}
           tone="danger"
           onClick={event => { event.stopPropagation(); onDelete(task.id); }}
         >
           <X className="h-3.5 w-3.5" />
+        </TaskIconButton>
+        <span className={`${expanded ? 'sr-only' : 'truncate'} min-w-0 flex-1 text-sm font-medium text-slate-950`} title={task.title}>
+          {task.title}
+        </span>
+        <RewardGradeIncrementButton taskId={rewardTaskId} />
+        <TaskIconButton
+          label={t('Edit template task')}
+          onClick={event => { event.stopPropagation(); setEditing(true); }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
         </TaskIconButton>
       </div>
       <div className={`overflow-hidden px-4 transition-all duration-200 ${expanded ? 'mt-2 max-h-96 opacity-100' : 'max-h-0 opacity-0'}`} onClick={event => event.stopPropagation()}>

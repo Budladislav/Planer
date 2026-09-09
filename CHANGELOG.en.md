@@ -14,6 +14,10 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - Recompletion after Undo calmly restores the original result without replaying its celebration.
 - Reveal animations stay short and local, respecting both the Lab preference and the system reduced-motion setting.
+- The `MAX` marker now sits beside the credit amount, while a standard key appears without a redundant “Key drop” label.
+- Quick grade increase uses a single arrow without a diamond; the button is hidden at the maximum Mythic grade.
+- Completed task metadata now shows the dropped key and its grade to the left of earned credits.
+- Every planning level keeps delete to the left of the title, with quick grade increase, move, edit, and completion consistently ordered on the right.
 
 ### Fixed
 

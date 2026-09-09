@@ -4,6 +4,7 @@ import primitivesSource from './components/ui/Primitives.tsx?raw';
 import goalsSource from './components/views/Goals.tsx?raw';
 import todaySource from './components/views/Today.tsx?raw';
 import weekSource from './components/views/Week.tsx?raw';
+import rewardControlsSource from './features/rewards-lab/ui/ActiveRewardGradeControls.tsx?raw';
 
 const stylesSource = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
 
@@ -22,5 +23,18 @@ describe('graded completed task contrast', () => {
     expect(weekSource).toContain('text-slate-950 line-through');
     expect(goalsSource).toContain("task.status === 'done' ? 'text-slate-950 line-through'");
     expect(goalsSource).not.toContain("task.status === 'done' ? 'text-slate-500 line-through'");
+  });
+
+  it('keeps the originally dropped key visible with completed task metadata', () => {
+    const completionMeta = rewardControlsSource.slice(
+      rewardControlsSource.indexOf('export const ActiveRewardCompletionMeta'),
+      rewardControlsSource.indexOf('export const ActiveRewardGradeSelector'),
+    );
+
+    expect(completionMeta).toContain('claim.economyVersion === 3 && claim.keyId');
+    expect(completionMeta).toContain('snapshot.state.keys.find');
+    expect(completionMeta).toContain('<KeyRound');
+    expect(completionMeta).toContain('REWARD_GRADES[key.grade].label');
+    expect(completionMeta.indexOf('<KeyRound')).toBeLessThan(completionMeta.indexOf('+{claim.amount}'));
   });
 });

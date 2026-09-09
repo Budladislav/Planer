@@ -69,4 +69,3 @@ export const getRewardRevealIntensity = (
   if (restored) return 0;
   return Math.max(credit.intensity, key?.intensity ?? 0) as 0 | 1 | 2 | 3 | 4;
 };
-
