@@ -15,6 +15,10 @@ import gradeControlsSource from './features/rewards-lab/ui/ActiveRewardGradeCont
 import inboxSource from './components/views/Inbox.tsx?raw';
 import goalsSource from './components/views/Goals.tsx?raw';
 import optionalStartDateSource from './components/ui/OptionalStartDate.tsx?raw';
+import taskGoalLinkSource from './components/tasks/TaskGoalLinkControl.tsx?raw';
+import periodTaskCardSource from './components/planning/PeriodTaskCard.tsx?raw';
+import weekTaskItemsSource from './components/week/WeekTaskItems.tsx?raw';
+import doneSource from './components/views/Done.tsx?raw';
 
 const viewSources = import.meta.glob('./components/views/*.tsx', {
   query: '?raw',
@@ -121,5 +125,18 @@ describe('compact planner hierarchy', () => {
     expect(goalsSource).toContain('<StartDateModeButton');
     expect(optionalStartDateSource).toContain("t('Start date not specified')");
     expect(optionalStartDateSource).toContain("onClick={() => onChange(null)}");
+  });
+
+  it('makes long-term goals a core planning feature linked to every task horizon', () => {
+    expect(planningSettingsSource).toContain("title={t('Long-term goals')}");
+    expect(planningSettingsSource).not.toContain("t('Experimental')");
+    expect(goalsSource).toContain('<GoalTaskSheet');
+    expect(goalsSource).toContain('getGoalTaskCounts');
+    expect(goalsSource).toContain('goalNavigationTargetId');
+    [todaySource, weekTaskItemsSource, periodTaskCardSource, doneSource].forEach(source => {
+      expect(source).toContain('<TaskGoalLinkControl');
+    });
+    expect(taskGoalLinkSource).toContain("type: 'OPEN_GOAL'");
+    expect(taskGoalLinkSource).toContain("goalId: event.target.value || null");
   });
 });

@@ -1,4 +1,5 @@
 import { AppLanguage, Capture, LongTermGoal, Task } from './types';
+import { getGoalTaskCounts } from './goal-tasks';
 import { getDateString, getWeekDates } from './utils';
 
 export interface DateRange {
@@ -104,9 +105,10 @@ export const buildProgressReport = (
   const realizedCaptures = getRealizedCapturesForRange(captures, range);
   const activeGoals = goals.filter(goal => goal.status === 'active');
   const completedGoals = getCompletedGoalsForRange(goals, range);
+  const goalById = new Map(goals.map(goal => [goal.id, goal]));
   const ru = language === 'ru';
   const lines = ru ? [
-    'ОТЧЁТ О ПРОГРЕССЕ MONOFOCUS',
+    'ОТЧЁТ О ПРОГРЕССЕ TAKT',
     `начало_периода: ${range.start}`,
     `конец_периода: ${range.end}`,
     `создан: ${formatTimestamp(generatedAt.toISOString())}`,
@@ -116,7 +118,7 @@ export const buildProgressReport = (
     '',
     '=== ВЫПОЛНЕННЫЕ ЗАДАЧИ ===',
   ] : [
-    'MONOFOCUS PROGRESS REPORT',
+    'TAKT PROGRESS REPORT',
     `period_start: ${range.start}`,
     `period_end: ${range.end}`,
     `generated_at: ${formatTimestamp(generatedAt.toISOString())}`,
@@ -131,12 +133,15 @@ export const buildProgressReport = (
     lines.push(ru ? '(нет выполненных задач)' : '(no completed tasks)');
   } else {
     completedTasks.forEach((task, index) => {
+      const linkedGoal = task.goalId ? goalById.get(task.goalId) : null;
       lines.push(...(ru ? [
         `${index + 1}. выполнено: ${formatTimestamp(task.completedAt as string)}`,
         `   название: ${singleLine(task.title)}`,
+        ...(linkedGoal ? [`   цель: ${singleLine(linkedGoal.title)}`] : []),
       ] : [
         `${index + 1}. completed_at: ${formatTimestamp(task.completedAt as string)}`,
         `   title: ${singleLine(task.title)}`,
+        ...(linkedGoal ? [`   goal: ${singleLine(linkedGoal.title)}`] : []),
       ]));
     });
   }
@@ -167,32 +172,38 @@ export const buildProgressReport = (
   lines.push(ru ? '--- Активные ---' : '--- Active ---');
   if (activeGoals.length === 0) lines.push(ru ? '(нет активных целей)' : '(no active goals)');
   else activeGoals.forEach((goal, index) => {
+    const counts = getGoalTaskCounts(tasks, goal.id);
     lines.push(...(ru ? [
       `${index + 1}. начало: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'не указано'}`,
       `   название: ${singleLine(goal.title)}`,
       `   текущая_ситуация: ${singleLine(goal.currentState) || '—'}`,
       `   следующий_шаг: ${singleLine(goal.nextStep) || '—'}`,
+      `   связанные_задачи: активных ${counts.active}, выполнено ${counts.completed}`,
     ] : [
       `${index + 1}. started_at: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'not specified'}`,
       `   title: ${singleLine(goal.title)}`,
       `   current_situation: ${singleLine(goal.currentState) || '—'}`,
       `   next_step: ${singleLine(goal.nextStep) || '—'}`,
+      `   linked_tasks: active ${counts.active}, completed ${counts.completed}`,
     ]));
   });
 
   lines.push('', ru ? '--- Завершённые за период ---' : '--- Completed during the period ---');
   if (completedGoals.length === 0) lines.push(ru ? '(нет завершённых целей)' : '(no completed goals)');
   else completedGoals.forEach((goal, index) => {
+    const counts = getGoalTaskCounts(tasks, goal.id);
     lines.push(...(ru ? [
       `${index + 1}. начало: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'не указано'}`,
       `   завершено: ${formatTimestamp(goal.completedAt as string)}`,
       ...(goal.startedAt ? [`   прошло_дней: ${elapsedDays(goal.startedAt, goal.completedAt as string)}`] : []),
       `   название: ${singleLine(goal.title)}`,
+      `   связанные_задачи: активных ${counts.active}, выполнено ${counts.completed}`,
     ] : [
       `${index + 1}. started_at: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'not specified'}`,
       `   completed_at: ${formatTimestamp(goal.completedAt as string)}`,
       ...(goal.startedAt ? [`   elapsed_days: ${elapsedDays(goal.startedAt, goal.completedAt as string)}`] : []),
       `   title: ${singleLine(goal.title)}`,
+      `   linked_tasks: active ${counts.active}, completed ${counts.completed}`,
     ]));
   });
 

@@ -15,6 +15,7 @@ const task: Task = {
   plan: { year: '2026', month: '2026-08', week: '2026-W33', day: '2026-08-12' },
   projectId: null,
   eventId: null,
+  goalId: null,
   createdAt: '2026-08-01T08:00:00.000Z',
   updatedAt: '2026-08-01T08:00:00.000Z',
   completedAt: null,

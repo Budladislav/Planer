@@ -26,7 +26,7 @@ import {
   type WeeklyTemplateTaskApplication,
 } from './weekly-template';
 
-export const CURRENT_SCHEMA_VERSION = 12;
+export const CURRENT_SCHEMA_VERSION = 13;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -154,6 +154,9 @@ export const migrateAppState = (value: unknown): AppState => {
     ? requestedView as ViewState
     : 'today';
 
+  const goals = migrateGoals(parsed.goals, now);
+  const goalIds = new Set(goals.map(goal => goal.id));
+
   const tasks = Array.isArray(parsed.tasks)
     ? parsed.tasks.flatMap((value): Task[] => {
         if (!isRecord(value)) return [];
@@ -182,6 +185,7 @@ export const migrateAppState = (value: unknown): AppState => {
           },
           projectId: asNullableString(value.projectId),
           eventId: asNullableString(value.eventId),
+          goalId: goalIds.has(asNullableString(value.goalId) ?? '') ? asNullableString(value.goalId) : null,
           createdAt,
           updatedAt,
           completedAt: status === 'done'
@@ -256,6 +260,7 @@ export const migrateAppState = (value: unknown): AppState => {
     tasks,
     events,
     lastActiveView,
+    goalNavigationTargetId: null,
     taskOrderByDay: migrateOrderMap(parsed.taskOrderByDay),
     taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
     taskOrderByMonthBucket: migrateOrderMap(parsed.taskOrderByMonthBucket),
@@ -273,7 +278,7 @@ export const migrateAppState = (value: unknown): AppState => {
     yearNotes: migrateNotesByKey<YearNote>(parsed.yearNotes, now, isValidYearString),
     weekNotes: migrateNotesByKey<WeekNote>(parsed.weekNotes, now, isValidWeekString),
     dayNotes: migrateNotesByKey<DayNote>(parsed.dayNotes, now, isValidDateKey),
-    goals: migrateGoals(parsed.goals, now),
+    goals,
     uiPreferences: {
       todayCompletedExpanded: rawUiPreferences.todayCompletedExpanded === true,
       eventsDistantExpanded: rawUiPreferences.eventsDistantExpanded === true,
@@ -287,6 +292,7 @@ export const migrateAppState = (value: unknown): AppState => {
 export type Action =
   | { type: 'INIT_STATE'; payload: AppState }
   | { type: 'SET_VIEW'; payload: ViewState }
+  | { type: 'OPEN_GOAL'; payload: string }
   | { type: 'ADD_CAPTURE'; payload: { text: string; startDateKnown: boolean } }
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
   | { type: 'UPDATE_CAPTURE_STARTED_AT'; payload: { id: string; startedAt: string | null } }
@@ -347,7 +353,11 @@ export const appReducer = (state: AppState, action: Action): AppState => {
     case 'INIT_STATE':
       return action.payload;
     case 'SET_VIEW':
-      return { ...state, lastActiveView: action.payload };
+      return { ...state, lastActiveView: action.payload, goalNavigationTargetId: null };
+    case 'OPEN_GOAL':
+      return state.goals.some(goal => goal.id === action.payload)
+        ? { ...state, lastActiveView: 'goals', goalNavigationTargetId: action.payload }
+        : state;
     case 'ADD_CAPTURE': {
       const text = action.payload.text.trim();
       if (!text) return state;
@@ -955,8 +965,15 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           ? { ...goal, status: 'archived', completedAt: null, updatedAt: new Date().toISOString() }
           : goal),
       };
-    case 'DELETE_GOAL':
-      return { ...state, goals: state.goals.filter(goal => goal.id !== action.payload) };
+    case 'DELETE_GOAL': {
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        goals: state.goals.filter(goal => goal.id !== action.payload),
+        tasks: state.tasks.map(task => task.goalId === action.payload ? { ...task, goalId: null, updatedAt: now } : task),
+        goalNavigationTargetId: state.goalNavigationTargetId === action.payload ? null : state.goalNavigationTargetId,
+      };
+    }
     case 'ADD_GOAL_NOTE': {
       const text = action.payload.text.trim();
       if (!text) return state;

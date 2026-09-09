@@ -14,6 +14,7 @@ const task = (id: string, completedAt: string | null): Task => ({
   plan: { year: '2026', month: '2026-08', day: '2026-08-16', week: null },
   projectId: null,
   eventId: null,
+  goalId: null,
   createdAt: '2026-08-01T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,
@@ -75,7 +76,7 @@ describe('completed task report', () => {
 
   it('creates a compact report with clearly separated task and Inbox sections', () => {
     const report = buildProgressReport(
-      [task('one', '2026-08-16T12:00:00.000Z')],
+      [{ ...task('one', '2026-08-16T12:00:00.000Z'), goalId: 'active' }],
       [capture('one', '2026-08-15T12:00:00.000Z')],
       [goal('active', null), goal('done', '2026-08-14T12:00:00.000Z')],
       { start: '2026-08-10', end: '2026-08-16' },
@@ -88,6 +89,7 @@ describe('completed task report', () => {
     expect(report).toContain('completed_long_term_goals_count: 1');
     expect(report).toContain('=== COMPLETED TASKS ===');
     expect(report).toContain('title: Task one');
+    expect(report).toContain('goal: Goal active');
     expect(report).not.toContain('focus_seconds');
     expect(report).toContain('=== REALIZED WISHES ===');
     expect(report).toContain('started_at: 2026-08-10');
@@ -96,6 +98,7 @@ describe('completed task report', () => {
     expect(report).toContain('title: Idea one');
     expect(report).toContain('=== LONG-TERM GOALS ===');
     expect(report).toContain('current_situation: Halfway there');
+    expect(report).toContain('linked_tasks: active 0, completed 1');
     expect(report).toContain('title: Goal done');
   });
 
@@ -108,9 +111,10 @@ describe('completed task report', () => {
       'ru',
       new Date('2026-08-16T14:00:00.000Z'),
     );
-    expect(report).toContain('ОТЧЁТ О ПРОГРЕССЕ MONOFOCUS');
+    expect(report).toContain('ОТЧЁТ О ПРОГРЕССЕ TAKT');
     expect(report).toContain('=== БОЛЬШИЕ ЦЕЛИ ===');
     expect(report).toContain('текущая_ситуация: Halfway there');
+    expect(report).toContain('связанные_задачи: активных 0, выполнено 0');
     expect(report).not.toContain('секунд_фокусировки');
   });
 

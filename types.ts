@@ -89,6 +89,7 @@ export interface Task {
   };
   projectId: string | null;
   eventId: string | null; // Link to CalendarEvent if task was created from event
+  goalId: string | null; // Optional link to a long-term goal
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -133,6 +134,7 @@ export interface AppState {
   tasks: Task[];
   events: CalendarEvent[];
   lastActiveView: ViewState;
+  goalNavigationTargetId: string | null;
   taskOrderByDay: Record<string, string[]>; // Maps day (YYYY-MM-DD) to ordered task IDs
   taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
   taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
@@ -155,11 +157,12 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 12,
+  schemaVersion: 13,
   captures: [],
   tasks: [],
   events: [],
   lastActiveView: 'today',
+  goalNavigationTargetId: null,
   taskOrderByDay: {},
   taskOrderByWeekBucket: {},
   taskOrderByMonthBucket: {},

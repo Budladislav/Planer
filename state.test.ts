@@ -9,6 +9,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   plan: { year: '2026', month: '2026-08', day: '2026-08-16', week: '2026-W33' },
   projectId: null,
   eventId: null,
+  goalId: null,
   createdAt: '2026-08-16T08:00:00.000Z',
   updatedAt: '2026-08-16T08:00:00.000Z',
   completedAt: null,
@@ -51,6 +52,7 @@ describe('migrateAppState', () => {
       id: 'legacy-task',
       completedAt: '2026-01-05T09:00:00.000Z',
       eventId: null,
+      goalId: null,
       plan: { day: '2026-01-05', week: null, month: '2026-01', year: '2026' },
     }));
     expect(migrated.tasks[0]).not.toHaveProperty('frog');
@@ -257,6 +259,30 @@ describe('appReducer Inbox captures', () => {
 
     const reopened = appReducer(redated, { type: 'REOPEN_CAPTURE', payload: 'capture-1' });
     expect(reopened.captures[0]).toMatchObject({ status: 'new', completedAt: null });
+  });
+
+  it('preserves valid goal links and removes orphaned task links', () => {
+    const linkedTask = makeTask({ id: 'linked', goalId: 'goal-1' });
+    const orphanedTask = makeTask({ id: 'orphaned', goalId: 'missing-goal' });
+    const migrated = migrateAppState({
+      tasks: [linkedTask, orphanedTask],
+      captures: [],
+      events: [],
+      goals: [{
+        id: 'goal-1',
+        title: 'Linked goal',
+        status: 'active',
+        createdAt: '2026-08-01T08:00:00.000Z',
+        updatedAt: '2026-08-01T08:00:00.000Z',
+        completedAt: null,
+        currentState: '',
+        nextStep: '',
+        notes: [],
+      }],
+    });
+
+    expect(migrated.tasks.find(task => task.id === 'linked')?.goalId).toBe('goal-1');
+    expect(migrated.tasks.find(task => task.id === 'orphaned')?.goalId).toBeNull();
   });
 
   it('creates wishes without a start date while retaining their technical creation time', () => {
@@ -597,6 +623,36 @@ describe('appReducer day notes and long-term goals', () => {
       title: 'Emergency fund', status: 'completed', startedAt: '2026-01-01T10:00:00.000Z',
     }));
     expect(migrated.goals[0].notes[0].text).toBe('Final transfer');
+  });
+
+  it('opens a linked goal and clears the navigation target when leaving goals', () => {
+    const goalState = appReducer(INITIAL_STATE, {
+      type: 'ADD_GOAL', payload: { title: 'Ship project', startDateKnown: true },
+    });
+    const goalId = goalState.goals[0].id;
+    const opened = appReducer(goalState, { type: 'OPEN_GOAL', payload: goalId });
+
+    expect(opened.lastActiveView).toBe('goals');
+    expect(opened.goalNavigationTargetId).toBe(goalId);
+    expect(appReducer(opened, { type: 'SET_VIEW', payload: 'today' }).goalNavigationTargetId).toBeNull();
+  });
+
+  it('deleting a goal keeps its tasks and only removes their link', () => {
+    const goalState = appReducer(INITIAL_STATE, {
+      type: 'ADD_GOAL', payload: { title: 'Ship project', startDateKnown: true },
+    });
+    const goalId = goalState.goals[0].id;
+    const state = {
+      ...goalState,
+      goalNavigationTargetId: goalId,
+      tasks: [makeTask({ goalId })],
+    };
+    const deleted = appReducer(state, { type: 'DELETE_GOAL', payload: goalId });
+
+    expect(deleted.goals).toHaveLength(0);
+    expect(deleted.tasks).toHaveLength(1);
+    expect(deleted.tasks[0].goalId).toBeNull();
+    expect(deleted.goalNavigationTargetId).toBeNull();
   });
 
   it('stores, edits, orders and deletes weekly template tasks without touching generated tasks', () => {

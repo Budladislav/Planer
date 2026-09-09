@@ -190,6 +190,7 @@ export const YearView: React.FC = () => {
         plan: { year: currentYear, month: targetMonth, week: null, day: null },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

@@ -8,6 +8,7 @@ import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
 import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 
 export const DoneView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -52,6 +53,7 @@ export const DoneView: React.FC = () => {
         plan: { day: getTodayString(), week: null, month: getTodayString().slice(0, 7), year: getTodayString().slice(0, 4) },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
@@ -192,6 +194,9 @@ export const DoneView: React.FC = () => {
             </TaskIconButton>
           )}
           </div>
+        </div>
+        <div className="mt-2">
+          <TaskGoalLinkControl task={task} />
         </div>
       </TaskCard>
     );

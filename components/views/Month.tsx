@@ -213,6 +213,7 @@ export const MonthView: React.FC = () => {
         plan: { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

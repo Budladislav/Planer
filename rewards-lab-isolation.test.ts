@@ -14,6 +14,7 @@ describe('Rewards Lab planner isolation', () => {
         plan: { day: '2099-01-01', week: '2099-W01', month: '2099-01' },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: '2026-08-28T10:00:00.000Z',
         updatedAt: '2026-08-28T10:00:00.000Z',
         completedAt: null,

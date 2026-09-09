@@ -34,6 +34,7 @@ const task = (overrides: Partial<Task> = {}): Task => ({
   plan: { day: '2026-08-29', week: '2026-W35', month: '2026-08', year: '2026' },
   projectId: null,
   eventId: null,
+  goalId: null,
   createdAt: '2026-08-29T08:00:00.000Z',
   updatedAt: '2026-08-29T10:00:00.000Z',
   completedAt: '2026-08-29T10:00:00.000Z',

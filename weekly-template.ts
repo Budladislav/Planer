@@ -254,6 +254,7 @@ export const buildWeeklyTemplateApplication = ({
         plan: { day, week: targetWeek, month, year: month?.slice(0, 4) ?? targetWeek.slice(0, 4) },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: now,
         updatedAt: now,
         completedAt: null,

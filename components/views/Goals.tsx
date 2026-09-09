@@ -1,24 +1,156 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
+  CalendarDays,
+  CalendarRange,
   Check,
   ChevronDown,
   CircleCheckBig,
+  Flag,
+  Link2Off,
+  ListChecks,
   Pencil,
   Plus,
   RotateCcw,
   Save,
+  SquareArrowOutUpRight,
   Trash2,
   X,
 } from 'lucide-react';
 import { useAppStore } from '../../store';
-import { GoalNote, LongTermGoal } from '../../types';
+import { GoalNote, LongTermGoal, Task } from '../../types';
 import { getTodayString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
 import { EmptyState } from '../ui/Primitives';
 import { OptionalStartDateField, StartDateModeButton } from '../ui/OptionalStartDate';
 import { replaceOptionalStartDate, toOptionalDateInputValue } from '../../optional-start-date';
+import {
+  buildGoalTask,
+  defaultGoalTaskTarget,
+  getGoalTaskCounts,
+  isValidGoalTaskTarget,
+  type GoalTaskHorizon,
+} from '../../goal-tasks';
+import { getTaskPlanningMonth, monthWeekOrderKey } from '../../month-planning';
+import { yearMonthOrderKey } from '../../year-planning';
+
+const taskDestinationLabel = (task: Task, locale: string, t: (key: string, variables?: Record<string, string | number>) => string): string => {
+  if (task.plan.day) return new Date(`${task.plan.day}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (task.plan.week) return t('Week {week}', { week: task.plan.week.split('-W')[1] });
+  if (task.plan.month) return new Date(`${task.plan.month}-01T12:00:00`).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  return task.plan.year ?? t('No planning period');
+};
+
+const taskDestinationView = (task: Task): 'today' | 'week' | 'month' | 'year' | 'done' => {
+  if (task.status === 'done') return 'done';
+  if (task.plan.day || task.plan.week) return task.plan.day === getTodayString() ? 'today' : 'week';
+  if (task.plan.month) return 'month';
+  return 'year';
+};
+
+const GoalTaskSheet: React.FC<{
+  goal: LongTermGoal;
+  initialTitle: string;
+  onClose: () => void;
+}> = ({ goal, initialTitle, onClose }) => {
+  const { state, dispatch } = useAppStore();
+  const { t } = useI18n();
+  const today = getTodayString();
+  const [title, setTitle] = useState(initialTitle);
+  const [horizon, setHorizon] = useState<GoalTaskHorizon>('today');
+  const [target, setTarget] = useState(today);
+
+  const changeHorizon = (value: GoalTaskHorizon) => {
+    setHorizon(value);
+    setTarget(defaultGoalTaskTarget(value, today));
+  };
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const task = buildGoalTask({
+      id: crypto.randomUUID(),
+      goalId: goal.id,
+      title,
+      horizon,
+      target,
+      now: new Date().toISOString(),
+    });
+    if (!task) return;
+    dispatch({ type: 'ADD_TASK', payload: task });
+    if (task.plan.day) {
+      dispatch({ type: 'UPDATE_TASK_ORDER', payload: {
+        day: task.plan.day,
+        order: [...(state.taskOrderByDay[task.plan.day] ?? []), task.id],
+      } });
+    } else if (task.plan.week) {
+      dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: {
+        week: task.plan.week,
+        order: [...(state.taskOrderByWeekBucket[task.plan.week] ?? []), task.id],
+      } });
+      const month = getTaskPlanningMonth(task);
+      if (month) dispatch({ type: 'UPDATE_TASK_ORDER_MONTH_WEEK', payload: {
+        key: monthWeekOrderKey(month, task.plan.week),
+        order: [...(state.taskOrderByMonthWeek[monthWeekOrderKey(month, task.plan.week)] ?? []), task.id],
+      } });
+    } else if (task.plan.month) {
+      dispatch({ type: 'UPDATE_TASK_ORDER_MONTH_BUCKET', payload: {
+        month: task.plan.month,
+        order: [...(state.taskOrderByMonthBucket[task.plan.month] ?? []), task.id],
+      } });
+      dispatch({ type: 'UPDATE_TASK_ORDER_YEAR_MONTH', payload: {
+        key: yearMonthOrderKey(task.plan.year!, task.plan.month),
+        order: [...(state.taskOrderByYearMonth[yearMonthOrderKey(task.plan.year!, task.plan.month)] ?? []), task.id],
+      } });
+    } else if (task.plan.year) {
+      dispatch({ type: 'UPDATE_TASK_ORDER_YEAR_BUCKET', payload: {
+        year: task.plan.year,
+        order: [...(state.taskOrderByYearBucket[task.plan.year] ?? []), task.id],
+      } });
+    }
+    onClose();
+  };
+
+  const targetInput = horizon === 'today'
+    ? <input type="date" value={target} min={today} onChange={event => setTarget(event.target.value)} className="field w-full" aria-label={t('Task day')} />
+    : horizon === 'week'
+      ? <input type="week" value={target} min={defaultGoalTaskTarget('week', today)} onChange={event => setTarget(event.target.value)} className="field w-full" aria-label={t('Task week')} />
+      : horizon === 'month'
+        ? <input type="month" value={target} min={today.slice(0, 7)} onChange={event => setTarget(event.target.value)} className="field w-full" aria-label={t('Task month')} />
+        : <input type="number" min={Number(today.slice(0, 4))} max="2100" value={target} onChange={event => setTarget(event.target.value)} className="field w-full" aria-label={t('Task year')} />;
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <form className="sheet-panel sm:w-[460px]" onSubmit={submit} onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={t('Create task for goal')}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-slate-800">{t('Create task for goal')}</h2>
+            <p className="mt-0.5 text-xs text-slate-500">{goal.title}</p>
+          </div>
+          <button type="button" className="text-sm text-slate-400" onClick={onClose}>{t('Close')}</button>
+        </div>
+        <label className="block text-xs font-semibold text-slate-500">
+          {t('Task title')}
+          <textarea value={title} onChange={event => setTitle(event.target.value)} rows={2} className="field mt-1 w-full resize-none font-normal" autoFocus />
+        </label>
+        <label className="block text-xs font-semibold text-slate-500">
+          {t('Planning horizon')}
+          <select value={horizon} onChange={event => changeHorizon(event.target.value as GoalTaskHorizon)} className="field mt-1 w-full font-normal">
+            <option value="today">{t('Today')}</option>
+            <option value="week">{t('Week')}</option>
+            <option value="month">{t('Month')}</option>
+            <option value="year">{t('Year')}</option>
+          </select>
+        </label>
+        {targetInput}
+        <div className="flex gap-2">
+          <button type="button" className="button-secondary flex-1" onClick={onClose}>{t('Cancel')}</button>
+          <button type="submit" className="button-primary flex-1" disabled={!title.trim() || !isValidGoalTaskTarget(horizon, target)}>{t('Create task')}</button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 const GoalNoteRow: React.FC<{ goalId: string; note: GoalNote }> = ({ goalId, note }) => {
   const { dispatch } = useAppStore();
@@ -81,18 +213,33 @@ const GoalNoteRow: React.FC<{ goalId: string; note: GoalNote }> = ({ goalId, not
 
 interface GoalCardProps {
   goal: LongTermGoal;
+  linkedTasks: Task[];
+  highlighted: boolean;
   onDelete: () => void;
 }
 
-const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
+const GoalCard: React.FC<GoalCardProps> = ({ goal, linkedTasks, highlighted, onDelete }) => {
   const { dispatch } = useAppStore();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const cardRef = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState(goal.status === 'active');
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(goal.title);
   const [currentState, setCurrentState] = useState(goal.currentState);
   const [nextStep, setNextStep] = useState(goal.nextStep);
   const [noteDraft, setNoteDraft] = useState('');
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const counts = getGoalTaskCounts(linkedTasks, goal.id);
+  const sortedLinkedTasks = [...linkedTasks].sort((left, right) => {
+    if (left.status !== right.status) return left.status === 'todo' ? -1 : 1;
+    return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+  });
+
+  useEffect(() => {
+    if (!highlighted) return;
+    setExpanded(true);
+    window.requestAnimationFrame(() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }, [highlighted]);
 
   const update = (updates: Partial<Omit<LongTermGoal, 'id' | 'notes'>>) => {
     dispatch({ type: 'UPDATE_GOAL', payload: { id: goal.id, ...updates } });
@@ -113,7 +260,11 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
   };
 
   return (
-    <article className="surface-card">
+    <article
+      ref={cardRef}
+      data-goal-id={goal.id}
+      className={`surface-card transition-shadow ${highlighted ? 'ring-2 ring-brand-300 ring-offset-2' : ''}`}
+    >
       <div className="flex items-start gap-2 p-3">
         <button
           type="button"
@@ -163,6 +314,10 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                 />
               </label>
             )}
+            <span className="inline-flex items-center gap-1 text-slate-500">
+              <Flag className="h-3 w-3 text-brand-500" aria-hidden="true" />
+              {t('{active} active • {completed} done', { active: counts.active, completed: counts.completed })}
+            </span>
           </div>
         </div>
         <button
@@ -234,7 +389,60 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
                 placeholder={t('The next concrete action…')}
                 className="field mt-1 w-full resize-none font-normal"
               />
+              <button
+                type="button"
+                onClick={() => setTaskSheetOpen(true)}
+                disabled={!nextStep.trim()}
+                className="button-secondary mt-2 w-full justify-center text-xs disabled:opacity-40"
+              >
+                <ListChecks className="h-4 w-4" aria-hidden="true" />
+                {t('Create task from next step')}
+              </button>
             </label>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">{t('Linked tasks')}</div>
+              <span className="text-[11px] text-slate-400">{t('{active} active • {completed} done', { active: counts.active, completed: counts.completed })}</span>
+            </div>
+            {sortedLinkedTasks.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-400">{t('No linked tasks yet.')}</p>
+            ) : (
+              <div className="space-y-1.5">
+                {sortedLinkedTasks.map(task => (
+                  <div key={task.id} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2">
+                    {task.status === 'done'
+                      ? <CircleCheckBig className="h-4 w-4 flex-shrink-0 text-emerald-500" aria-hidden="true" />
+                      : task.plan.day
+                        ? <CalendarDays className="h-4 w-4 flex-shrink-0 text-brand-500" aria-hidden="true" />
+                        : <CalendarRange className="h-4 w-4 flex-shrink-0 text-brand-500" aria-hidden="true" />}
+                    <div className="min-w-0 flex-1">
+                      <p className={`break-words text-sm ${task.status === 'done' ? 'text-slate-500 line-through' : 'text-slate-700'}`}>{task.title}</p>
+                      <p className="text-[10px] text-slate-400">{taskDestinationLabel(task, locale, t)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: 'SET_VIEW', payload: taskDestinationView(task) })}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-brand-600"
+                      title={t('Open task location')}
+                      aria-label={t('Open task location')}
+                    >
+                      <SquareArrowOutUpRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: 'UPDATE_TASK', payload: { id: task.id, goalId: null } })}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-600"
+                      title={t('Unlink from goal')}
+                      aria-label={t('Unlink from goal')}
+                    >
+                      <Link2Off className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -268,6 +476,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
           </div>
         </div>
       )}
+      {taskSheetOpen && <GoalTaskSheet goal={goal} initialTitle={nextStep} onClose={() => setTaskSheetOpen(false)} />}
     </article>
   );
 };
@@ -283,6 +492,22 @@ export const GoalsView: React.FC = () => {
   const active = state.goals.filter(goal => goal.status === 'active');
   const completed = state.goals.filter(goal => goal.status === 'completed');
   const archived = state.goals.filter(goal => goal.status === 'archived');
+  const targetGoal = state.goalNavigationTargetId
+    ? state.goals.find(goal => goal.id === state.goalNavigationTargetId)
+    : null;
+  const tasksByGoal = useMemo(() => {
+    const groups = new Map<string, Task[]>();
+    state.tasks.forEach(task => {
+      if (!task.goalId) return;
+      groups.set(task.goalId, [...(groups.get(task.goalId) ?? []), task]);
+    });
+    return groups;
+  }, [state.tasks]);
+
+  useEffect(() => {
+    if (targetGoal?.status === 'completed') setCompletedExpanded(true);
+    if (targetGoal?.status === 'archived') setArchivedExpanded(true);
+  }, [targetGoal?.id, targetGoal?.status]);
 
   const addGoal = (event: React.FormEvent) => {
     event.preventDefault();
@@ -307,7 +532,15 @@ export const GoalsView: React.FC = () => {
         <span>{title} ({goals.length})</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
-      {expanded && <div className="space-y-3">{goals.map(goal => <GoalCard key={goal.id} goal={goal} onDelete={() => setDeleteId(goal.id)} />)}</div>}
+      {expanded && <div className="space-y-3">{goals.map(goal => (
+        <GoalCard
+          key={goal.id}
+          goal={goal}
+          linkedTasks={tasksByGoal.get(goal.id) ?? []}
+          highlighted={state.goalNavigationTargetId === goal.id}
+          onDelete={() => setDeleteId(goal.id)}
+        />
+      ))}</div>}
     </section>
   );
 
@@ -331,7 +564,15 @@ export const GoalsView: React.FC = () => {
           {t('No active big goals yet.')}
         </EmptyState>
       ) : (
-        <section className="space-y-3">{active.map(goal => <GoalCard key={goal.id} goal={goal} onDelete={() => setDeleteId(goal.id)} />)}</section>
+        <section className="space-y-3">{active.map(goal => (
+          <GoalCard
+            key={goal.id}
+            goal={goal}
+            linkedTasks={tasksByGoal.get(goal.id) ?? []}
+            highlighted={state.goalNavigationTargetId === goal.id}
+            onDelete={() => setDeleteId(goal.id)}
+          />
+        ))}</section>
       )}
 
       {renderSection(t('Completed'), completed, completedExpanded, setCompletedExpanded)}
@@ -345,7 +586,7 @@ export const GoalsView: React.FC = () => {
           setDeleteId(null);
         }}
         title={t('Delete goal')}
-        message={t('Delete this goal and all of its progress notes permanently?')}
+        message={t('Delete this goal and all of its progress notes permanently? Linked tasks will stay in the planner and become unlinked.')}
         variant="danger"
         confirmText={t('Delete')}
       />

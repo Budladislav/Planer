@@ -36,6 +36,7 @@ import { useI18n } from '../../i18n';
 import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
 import { WeekTaskMoveButton, WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 
 const AddToStartIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
@@ -208,6 +209,7 @@ const SortableTaskItem: React.FC<{
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
+            <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <WeekTaskMoveButton onClick={() => onMove(task.id)} />
               <TaskIconButton
@@ -321,6 +323,7 @@ export const TodayView: React.FC = () => {
         plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
         projectId: null,
         eventId: null,
+        goalId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

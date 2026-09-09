@@ -8,6 +8,7 @@ import { useI18n } from '../../i18n';
 import { Task } from '../../types';
 import { formatDateShort } from '../../utils';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
+import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 
 type PeriodTaskCardProps = {
   task: Task;
@@ -67,6 +68,7 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm"><RewardGradeSelector taskId={task.id} compact /></div>
+            <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDelete(task.id)}><X className="h-3.5 w-3.5" /></TaskIconButton>
               <TaskIconButton label={t('Edit task')} onClick={() => onEdit(task)}><Pencil className="h-3.5 w-3.5" /></TaskIconButton>

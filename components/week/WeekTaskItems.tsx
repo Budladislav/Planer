@@ -17,6 +17,7 @@ import { useI18n } from '../../i18n';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 import { WeekTaskMoveButton } from './WeekTaskMoveControl';
+import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 
 type DayTaskItemProps = {
   task: Task;
@@ -232,6 +233,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
+            <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
                 <X className="h-3.5 w-3.5" />
@@ -489,6 +491,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             <div className="mx-auto w-full max-w-sm">
               <RewardGradeSelector taskId={task.id} compact />
             </div>
+            <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
                 <X className="h-3.5 w-3.5" />

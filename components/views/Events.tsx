@@ -145,6 +145,7 @@ export const EventsView: React.FC = () => {
         plan: { day: newDate, week: getWeekString(newDate), month: newDate.slice(0, 7), year: newDate.slice(0, 4) },
         projectId: null,
         eventId,
+        goalId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

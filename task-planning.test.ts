@@ -9,6 +9,7 @@ const datedTask: Task = {
   plan: { year: '2026', month: '2026-08', day: '2026-08-12', week: '2026-W33' },
   projectId: null,
   eventId: null,
+  goalId: null,
   createdAt: '2026-08-10T08:00:00.000Z',
   updatedAt: '2026-08-10T08:00:00.000Z',
   completedAt: null,
