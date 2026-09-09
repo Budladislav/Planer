@@ -238,6 +238,7 @@ const RU: Record<string, string> = {
   'Add task to {year}': 'Добавить задачу на {year} год',
   'Planning year': 'Год планирования',
   'Past months ({count})': 'Прошедшие месяцы: {count}',
+  'No current or future destinations in this period.': 'В этом периоде нет текущих или будущих вариантов переноса.',
   'Notes for {year}': 'Заметки на {year} год',
   'No year notes yet.': 'Для этого года заметок пока нет.',
   'Edit year notes': 'Изменить заметки года',

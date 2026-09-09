@@ -68,6 +68,7 @@ export const YearView: React.FC = () => {
     () => partitionYearMonths(months, currentCalendarMonth),
     [currentCalendarMonth, months],
   );
+  const canMoveToYearPool = currentYear >= today.slice(0, 4);
   const todoTasks = useMemo(
     () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningYear(task) === currentYear),
     [currentYear, state.tasks],
@@ -287,11 +288,18 @@ export const YearView: React.FC = () => {
           <div className="sheet-panel sm:w-[440px]" onClick={event => event.stopPropagation()}>
             <div className="flex items-center justify-between"><h3 className="font-semibold text-slate-800">{t('Where to move task?')}</h3><button type="button" onClick={() => setMoveTaskId(null)} className="text-sm text-slate-400">{t('Close')}</button></div>
             <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto">
-              <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">{t('Year pool')}</button>
-              {months.map(month => {
+              {canMoveToYearPool && (
+                <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">{t('Year pool')}</button>
+              )}
+              {currentAndFutureMonths.map(month => {
                 const label = new Date(`${month}-01T12:00:00`).toLocaleDateString(locale, { month: 'long' });
                 return <button type="button" key={month} onClick={() => moveTaskTo(moveTaskId, month)} className="button-secondary h-auto justify-start p-3 text-left capitalize">{label}</button>;
               })}
+              {!canMoveToYearPool && currentAndFutureMonths.length === 0 && (
+                <p className="col-span-2 rounded-xl bg-slate-50 px-3 py-4 text-center text-sm italic text-slate-400">
+                  {t('No current or future destinations in this period.')}
+                </p>
+              )}
             </div>
           </div>
         </div>

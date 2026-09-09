@@ -69,6 +69,7 @@ export const MonthView: React.FC = () => {
     () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningMonth(task) === currentMonth),
     [currentMonth, state.tasks],
   );
+  const canMoveToMonthPool = currentMonth >= today.slice(0, 7);
   const doneTasks = useMemo(
     () => state.tasks.filter(task => task.status === 'done' && getTaskPlanningMonth(task) === currentMonth),
     [currentMonth, state.tasks],
@@ -352,14 +353,21 @@ export const MonthView: React.FC = () => {
               <button type="button" onClick={() => setMoveTaskId(null)} className="text-sm text-slate-400">{t('Close')}</button>
             </div>
             <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto">
-              <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">
-                {t('Month pool')}
-              </button>
-              {weeks.map(week => (
+              {canMoveToMonthPool && (
+                <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">
+                  {t('Month pool')}
+                </button>
+              )}
+              {currentAndFutureWeeks.map(week => (
                 <button key={week} type="button" onClick={() => moveTaskTo(moveTaskId, week)} className="button-secondary h-auto justify-start p-3 text-left">
                   {t('Week {week}', { week: week.split('-W')[1] })}
                 </button>
               ))}
+              {!canMoveToMonthPool && currentAndFutureWeeks.length === 0 && (
+                <p className="col-span-2 rounded-xl bg-slate-50 px-3 py-4 text-center text-sm italic text-slate-400">
+                  {t('No current or future destinations in this period.')}
+                </p>
+              )}
             </div>
           </div>
         </div>

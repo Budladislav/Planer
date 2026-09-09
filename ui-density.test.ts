@@ -59,6 +59,15 @@ describe('compact planner hierarchy', () => {
     expect(appSource).toContain("case 'year': return <YearView />");
   });
 
+  it('does not offer past destinations in Month and Year move menus', () => {
+    expect(monthSource).toContain('canMoveToMonthPool');
+    expect(monthSource).toContain('{currentAndFutureWeeks.map(week => (');
+    expect(monthSource).not.toContain('{weeks.map(week => (');
+    expect(yearSource).toContain('canMoveToYearPool');
+    expect(yearSource).toContain('{currentAndFutureMonths.map(month => {');
+    expect(yearSource).not.toContain('{months.map(month => {');
+  });
+
   it('keeps calendar navigation compact and exposes month notes', () => {
     expect(calendarSource).toContain('justify-center gap-1');
     expect(calendarSource).toContain('<MonthMetaBadges');

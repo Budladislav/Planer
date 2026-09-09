@@ -17,6 +17,10 @@ This is the user-facing release history. Dates for older versions were reconstru
 - Month and Year share task-card and container components so grades, Move, completion, editing, and deletion remain consistent.
 - PWA assets and application version were updated to 5.2.0.
 
+### Fixed
+
+- Move menus in Month and Year hide past weeks and months, including pools belonging to wholly past periods, so a task cannot be moved backward accidentally.
+
 ### Safety
 
 - Planner schema advanced from 8 to 9. Existing tasks derive their year safely from the planning month while legacy fields and the local storage key remain unchanged.
