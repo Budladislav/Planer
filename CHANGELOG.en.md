@@ -2,6 +2,26 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.2.5] — 09.09.2026 — “Weekly Template”
+
+### Added
+
+- Settings now includes an Autofill section with a weekly template split into a week pool and one block for every weekday.
+- Template tasks can be added, renamed, deleted, sorted within their block, and assigned a grade while Rewards Lab is enabled.
+- “Apply to week” creates the template in a selected current or future week. Reapplying skips existing entries and adds only new ones.
+- Today now has two distinct quick-add controls for inserting a task at the start or end of the list.
+
+### Changed
+
+- Template mode is visually distinct from a real week and contains no completion, Move, or cross-day controls: tasks are created directly in their intended block.
+- Applying the template creates normal Takt tasks shared by Week, Month, Year, and Today.
+
+### Safety
+
+- Planner schema advanced from 9 to 10. The template and duplicate protection are included in the planner JSON backup without changing existing data.
+- Editing or deleting a template entry affects only future applications; already-created tasks remain independent.
+- Template grades stay in isolated Rewards Lab storage and are not loaded while the experiment is disabled.
+
 ## [5.2.0] — 09.09.2026 — “Year Horizon”
 
 ### Added

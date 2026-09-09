@@ -99,7 +99,7 @@ describe('service worker update recovery', () => {
     let responsePromise: Promise<unknown> | undefined;
     const request = {
       method: 'GET',
-      url: 'https://example.test/Planer/takt-icon-192-v5.2.0.png',
+      url: 'https://example.test/Planer/takt-icon-192-v5.2.5.png',
       destination: 'image',
       mode: 'cors',
     };
