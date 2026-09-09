@@ -10,7 +10,7 @@ const makeTask = (overrides: Partial<Task>): Task => ({
   id: 'task',
   title: 'Task',
   status: 'done',
-  plan: { day: '2026-08-27', week: '2026-W35', month: '2026-08' },
+  plan: { day: '2026-08-27', week: '2026-W35', month: '2026-08', year: '2026' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-27T08:00:00.000Z',

@@ -13,11 +13,13 @@ import {
   ViewState,
   WeekNote,
   WorkShift,
+  YearNote,
 } from './types';
 import { formatEventTitle, generateId, getDateString, getTodayString, getWeekString, isValidWeekString } from './utils';
 import { getMonthForWeek, isValidMonthString } from './month-planning';
+import { isValidYearString } from './year-planning';
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -44,7 +46,7 @@ const migrateOrderMap = (value: unknown): Record<string, string[]> => {
   );
 };
 
-const migrateNotesByKey = <T extends MonthNote | WeekNote | DayNote>(
+const migrateNotesByKey = <T extends YearNote | MonthNote | WeekNote | DayNote>(
   value: unknown,
   now: string,
   isValidKey: (key: string) => boolean,
@@ -135,7 +137,7 @@ export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
   const today = getTodayString();
-  const allowedViews: ViewState[] = ['today', 'month', 'week', 'inbox', 'events', 'settings', 'done', 'reports', 'goals'];
+  const allowedViews: ViewState[] = ['today', 'month', 'year', 'week', 'inbox', 'events', 'settings', 'done', 'reports', 'goals'];
   const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
   const lastActiveView = allowedViews.includes(requestedView as ViewState)
     ? requestedView as ViewState
@@ -155,6 +157,8 @@ export const migrateAppState = (value: unknown): AppState => {
         const month = rawMonth && isValidMonthString(rawMonth)
           ? rawMonth
           : day?.slice(0, 7) ?? (week ? getMonthForWeek(week) : null);
+        const rawYear = asNullableString(rawPlan.year);
+        const year = month?.slice(0, 4) ?? (rawYear && isValidYearString(rawYear) ? rawYear : null);
         const task: Task = {
           id: asString(value.id, generateId()),
           title: asString(value.title, ''),
@@ -163,6 +167,7 @@ export const migrateAppState = (value: unknown): AppState => {
             day,
             week,
             month,
+            year,
           },
           projectId: asNullableString(value.projectId),
           eventId: asNullableString(value.eventId),
@@ -174,7 +179,7 @@ export const migrateAppState = (value: unknown): AppState => {
         };
 
         if (task.status === 'todo' && task.plan.day && task.plan.day < today) {
-          task.plan = { day: today, week: getWeekString(today), month: today.slice(0, 7) };
+          task.plan = { day: today, week: getWeekString(today), month: today.slice(0, 7), year: today.slice(0, 4) };
         }
 
         return [task];
@@ -239,6 +244,8 @@ export const migrateAppState = (value: unknown): AppState => {
     taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
     taskOrderByMonthBucket: migrateOrderMap(parsed.taskOrderByMonthBucket),
     taskOrderByMonthWeek: migrateOrderMap(parsed.taskOrderByMonthWeek),
+    taskOrderByYearBucket: migrateOrderMap(parsed.taskOrderByYearBucket),
+    taskOrderByYearMonth: migrateOrderMap(parsed.taskOrderByYearMonth),
     workShiftSettings: {
       baseWeek: baseWeekCandidate && isValidWeekString(baseWeekCandidate) ? baseWeekCandidate : null,
       baseShift: baseShiftCandidate === 1 || baseShiftCandidate === 2 ? baseShiftCandidate : null,
@@ -246,6 +253,7 @@ export const migrateAppState = (value: unknown): AppState => {
       transitionHighlight: requestedTransitionHighlight,
     },
     monthNotes: migrateNotesByKey<MonthNote>(parsed.monthNotes, now, isValidMonthString),
+    yearNotes: migrateNotesByKey<YearNote>(parsed.yearNotes, now, isValidYearString),
     weekNotes: migrateNotesByKey<WeekNote>(parsed.weekNotes, now, isValidWeekString),
     dayNotes: migrateNotesByKey<DayNote>(parsed.dayNotes, now, isValidDateKey),
     goals: migrateGoals(parsed.goals, now),
@@ -280,10 +288,15 @@ export type Action =
   | { type: 'UPDATE_TASK_ORDER_WEEK_BUCKET'; payload: { week: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_MONTH_BUCKET'; payload: { month: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_MONTH_WEEK'; payload: { key: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_YEAR_BUCKET'; payload: { year: string; order: string[] } }
+  | { type: 'UPDATE_TASK_ORDER_YEAR_MONTH'; payload: { key: string; order: string[] } }
   | { type: 'UPDATE_WORK_SHIFT_SETTINGS'; payload: AppState['workShiftSettings'] }
   | { type: 'ADD_MONTH_NOTE'; payload: { month: string; text: string } }
   | { type: 'UPDATE_MONTH_NOTE'; payload: { month: string; id: string; text: string } }
   | { type: 'DELETE_MONTH_NOTE'; payload: { month: string; id: string } }
+  | { type: 'ADD_YEAR_NOTE'; payload: { year: string; text: string } }
+  | { type: 'UPDATE_YEAR_NOTE'; payload: { year: string; id: string; text: string } }
+  | { type: 'DELETE_YEAR_NOTE'; payload: { year: string; id: string } }
   | { type: 'ADD_WEEK_NOTE'; payload: { week: string; text: string } }
   | { type: 'UPDATE_WEEK_NOTE'; payload: { week: string; id: string; text: string } }
   | { type: 'DELETE_WEEK_NOTE'; payload: { week: string; id: string } }
@@ -392,6 +405,7 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         ? updatedTask.plan.day !== previousTask.plan.day
           || updatedTask.plan.week !== previousTask.plan.week
           || updatedTask.plan.month !== previousTask.plan.month
+          || updatedTask.plan.year !== previousTask.plan.year
         : false;
       let events = state.events;
 
@@ -427,6 +441,12 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         taskOrderByMonthWeek: planChanged
           ? removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload.id)
           : state.taskOrderByMonthWeek,
+        taskOrderByYearBucket: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByYearBucket, action.payload.id)
+          : state.taskOrderByYearBucket,
+        taskOrderByYearMonth: planChanged
+          ? removeTaskFromOrderMap(state.taskOrderByYearMonth, action.payload.id)
+          : state.taskOrderByYearMonth,
       };
     }
     case 'DELETE_TASK':
@@ -437,6 +457,8 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         taskOrderByWeekBucket: removeTaskFromOrderMap(state.taskOrderByWeekBucket, action.payload),
         taskOrderByMonthBucket: removeTaskFromOrderMap(state.taskOrderByMonthBucket, action.payload),
         taskOrderByMonthWeek: removeTaskFromOrderMap(state.taskOrderByMonthWeek, action.payload),
+        taskOrderByYearBucket: removeTaskFromOrderMap(state.taskOrderByYearBucket, action.payload),
+        taskOrderByYearMonth: removeTaskFromOrderMap(state.taskOrderByYearMonth, action.payload),
       };
     case 'ADD_EVENT':
       return { ...state, events: [...state.events, action.payload] };
@@ -459,6 +481,7 @@ export const appReducer = (state: AppState, action: Action): AppState => {
                 day: updatedEvent.date,
                 week: getWeekString(updatedEvent.date),
                 month: updatedEvent.date.slice(0, 7),
+                year: updatedEvent.date.slice(0, 4),
               },
               updatedAt: new Date().toISOString(),
             }
@@ -503,6 +526,22 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           [action.payload.key]: action.payload.order,
         },
       };
+    case 'UPDATE_TASK_ORDER_YEAR_BUCKET':
+      return {
+        ...state,
+        taskOrderByYearBucket: {
+          ...state.taskOrderByYearBucket,
+          [action.payload.year]: action.payload.order,
+        },
+      };
+    case 'UPDATE_TASK_ORDER_YEAR_MONTH':
+      return {
+        ...state,
+        taskOrderByYearMonth: {
+          ...state.taskOrderByYearMonth,
+          [action.payload.key]: action.payload.order,
+        },
+      };
     case 'UPDATE_WORK_SHIFT_SETTINGS':
       return { ...state, workShiftSettings: action.payload };
     case 'ADD_MONTH_NOTE': {
@@ -540,6 +579,42 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       if (remainingNotes.length > 0) monthNotes[action.payload.month] = remainingNotes;
       else delete monthNotes[action.payload.month];
       return { ...state, monthNotes };
+    }
+    case 'ADD_YEAR_NOTE': {
+      const text = action.payload.text.trim();
+      if (!text || !isValidYearString(action.payload.year)) return state;
+      const now = new Date().toISOString();
+      const note: YearNote = { id: generateId(), text, createdAt: now, updatedAt: now };
+      return {
+        ...state,
+        yearNotes: {
+          ...state.yearNotes,
+          [action.payload.year]: [...(state.yearNotes[action.payload.year] ?? []), note],
+        },
+      };
+    }
+    case 'UPDATE_YEAR_NOTE': {
+      const text = action.payload.text.trim();
+      const notes = state.yearNotes[action.payload.year];
+      if (!text || !notes || !isValidYearString(action.payload.year)) return state;
+      return {
+        ...state,
+        yearNotes: {
+          ...state.yearNotes,
+          [action.payload.year]: notes.map(note => note.id === action.payload.id
+            ? { ...note, text, updatedAt: new Date().toISOString() }
+            : note),
+        },
+      };
+    }
+    case 'DELETE_YEAR_NOTE': {
+      const notes = state.yearNotes[action.payload.year];
+      if (!notes) return state;
+      const remainingNotes = notes.filter(note => note.id !== action.payload.id);
+      const yearNotes = { ...state.yearNotes };
+      if (remainingNotes.length > 0) yearNotes[action.payload.year] = remainingNotes;
+      else delete yearNotes[action.payload.year];
+      return { ...state, yearNotes };
     }
     case 'ADD_WEEK_NOTE': {
       const text = action.payload.text.trim();

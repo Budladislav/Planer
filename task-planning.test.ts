@@ -6,7 +6,7 @@ const datedTask: Task = {
   id: 'dated',
   title: 'Dated task',
   status: 'todo',
-  plan: { month: '2026-08', day: '2026-08-12', week: '2026-W33' },
+  plan: { year: '2026', month: '2026-08', day: '2026-08-12', week: '2026-W33' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-10T08:00:00.000Z',
@@ -20,6 +20,7 @@ describe('planTaskForWeek', () => {
       day: null,
       week: '2026-W34',
       month: '2026-08',
+      year: '2026',
     });
   });
 
@@ -28,6 +29,7 @@ describe('planTaskForWeek', () => {
       day: '2026-08-12',
       week: '2026-W33',
       month: '2026-08',
+      year: '2026',
     });
   });
 });

@@ -6,7 +6,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',
   title: 'Test task',
   status: 'todo',
-  plan: { month: '2026-08', day: '2026-08-16', week: '2026-W33' },
+  plan: { year: '2026', month: '2026-08', day: '2026-08-16', week: '2026-W33' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-16T08:00:00.000Z',
@@ -51,7 +51,7 @@ describe('migrateAppState', () => {
       id: 'legacy-task',
       completedAt: '2026-01-05T09:00:00.000Z',
       eventId: null,
-      plan: { day: '2026-01-05', week: null, month: '2026-01' },
+      plan: { day: '2026-01-05', week: null, month: '2026-01', year: '2026' },
     }));
     expect(migrated.tasks[0]).not.toHaveProperty('frog');
     expect(migrated.tasks[0]).not.toHaveProperty('difficulty');
@@ -134,8 +134,12 @@ describe('migrateAppState', () => {
     expect(migrated.captures).toHaveLength(1);
     expect(migrated.events).toHaveLength(1);
     expect(migrated.taskOrderByMonthBucket).toEqual({ '2026-08': ['task-1'] });
+    expect(migrated.tasks[0].plan.year).toBe('2026');
+    expect(migrated.taskOrderByYearBucket).toEqual({});
+    expect(migrated.taskOrderByYearMonth).toEqual({});
     expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
     expect(migrated.monthNotes).toEqual({});
+    expect(migrated.yearNotes).toEqual({});
     expect(migrated.weekNotes).toEqual({});
     expect(migrated.dayNotes).toEqual({});
     expect(migrated.goals).toEqual([]);
@@ -333,6 +337,30 @@ describe('appReducer task ordering', () => {
 });
 
 describe('appReducer period notes and UI preferences', () => {
+  it('adds, updates and deletes a year note', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-08T08:00:00.000Z'));
+
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_YEAR_NOTE',
+      payload: { year: '2027', text: '  Main direction  ' },
+    });
+    const note = added.yearNotes['2027'][0];
+    expect(note).toMatchObject({ text: 'Main direction', createdAt: '2026-09-08T08:00:00.000Z' });
+
+    const updated = appReducer(added, {
+      type: 'UPDATE_YEAR_NOTE',
+      payload: { year: '2027', id: note.id, text: 'Launch year' },
+    });
+    expect(updated.yearNotes['2027'][0].text).toBe('Launch year');
+
+    const deleted = appReducer(updated, {
+      type: 'DELETE_YEAR_NOTE',
+      payload: { year: '2027', id: note.id },
+    });
+    expect(deleted.yearNotes).toEqual({});
+  });
+
   it('adds, updates and deletes a month note', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-08T08:00:00.000Z'));
@@ -422,17 +450,21 @@ describe('appReducer task planning', () => {
       taskOrderByWeekBucket: { '2026-W33': [task.id] },
       taskOrderByMonthBucket: { '2026-08': [task.id] },
       taskOrderByMonthWeek: { '2026-08|2026-W33': [task.id] },
+      taskOrderByYearBucket: { '2026': [task.id] },
+      taskOrderByYearMonth: { '2026|2026-08': [task.id] },
     };
 
     const moved = appReducer(state, {
       type: 'UPDATE_TASK',
-      payload: { id: task.id, plan: { month: '2026-08', week: '2026-W34', day: null } },
+      payload: { id: task.id, plan: { year: '2026', month: '2026-08', week: '2026-W34', day: null } },
     });
 
     expect(moved.taskOrderByDay['2026-08-16']).toEqual([]);
     expect(moved.taskOrderByWeekBucket['2026-W33']).toEqual([]);
     expect(moved.taskOrderByMonthBucket['2026-08']).toEqual([]);
     expect(moved.taskOrderByMonthWeek['2026-08|2026-W33']).toEqual([]);
+    expect(moved.taskOrderByYearBucket['2026']).toEqual([]);
+    expect(moved.taskOrderByYearMonth['2026|2026-08']).toEqual([]);
   });
 });
 
@@ -489,7 +521,7 @@ describe('appReducer day notes and long-term goals', () => {
     vi.useRealTimers();
   });
 
-  it('migrates valid day notes and goals while discarding malformed entries', () => {
+  it('migrates valid period notes and goals while discarding malformed entries', () => {
     const migrated = migrateAppState({
       tasks: [], captures: [], events: [],
       dayNotes: {
@@ -500,6 +532,12 @@ describe('appReducer day notes and long-term goals', () => {
         '2026-09': [{ id: 'month-note', text: '  September focus  ', createdAt: '2026-09-01T10:00:00.000Z' }],
         invalid: [{ id: 'invalid-month', text: 'Discard' }],
       },
+      yearNotes: {
+        '2027': [{ id: 'year-note', text: '  Launch year  ', createdAt: '2026-09-01T10:00:00.000Z' }],
+        '2019': [{ id: 'invalid-year', text: 'Discard' }],
+      },
+      taskOrderByYearBucket: { '2027': ['task-a', 42, 'task-b'] },
+      taskOrderByYearMonth: { '2027|2027-03': ['task-b'] },
       goals: [{
         id: 'goal-1',
         title: '  Emergency fund  ',
@@ -516,6 +554,10 @@ describe('appReducer day notes and long-term goals', () => {
     expect(migrated.dayNotes['2026-02-31']).toBeUndefined();
     expect(migrated.monthNotes['2026-09'][0].text).toBe('September focus');
     expect(migrated.monthNotes.invalid).toBeUndefined();
+    expect(migrated.yearNotes['2027'][0].text).toBe('Launch year');
+    expect(migrated.yearNotes['2019']).toBeUndefined();
+    expect(migrated.taskOrderByYearBucket['2027']).toEqual(['task-a', 'task-b']);
+    expect(migrated.taskOrderByYearMonth['2027|2027-03']).toEqual(['task-b']);
     expect(migrated.goals).toHaveLength(1);
     expect(migrated.goals[0]).toEqual(expect.objectContaining({ title: 'Emergency fund', status: 'completed' }));
     expect(migrated.goals[0].notes[0].text).toBe('Final transfer');

@@ -7,7 +7,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'task-1',
   title: 'Lifecycle task',
   status: 'todo',
-  plan: { day: '2026-08-28', week: null, month: '2026-08' },
+  plan: { day: '2026-08-28', week: null, month: '2026-08', year: '2026' },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-28T08:00:00.000Z',
@@ -37,7 +37,7 @@ describe('task lifecycle commands', () => {
     });
 
     const completed = completeTask(dispatch, makeTask(), {
-      plan: { day: '2026-08-28', week: null, month: '2026-08' },
+      plan: { day: '2026-08-28', week: null, month: '2026-08', year: '2026' },
     });
     unsubscribe();
 
@@ -49,7 +49,7 @@ describe('task lifecycle commands', () => {
         id: 'task-1',
         status: 'done',
         completedAt: '2026-08-28T10:30:00.000Z',
-        plan: { day: '2026-08-28', week: null, month: '2026-08' },
+        plan: { day: '2026-08-28', week: null, month: '2026-08', year: '2026' },
       },
     }]);
     expect(events).toEqual([expect.objectContaining({
@@ -75,7 +75,7 @@ describe('task lifecycle commands', () => {
 
     completeTask(action => actions.push(action), makeTask(), {
       completedAt: '2026-08-27T12:00:00.000Z',
-      plan: { day: '2026-08-27', week: '2026-W35', month: '2026-08' },
+      plan: { day: '2026-08-27', week: '2026-W35', month: '2026-08', year: '2026' },
     });
     unsubscribe();
 
@@ -131,7 +131,7 @@ describe('task lifecycle commands', () => {
     const unsubscribe = subscribeToTaskLifecycle(event => events.push(event));
 
     const reopened = reopenTask(action => actions.push(action), task, {
-      plan: { day: '2026-08-28', week: null, month: '2026-08' },
+      plan: { day: '2026-08-28', week: null, month: '2026-08', year: '2026' },
     });
     unsubscribe();
 
@@ -142,7 +142,7 @@ describe('task lifecycle commands', () => {
         id: 'task-1',
         status: 'todo',
         completedAt: null,
-        plan: { day: '2026-08-28', week: null, month: '2026-08' },
+        plan: { day: '2026-08-28', week: null, month: '2026-08', year: '2026' },
       },
     }]);
     expect(events).toEqual([expect.objectContaining({

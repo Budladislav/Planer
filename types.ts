@@ -1,4 +1,4 @@
-export type ViewState = 'today' | 'month' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
+export type ViewState = 'today' | 'month' | 'year' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
 
 export type AppLanguage = 'ru' | 'en';
 export type ShiftTransitionHighlight = 'off' | 'weekend' | 'extended';
@@ -27,6 +27,13 @@ export interface DayNote {
 }
 
 export interface MonthNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface YearNote {
   id: string;
   text: string;
   createdAt: string;
@@ -76,6 +83,7 @@ export interface Task {
     day: string | null; // YYYY-MM-DD
     week: string | null; // YYYY-WW
     month: string | null; // YYYY-MM planning month
+    year: string | null; // YYYY planning year
   };
   projectId: string | null;
   eventId: string | null; // Link to CalendarEvent if task was created from event
@@ -102,8 +110,11 @@ export interface AppState {
   taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
   taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
   taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
+  taskOrderByYearBucket: Record<string, string[]>; // Maps year (YYYY) to unordered-month task IDs
+  taskOrderByYearMonth: Record<string, string[]>; // Maps year|month to task order in Year Plan
   workShiftSettings: WorkShiftSettings;
   monthNotes: Record<string, MonthNote[]>; // Maps month (YYYY-MM) to user-authored notes
+  yearNotes: Record<string, YearNote[]>; // Maps year (YYYY) to user-authored notes
   weekNotes: Record<string, WeekNote[]>; // Maps ISO week (YYYY-Www) to user-authored notes
   dayNotes: Record<string, DayNote[]>; // Maps date (YYYY-MM-DD) to user-authored notes
   goals: LongTermGoal[];
@@ -116,7 +127,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 8,
+  schemaVersion: 9,
   captures: [],
   tasks: [],
   events: [],
@@ -125,8 +136,11 @@ export const INITIAL_STATE: AppState = {
   taskOrderByWeekBucket: {},
   taskOrderByMonthBucket: {},
   taskOrderByMonthWeek: {},
+  taskOrderByYearBucket: {},
+  taskOrderByYearMonth: {},
   workShiftSettings: { baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'extended' },
   monthNotes: {},
+  yearNotes: {},
   weekNotes: {},
   dayNotes: {},
   goals: [],

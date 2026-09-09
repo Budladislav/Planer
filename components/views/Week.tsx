@@ -147,6 +147,7 @@ export const WeekView: React.FC = () => {
                 week: currentWeek,
                 day: null,
                 month: getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek),
+                year: (getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek))?.slice(0, 4) ?? null,
               },
             },
           });
@@ -282,14 +283,14 @@ export const WeekView: React.FC = () => {
       const day = targetContainer.slice('week-day:'.length);
       dispatch({
         type: 'UPDATE_TASK',
-        payload: { id: activeId, plan: { day, week: currentWeek, month: planningMonth ?? day.slice(0, 7) } },
+        payload: { id: activeId, plan: { day, week: currentWeek, month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) } },
       });
       const targetOrder = (dayTasks[day] ?? []).map(item => item.id).filter(id => id !== activeId);
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day, order: [...targetOrder, activeId] } });
     } else {
       dispatch({
         type: 'UPDATE_TASK',
-        payload: { id: activeId, plan: { day: null, week: currentWeek, month: planningMonth } },
+        payload: { id: activeId, plan: { day: null, week: currentWeek, month: planningMonth, year: planningMonth?.slice(0, 4) ?? null } },
       });
       const targetOrder = weekTasks.map(item => item.id).filter(id => id !== activeId);
       dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: { week: currentWeek, order: [...targetOrder, activeId] } });
@@ -311,8 +312,8 @@ export const WeekView: React.FC = () => {
       payload: {
         id,
         plan: day
-          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7) }
-          : { week: currentWeek, day: null, month: planningMonth },
+          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) }
+          : { week: currentWeek, day: null, month: planningMonth, year: planningMonth?.slice(0, 4) ?? null },
       },
     });
     // If moving to a day, update the order (add to end)
@@ -353,7 +354,7 @@ export const WeekView: React.FC = () => {
           id: newTaskId,
           title: quickAdd.trim(),
           status: 'todo',
-          plan: { week: currentWeek, day: null, month: getMonthForWeek(currentWeek) },
+          plan: { week: currentWeek, day: null, month: getMonthForWeek(currentWeek), year: getMonthForWeek(currentWeek)?.slice(0, 4) ?? null },
           projectId: null,
           eventId: null,
           createdAt: new Date().toISOString(),
@@ -384,7 +385,7 @@ export const WeekView: React.FC = () => {
         id: newTaskId,
         title: title.trim(),
         status: 'todo',
-        plan: { day, week: dayWeek, month: day.slice(0, 7) },
+        plan: { day, week: dayWeek, month: day.slice(0, 7), year: day.slice(0, 4) },
         projectId: null,
         eventId: null,
         createdAt: new Date().toISOString(),

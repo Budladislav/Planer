@@ -304,7 +304,7 @@ export const TodayView: React.FC = () => {
         id: newTaskId,
         title: quickAdd.trim(),
         status: 'todo',
-        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
+        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
         projectId: null,
         eventId: null,
         createdAt: new Date().toISOString(),
@@ -338,7 +338,7 @@ export const TodayView: React.FC = () => {
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     // Always set plan.day to today when completing, so it appears in Done under today's date
     completeTask(dispatch, task, {
-      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
+      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
     });
   };
 
@@ -351,7 +351,7 @@ export const TodayView: React.FC = () => {
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
     completeTask(dispatch, task, {
       completedAt,
-      plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7) },
+      plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7), year: completedDay.slice(0, 4) },
     });
   };
 
@@ -366,8 +366,8 @@ export const TodayView: React.FC = () => {
       payload: {
         id,
         plan: day
-          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7) }
-          : { day: null, week: currentWeek, month: planningMonth },
+          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) }
+          : { day: null, week: currentWeek, month: planningMonth, year: (planningMonth ?? getMonthForWeek(currentWeek))?.slice(0, 4) ?? null },
       },
     });
 
@@ -411,7 +411,7 @@ export const TodayView: React.FC = () => {
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: [...currentOrder, id] } });
     }
     reopenTask(dispatch, task, {
-      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7) },
+      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
     });
   };
 

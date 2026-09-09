@@ -13,5 +13,6 @@ export const planTaskForWeek = (task: Task, targetWeek: string): Task['plan'] =>
     month: sourceWeek === targetWeek
       ? getTaskPlanningMonth(task) ?? getMonthForWeek(targetWeek)
       : getMonthForWeek(targetWeek),
+    year: (getMonthForWeek(targetWeek) ?? getTaskPlanningMonth(task))?.slice(0, 4) ?? task.plan.year,
   };
 };

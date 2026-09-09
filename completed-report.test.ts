@@ -11,7 +11,7 @@ const task = (id: string, completedAt: string | null): Task => ({
   id,
   title: `Task ${id}`,
   status: completedAt ? 'done' : 'todo',
-  plan: { month: '2026-08', day: '2026-08-16', week: null },
+  plan: { year: '2026', month: '2026-08', day: '2026-08-16', week: null },
   projectId: null,
   eventId: null,
   createdAt: '2026-08-01T08:00:00.000Z',

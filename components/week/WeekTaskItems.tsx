@@ -211,7 +211,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             onClick={(e) => {
               e.stopPropagation();
               completeTask(dispatch, task, {
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
+                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7), year: getTodayString().slice(0, 4) },
               });
             }}
           >
@@ -468,7 +468,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             onClick={(e) => {
               e.stopPropagation();
               completeTask(dispatch, task, {
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7) },
+                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7), year: getTodayString().slice(0, 4) },
               });
             }}
           >

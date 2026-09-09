@@ -45,8 +45,8 @@ export const getTaskPlanningMonth = (task: Pick<Task, 'plan'>): string | null =>
 
 export const planTaskForMonth = (task: Task, targetMonth: string): Task['plan'] => {
   const currentMonth = getTaskPlanningMonth(task);
-  if (currentMonth === targetMonth) return { ...task.plan, month: targetMonth };
-  return { month: targetMonth, week: null, day: null };
+  if (currentMonth === targetMonth) return { ...task.plan, month: targetMonth, year: targetMonth.slice(0, 4) };
+  return { year: targetMonth.slice(0, 4), month: targetMonth, week: null, day: null };
 };
 
 export const monthWeekOrderKey = (month: string, week: string): string => `${month}|${week}`;

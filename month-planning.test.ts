@@ -9,7 +9,7 @@ import { Task } from './types';
 
 const task: Task = {
   id: 'task', title: 'Task', status: 'todo',
-  plan: { month: '2026-08', week: '2026-W33', day: '2026-08-12' },
+  plan: { year: '2026', month: '2026-08', week: '2026-W33', day: '2026-08-12' },
   projectId: null, eventId: null,
   createdAt: '2026-08-01T08:00:00.000Z', updatedAt: '2026-08-01T08:00:00.000Z', completedAt: null,
 };
@@ -26,7 +26,8 @@ describe('month planning', () => {
   });
 
   it('moves a task to another month pool without copying it', () => {
-    expect(planTaskForMonth(task, '2026-09')).toEqual({ month: '2026-09', week: null, day: null });
+    expect(planTaskForMonth(task, '2026-09')).toEqual({ year: '2026', month: '2026-09', week: null, day: null });
+    expect(planTaskForMonth(task, '2027-01')).toEqual({ year: '2027', month: '2027-01', week: null, day: null });
   });
 
   it('keeps the current week visible and folds only older weeks', () => {
