@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '../../store';
-import { BriefcaseBusiness, CalendarDays, CalendarRange, CheckSquare, ChevronDown, ChevronRight, Download, FileText, Flag, Inbox, Languages, Upload, Trash2 } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, CalendarRange, CheckSquare, ChevronDown, ChevronRight, CopyPlus, Download, FileText, Flag, Inbox, Languages, Upload, Trash2 } from 'lucide-react';
 import { Modal, ConfirmModal } from '../Modal';
 import packageJson from '../../package.json';
 import { parseReleaseHistory } from '../../release-history';
@@ -306,6 +306,24 @@ export const SettingsView: React.FC = () => {
            />
          </label>
 
+        </div>
+      </section>
+
+      <section>
+        <p className="settings-group-label">{t('Autofill')}</p>
+        <div className="surface-card divide-y divide-line">
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'weekly-template' })}
+            className="settings-row"
+          >
+            <CopyPlus className="h-5 w-5 flex-shrink-0 text-brand-500" />
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-slate-800">{t('Weekly template')}</h3>
+              <p className="text-sm text-slate-500">{t('Build a reusable week skeleton and add it to a selected week.')}</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-slate-400" />
+          </button>
         </div>
       </section>
 

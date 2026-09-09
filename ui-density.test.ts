@@ -5,6 +5,7 @@ import todaySource from './components/views/Today.tsx?raw';
 import weekSource from './components/views/Week.tsx?raw';
 import monthSource from './components/views/Month.tsx?raw';
 import yearSource from './components/views/Year.tsx?raw';
+import weeklyTemplateSource from './components/views/WeeklyTemplate.tsx?raw';
 import appSource from './App.tsx?raw';
 import settingsSource from './components/views/Settings.tsx?raw';
 import calendarSource from './components/events/EventsCalendar.tsx?raw';
@@ -57,6 +58,15 @@ describe('compact planner hierarchy', () => {
     expect(settingsSource).toContain("payload: 'year'");
     expect(appSource).toContain("const YearView = lazy(");
     expect(appSource).toContain("case 'year': return <YearView />");
+  });
+
+  it('keeps the weekly template behind Settings and visually separates template mode', () => {
+    expect(settingsSource).toContain("payload: 'weekly-template'");
+    expect(appSource).toContain('const WeeklyTemplateView = lazy(');
+    expect(appSource).toContain("case 'weekly-template': return <WeeklyTemplateView />");
+    expect(weeklyTemplateSource).toContain("t('Template mode')");
+    expect(weeklyTemplateSource).not.toContain("t('Mark as done')");
+    expect(weeklyTemplateSource).not.toContain('<WeekTaskMove');
   });
 
   it('does not offer past destinations in Month and Year move menus', () => {
