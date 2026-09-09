@@ -287,6 +287,7 @@ const RU: Record<string, string> = {
   'Unlink from goal': 'Отвязать от цели',
   '{active} active • {completed} done': 'Активных: {active} • Выполнено: {completed}',
   'No planning period': 'Без периода',
+  'Tasks linked to a big goal cannot be Common.': 'Задачи, связанные с большой целью, не могут быть обычными.',
   'Report period': 'Период отчёта',
   'From': 'С',
   'To': 'По',

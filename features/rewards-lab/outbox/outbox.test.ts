@@ -7,6 +7,7 @@ import {
   drainRewardsLabLifecycleOutbox,
   enqueueRewardsLabLifecycleEvent,
   getRewardsLabLifecycleOutboxSize,
+  toRewardsLabLifecycleEvent,
 } from './outbox';
 
 class MemoryStorage {
@@ -69,6 +70,16 @@ const deletedEvent = (taskId = 'task-1'): TaskLifecycleEvent => ({
 });
 
 describe('Rewards Lab lifecycle outbox', () => {
+  it('keeps the big-goal link as a minimum-grade signal', () => {
+    const event = completedEvent();
+    const converted = toRewardsLabLifecycleEvent({
+      ...event,
+      task: { ...event.task, goalId: 'goal-1' },
+    });
+
+    expect(converted).toMatchObject({ type: 'task.completed', goalLinked: true });
+  });
+
   it('survives a reload boundary and drains strictly in insertion order', () => {
     const storage = new MemoryStorage();
     expect(enqueueRewardsLabLifecycleEvent(storage, completedEvent('first'))).toBe(true);

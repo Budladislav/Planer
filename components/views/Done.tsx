@@ -159,9 +159,9 @@ export const DoneView: React.FC = () => {
 
     return (
       <TaskCard>
-        <RewardGradeSurface taskId={task.id} />
+        <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
         <div className="flex min-w-0 items-start gap-2">
-          <RewardGradeMarker taskId={task.id} />
+          <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
           <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-950 line-through">
             {task.title}
           </span>

@@ -8,6 +8,7 @@ import {
   claimTaskCompletion,
   drawFromFairBag,
   drawRewardKey,
+  ensureTaskMinimumGrade,
   getAvailableKeyCounts,
   getRedemptionAvailability,
   getTaskGrade,
@@ -239,6 +240,27 @@ describe('task rewards', () => {
       economyVersion: 1, roll: 4, multiplier: 3, grade: 'legendary', amount: 12,
     });
     expect(regraded.correction?.economyVersion).toBe(1);
+  });
+
+  it('raises a goal-linked task to the minimum grade without rerolling or breaking Undo', () => {
+    const runtime = makeRuntime();
+    const earned = claimTaskCompletion({
+      ...createDefaultRewardsLabState(),
+      fairBag: { remaining: [0], cycle: 1 },
+    }, {
+      taskId: 'task-1', taskTitle: 'Goal step', completedAt: '2026-08-28T10:00:00.000Z',
+    }, runtime);
+    const raised = ensureTaskMinimumGrade(earned.state, 'task-1', 'uncommon', runtime);
+
+    expect(raised.outcome).toBe('raised');
+    expect(raised.state.claims['task-1']).toMatchObject({ grade: 'uncommon', luckSlot: 0, amount: 3 });
+    expect(raised.state.gradeCorrections.at(-1)).toMatchObject({ fromGrade: 'common', toGrade: 'uncommon', previousAmount: 1, amount: 3 });
+    expect(getWalletBalance(raised.state)).toBe(3);
+    expect(raised.state.fairBag).toEqual(earned.state.fairBag);
+
+    const reversed = reverseTaskCompletion(raised.state, 'task-1', runtime);
+    expect(getWalletBalance(reversed.state)).toBe(0);
+    expect(ensureTaskMinimumGrade(reversed.state, 'task-1', 'uncommon', runtime).outcome).toBe('unchanged');
   });
 
   it('ignores reopening a task that never produced a claim', () => {

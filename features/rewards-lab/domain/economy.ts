@@ -151,6 +151,8 @@ export const setTaskGrade = (
   return { ...state, taskGrades };
 };
 
+const gradeRank = (grade: RewardGrade): number => rewardGrades.indexOf(grade);
+
 export const claimLedgerTotal = (state: RewardsLabState, claimId: string): number => (
   state.ledger.reduce(
     (total, item) => item.claimId === claimId ? total + item.amount : total,
@@ -342,6 +344,71 @@ export const regradeReversedTaskClaim = (
     claim: updatedClaim,
     correction,
     outcome: 'regraded',
+  };
+};
+
+export interface EnsureTaskMinimumGradeResult {
+  state: RewardsLabState;
+  outcome: 'raised' | 'unchanged';
+}
+
+/**
+ * Applies a system-owned grade floor without rerolling an existing reward.
+ * Active claims receive only the positive difference as an append-only ledger
+ * entry; reversed claims keep a zero balance until they are completed again.
+ */
+export const ensureTaskMinimumGrade = (
+  state: RewardsLabState,
+  taskId: string,
+  minimumGrade: RewardGrade,
+  runtime: EconomyRuntime = {},
+): EnsureTaskMinimumGradeResult => {
+  const claim = state.claims[taskId];
+  const currentGrade = claim?.grade ?? getTaskGrade(state, taskId);
+  if (gradeRank(currentGrade) >= gradeRank(minimumGrade)) return { state, outcome: 'unchanged' };
+
+  if (!claim) {
+    return { state: setTaskGrade(state, taskId, minimumGrade), outcome: 'raised' };
+  }
+
+  const amount = getClaimAmountForGrade(claim, minimumGrade);
+  const updatedClaim: RewardClaim = claim.economyVersion === 1
+    ? { ...claim, grade: minimumGrade, multiplier: REWARD_GRADES[minimumGrade].legacyMultiplier, amount }
+    : { ...claim, grade: minimumGrade, amount };
+  const occurredAt = now(runtime);
+  const correction: RewardGradeCorrection = {
+    id: createId(runtime),
+    claimId: claim.id,
+    taskId,
+    fromGrade: claim.grade,
+    toGrade: minimumGrade,
+    previousAmount: claim.amount,
+    amount,
+    economyVersion: claim.economyVersion,
+    occurredAt,
+  };
+  const active = claimLedgerTotal(state, claim.id) > 0;
+  const adjustment = active && amount > claim.amount
+    ? transaction(runtime, {
+        kind: 'earn',
+        amount: amount - claim.amount,
+        label: `Goal minimum grade for ${claim.taskTitle}`,
+        taskId,
+        claimId: claim.id,
+        economyVersion: claim.economyVersion,
+        occurredAt,
+      })
+    : null;
+  const stateWithGrade = setTaskGrade(state, taskId, minimumGrade);
+
+  return {
+    state: {
+      ...stateWithGrade,
+      claims: { ...stateWithGrade.claims, [taskId]: updatedClaim },
+      gradeCorrections: [...stateWithGrade.gradeCorrections, correction],
+      ledger: adjustment ? [...stateWithGrade.ledger, adjustment] : stateWithGrade.ledger,
+    },
+    outcome: 'raised',
   };
 };
 

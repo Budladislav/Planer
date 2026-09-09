@@ -152,14 +152,14 @@ const SortableTaskItem: React.FC<{
       style={style}
       onClick={() => setShowActions((prev) => !prev)}
     >
-      <RewardGradeSurface taskId={task.id} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
       <div
         {...attributes}
         {...listeners}
         className="flex flex-1 min-w-0 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <RewardGradeIncrementButton taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-950 ${task.status === 'done' ? 'line-through' : ''}`}>
             {task.title}
           </span>
@@ -207,7 +207,7 @@ const SortableTaskItem: React.FC<{
           <div className="space-y-2">
             <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
@@ -526,8 +526,8 @@ export const TodayView: React.FC = () => {
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
                   ) : completedTodayTasks.map(task => (
                     <div key={task.id} className="relative flex items-center gap-2 overflow-hidden px-3 py-2.5">
-                      <RewardGradeSurface taskId={task.id} />
-                      <RewardGradeMarker taskId={task.id} />
+                      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+                      <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-950 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">

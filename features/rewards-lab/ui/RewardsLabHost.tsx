@@ -4,6 +4,7 @@ import { rewardsLabGate } from '../gate';
 import {
   drainRewardsLabLifecycleOutbox,
   enqueueRewardsLabLifecycleEvent,
+  toRewardsLabLifecycleEvent,
 } from '../outbox';
 import type { RewardsLabOutboxStorage } from '../outbox';
 import { useI18n } from '../../../i18n';
@@ -39,7 +40,7 @@ const GateAwareHost: React.FC = () => {
         } else {
           // Storage can be unavailable in privacy modes. Keep the planner
           // fail-open and still attempt the best-effort in-memory reward.
-          runtime.handleTaskLifecycle(event);
+          runtime.handleTaskLifecycle(toRewardsLabLifecycleEvent(event));
         }
       })
       .catch(() => {

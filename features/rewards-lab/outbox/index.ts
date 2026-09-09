@@ -3,6 +3,7 @@ export {
   clearRewardsLabLifecycleOutbox,
   drainRewardsLabLifecycleOutbox,
   enqueueRewardsLabLifecycleEvent,
+  toRewardsLabLifecycleEvent,
   getRewardsLabLifecycleOutboxSize,
 } from './outbox';
 

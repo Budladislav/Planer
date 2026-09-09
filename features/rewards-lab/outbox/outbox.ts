@@ -10,6 +10,7 @@ export interface RewardsLabLifecycleCompletedEvent {
   title: string;
   occurredAt: string;
   completedAt: string;
+  goalLinked?: boolean;
 }
 
 export interface RewardsLabLifecycleReversalEvent {
@@ -67,6 +68,7 @@ const sanitizeEvent = (value: unknown): RewardsLabLifecycleEvent | null => {
       title: value.title,
       occurredAt: value.occurredAt,
       completedAt: value.completedAt,
+      goalLinked: value.goalLinked === true,
     };
   }
 
@@ -140,7 +142,7 @@ const createOutboxId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
-const toRewardsLabEvent = (event: TaskLifecycleEvent): RewardsLabLifecycleEvent => (
+export const toRewardsLabLifecycleEvent = (event: TaskLifecycleEvent): RewardsLabLifecycleEvent => (
   event.type === 'task.completed'
     ? {
         type: event.type,
@@ -148,6 +150,7 @@ const toRewardsLabEvent = (event: TaskLifecycleEvent): RewardsLabLifecycleEvent 
         title: event.title,
         occurredAt: event.occurredAt,
         completedAt: event.completedAt,
+        goalLinked: Boolean(event.task.goalId),
       }
     : {
         type: event.type,
@@ -164,7 +167,7 @@ export const enqueueRewardsLabLifecycleEvent = (
   event: TaskLifecycleEvent,
 ): boolean => {
   const outbox = loadOutbox(storage);
-  outbox.events.push({ id: createOutboxId(), event: toRewardsLabEvent(event) });
+  outbox.events.push({ id: createOutboxId(), event: toRewardsLabLifecycleEvent(event) });
   return saveOutbox(storage, outbox);
 };
 

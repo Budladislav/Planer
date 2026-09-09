@@ -173,7 +173,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
       <div className="flex items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -196,7 +196,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
-          <RewardGradeIncrementButton taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <span
             className={`min-w-0 flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
             title={task.title}
@@ -231,7 +231,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
@@ -431,7 +431,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -455,7 +455,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
-          <RewardGradeIncrementButton taskId={task.id} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
           <span
             className={`min-w-0 max-w-full flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
           >
@@ -489,7 +489,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">

@@ -469,9 +469,9 @@ export const WeekView: React.FC = () => {
             : null;
           return (
             <div key={task.id} className="relative flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
-              <RewardGradeSurface taskId={task.id} />
+              <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-              <RewardGradeMarker taskId={task.id} />
+              <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
               <span className="min-w-0 flex-1 truncate text-slate-950 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <RewardCompletionMeta taskId={task.id} />

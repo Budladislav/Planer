@@ -214,6 +214,17 @@ describe('Rewards Lab runtime activation', () => {
 });
 
 describe('Rewards Lab task lifecycle', () => {
+  it('awards at least Uncommon for a task linked to a big goal', () => {
+    const storage = new MemoryStorage();
+    storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent({ goalId: 'goal-1' }));
+
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+
+    expect(runtime.getSnapshot().state!.claims['task-1']).toMatchObject({ grade: 'uncommon', amount: 3 });
+    expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(3);
+  });
+
   it('drains a completion captured before runtime import when a page reload creates the runtime', () => {
     const storage = new MemoryStorage();
     storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));

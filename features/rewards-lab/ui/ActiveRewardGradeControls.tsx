@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ChevronUp } from 'lucide-react';
 import { getTaskGrade, isRewardClaimActive, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
@@ -37,12 +37,25 @@ const GRADE_META_STYLES: Record<RewardGrade, string> = {
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
 
-export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }) => {
+const useTaskRewardGrade = (taskId: string, goalLinked: boolean) => {
+  const { runtime, snapshot } = useRewardsLab();
+  const claim = snapshot.state?.claims[taskId];
+  const storedGrade = snapshot.state ? (claim?.grade ?? getTaskGrade(snapshot.state, taskId)) : 'common';
+  const grade: RewardGrade = goalLinked && storedGrade === 'common' ? 'uncommon' : storedGrade;
+
+  useEffect(() => {
+    if (snapshot.enabled && snapshot.state && goalLinked && storedGrade === 'common') {
+      runtime.ensureTaskMinimumGrade(taskId, 'uncommon');
+    }
+  }, [goalLinked, runtime, snapshot.enabled, snapshot.state, storedGrade, taskId]);
+
+  return { runtime, snapshot, claim, grade, goalLinked };
+};
+
+export const ActiveRewardGradeMarker: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
   const { t } = useI18n();
-  const { snapshot } = useRewardsLab();
+  const { snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
   if (!snapshot.enabled || !snapshot.state) return null;
-  const claim = snapshot.state.claims[taskId];
-  const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   if (grade === 'common') return null;
   const meta = REWARD_GRADES[grade];
   const rule = claim?.economyVersion === 1
@@ -59,10 +72,9 @@ export const ActiveRewardGradeMarker: React.FC<{ taskId: string }> = ({ taskId }
   );
 };
 
-export const ActiveRewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId }) => {
-  const { snapshot } = useRewardsLab();
+export const ActiveRewardGradeSurface: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
+  const { snapshot, grade } = useTaskRewardGrade(taskId, goalLinked);
   if (!snapshot.enabled || !snapshot.state) return null;
-  const grade = snapshot.state.claims[taskId]?.grade ?? getTaskGrade(snapshot.state, taskId);
   if (grade === 'common') return null;
   return (
     <span
@@ -72,13 +84,11 @@ export const ActiveRewardGradeSurface: React.FC<{ taskId: string }> = ({ taskId 
   );
 };
 
-export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string }> = ({ taskId }) => {
+export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
   const { t } = useI18n();
-  const { runtime, snapshot } = useRewardsLab();
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
   if (!snapshot.enabled || !snapshot.state) return null;
 
-  const claim = snapshot.state.claims[taskId];
-  const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
   const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
   const label = nextGrade
@@ -119,13 +129,11 @@ export const ActiveRewardCompletionMeta: React.FC<{ taskId: string }> = ({ taskI
   );
 };
 
-export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean }> = ({ taskId, compact = false }) => {
+export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean; goalLinked?: boolean }> = ({ taskId, compact = false, goalLinked = false }) => {
   const { t } = useI18n();
-  const { runtime, snapshot } = useRewardsLab();
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
   if (!snapshot.enabled || !snapshot.state) return null;
 
-  const claim = snapshot.state.claims[taskId];
-  const grade = claim?.grade ?? getTaskGrade(snapshot.state, taskId);
   const selectedMeta = REWARD_GRADES[grade];
   const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
   const selectedRule = claim?.economyVersion === 1
@@ -147,7 +155,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
             <button
               key={option}
               type="button"
-              disabled={locked}
+              disabled={locked || (goalLinked && option === 'common')}
               onClick={event => {
                 event.stopPropagation();
                 runtime.setTaskGrade(taskId, option);
@@ -157,7 +165,9 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
               }`}
               aria-label={t('{grade}, reward {min}–{max}', { grade: t(meta.label), min: meta.min, max: meta.max })}
               aria-pressed={selected}
-              title={`${t(meta.label)} · ${claim?.economyVersion === 1 ? `×${meta.legacyMultiplier}` : `${meta.min}–${meta.max}`}${locked ? ` · ${t('locked while completed')}` : ''}`}
+              title={goalLinked && option === 'common'
+                ? t('Tasks linked to a big goal cannot be Common.')
+                : `${t(meta.label)} · ${claim?.economyVersion === 1 ? `×${meta.legacyMultiplier}` : `${meta.min}–${meta.max}`}${locked ? ` · ${t('locked while completed')}` : ''}`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${GRADE_STYLES[option].dot}`} />
             </button>

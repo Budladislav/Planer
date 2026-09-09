@@ -16,11 +16,11 @@ describe('Today task card presentation', () => {
   });
 
   it('keeps one-step grade promotion available on collapsed planning cards', () => {
-    expect(todayViewSource).toContain('<RewardGradeIncrementButton taskId={task.id} />');
-    expect(periodTaskCardSource).toContain('<RewardGradeIncrementButton taskId={task.id} />');
+    expect(todayViewSource).toContain('<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />');
+    expect(periodTaskCardSource).toContain('<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />');
     expect(monthViewSource).toContain('<PeriodTaskCard');
     expect(yearViewSource).toContain('<PeriodTaskCard');
-    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} \/>/g)).toHaveLength(2);
+    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(2);
   });
 
   it('keeps frequent actions collapsed and moves secondary actions under the grade selector', () => {
@@ -30,9 +30,9 @@ describe('Today task card presentation', () => {
     expect(todayViewSource.match(/<WeekTaskMoveButton/g)).toHaveLength(1);
     expect(weekTaskItemsSource.match(/<WeekTaskMoveButton/g)).toHaveLength(2);
     expect(weekTaskItemsSource.match(/label=\{t\('Mark as done'\)\}/g)).toHaveLength(2);
-    expect(todayViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
-    expect(periodTaskCardSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(1);
-    expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact \/>/g)).toHaveLength(2);
+    expect(todayViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(1);
+    expect(periodTaskCardSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(1);
+    expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(2);
     expect(todayViewSource.indexOf('<WeekTaskMoveButton')).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
     expect(todayViewSource.indexOf("label={t('Record this task as completed yesterday')}")).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
     expect(periodTaskCardSource.indexOf("label={t('Delete')}")).toBeGreaterThan(periodTaskCardSource.indexOf('showActions &&'));

@@ -98,6 +98,8 @@ describe('compact planner hierarchy', () => {
 
   it('renders grade color beneath task content', () => {
     expect(gradeControlsSource).toContain('reward-grade-surface');
+    expect(gradeControlsSource).toContain("runtime.ensureTaskMinimumGrade(taskId, 'uncommon')");
+    expect(gradeControlsSource).toContain("goalLinked && option === 'common'");
   });
 
   it('splits Settings into seven focused responsive sections', () => {

@@ -13,6 +13,7 @@ import {
   archiveRewardDefinition,
   claimTaskCompletion,
   createDefaultRewardsLabState,
+  ensureTaskMinimumGrade,
   regradeReversedTaskClaim,
   recordLabOpened,
   redeemPurchase,
@@ -86,6 +87,7 @@ export interface RewardsLabRuntime {
   closeLab(): void;
   dismissToast(): void;
   setTaskGrade(taskId: string, grade: RewardGrade): boolean;
+  ensureTaskMinimumGrade(taskId: string, minimumGrade: RewardGrade): boolean;
   /** True means the event was handled idempotently and may be acknowledged. */
   handleTaskLifecycle(event: RewardsLabLifecycleEvent): boolean;
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
@@ -336,12 +338,25 @@ export const createRewardsLabRuntime = (
       }
     },
 
+    ensureTaskMinimumGrade: (taskId, minimumGrade) => {
+      try {
+        if (unavailable() || !taskId || !canUseGrade(minimumGrade)) return false;
+        const result = ensureTaskMinimumGrade(snapshot.state!, taskId, minimumGrade, economyRuntime);
+        return result.outcome === 'unchanged' || persist(result.state);
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
     handleTaskLifecycle: event => {
       try {
         if (unavailable()) return false;
 
         if (event.type === 'task.completed') {
-          const result = claimTaskCompletion(snapshot.state!, {
+          const preparedState = event.goalLinked
+            ? ensureTaskMinimumGrade(snapshot.state!, event.taskId, 'uncommon', economyRuntime).state
+            : snapshot.state!;
+          const result = claimTaskCompletion(preparedState, {
             taskId: event.taskId,
             taskTitle: event.title,
             completedAt: event.completedAt,

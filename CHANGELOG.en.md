@@ -13,6 +13,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 ### Changed
 
 - Long-term goals graduated from experimental status into Takt's core planning model.
+- A task linked to a long-term goal now always has at least the Uncommon grade and cannot be lowered to Common.
 - TXT reports show a completed task's linked goal and active/completed task counts for every goal.
 - The TXT report heading now uses the current Takt name.
 
