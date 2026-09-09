@@ -17,16 +17,21 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarPlus2, Check, GripVertical, Pencil, Plus, X } from 'lucide-react';
+import { CalendarPlus2, Check, Copy, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store';
-import type { WeeklyTemplateDayIndex, WeeklyTemplateTask } from '../../types';
+import type { WeeklyTemplate, WeeklyTemplateDayIndex, WeeklyTemplateTask } from '../../types';
 import { generateId, getTodayString, getWeekDateRange, getWeekString, isValidWeekString } from '../../utils';
 import {
   buildWeeklyTemplateApplication,
+  createEmptyWeeklyTemplate,
+  DEFAULT_WEEKLY_TEMPLATE_NAME,
+  duplicateWeeklyTemplate,
+  getActiveWeeklyTemplate,
   getOrderedWeeklyTemplateTasks,
   getWeeklyTemplateRewardTaskId,
   getWeeklyTemplateTaskSlot,
+  isWeeklyTemplateNameAvailable,
   WEEKLY_TEMPLATE_POOL_SLOT,
   weeklyTemplateDaySlot,
 } from '../../weekly-template';
@@ -196,6 +201,10 @@ export const WeeklyTemplateView: React.FC = () => {
   const [targetWeek, setTargetWeek] = useState(currentWeek);
   const [summary, setSummary] = useState<{ added: number; skipped: number } | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [templateEditorMode, setTemplateEditorMode] = useState<'create' | 'duplicate' | 'rename' | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const activeTemplate = getActiveWeeklyTemplate(state.weeklyTemplate);
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => ({
     index: index as WeeklyTemplateDayIndex,
     title: new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: 'long' }),
@@ -206,13 +215,19 @@ export const WeeklyTemplateView: React.FC = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const tasksForSlot = (slot: string) => getOrderedWeeklyTemplateTasks(state.weeklyTemplate, slot);
+  const displayTemplateName = (template: WeeklyTemplate) => (
+    template.name === DEFAULT_WEEKLY_TEMPLATE_NAME ? t('Template 1') : template.name
+  );
+  const tasksForSlot = (slot: string) => getOrderedWeeklyTemplateTasks(activeTemplate, slot);
 
   const addTask = (dayIndex: WeeklyTemplateDayIndex | null, title: string) => {
     const now = new Date().toISOString();
     dispatch({
       type: 'ADD_WEEKLY_TEMPLATE_TASK',
-      payload: { id: generateId(), title, dayIndex, createdAt: now, updatedAt: now },
+      payload: {
+        templateId: activeTemplate.id,
+        task: { id: generateId(), title, dayIndex, createdAt: now, updatedAt: now },
+      },
     });
     setSummary(null);
   };
@@ -226,11 +241,14 @@ export const WeeklyTemplateView: React.FC = () => {
     const oldIndex = order.indexOf(String(active.id));
     const newIndex = order.indexOf(String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
-    dispatch({ type: 'UPDATE_WEEKLY_TEMPLATE_ORDER', payload: { slot: sourceSlot, order: arrayMove(order, oldIndex, newIndex) } });
+    dispatch({
+      type: 'UPDATE_WEEKLY_TEMPLATE_ORDER',
+      payload: { templateId: activeTemplate.id, slot: sourceSlot, order: arrayMove(order, oldIndex, newIndex) },
+    });
   };
 
-  const copyGrades = async (items: ReturnType<typeof buildWeeklyTemplateApplication>['items']) => {
-    if (!gate.enabled || items.length === 0) return;
+  const copyRewardGrades = async (pairs: Array<{ sourceTaskId: string; targetTaskId: string }>) => {
+    if (!gate.enabled || pairs.length === 0) return;
     try {
       const [{ getRewardsLabRuntime }, { getTaskGrade }] = await Promise.all([
         import('../../features/rewards-lab/runtime'),
@@ -239,27 +257,83 @@ export const WeeklyTemplateView: React.FC = () => {
       const runtime = getRewardsLabRuntime();
       const rewardsState = runtime.getSnapshot().state;
       if (!rewardsState) return;
-      items.forEach(item => {
-        const grade = getTaskGrade(rewardsState, getWeeklyTemplateRewardTaskId(item.templateTaskId));
-        runtime.setTaskGrade(item.task.id, grade);
+      pairs.forEach(pair => {
+        const grade = getTaskGrade(rewardsState, pair.sourceTaskId);
+        runtime.setTaskGrade(pair.targetTaskId, grade);
       });
     } catch (error) {
       console.error('Failed to copy weekly template grades', error);
     }
   };
 
+  const copyApplicationGrades = (items: ReturnType<typeof buildWeeklyTemplateApplication>['items']) => (
+    copyRewardGrades(items.map(item => ({
+      sourceTaskId: getWeeklyTemplateRewardTaskId(item.templateTaskId),
+      targetTaskId: item.task.id,
+    })))
+  );
+
+  const nextTemplateName = () => {
+    let number = state.weeklyTemplate.templates.length + 1;
+    while (!isWeeklyTemplateNameAvailable(state.weeklyTemplate, t('Template {number}', { number }))) number += 1;
+    return t('Template {number}', { number });
+  };
+
+  const openTemplateEditor = (mode: 'create' | 'duplicate' | 'rename') => {
+    setTemplateEditorMode(mode);
+    setTemplateName(mode === 'rename'
+      ? displayTemplateName(activeTemplate)
+      : mode === 'duplicate'
+        ? t('{name} copy', { name: displayTemplateName(activeTemplate) })
+        : nextTemplateName());
+  };
+
+  const submitTemplateEditor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!templateEditorMode || !isWeeklyTemplateNameAvailable(
+      state.weeklyTemplate,
+      templateName,
+      templateEditorMode === 'rename' ? activeTemplate.id : undefined,
+    )) return;
+
+    if (templateEditorMode === 'rename') {
+      dispatch({ type: 'RENAME_WEEKLY_TEMPLATE', payload: { id: activeTemplate.id, name: templateName } });
+    } else if (templateEditorMode === 'create') {
+      const now = new Date().toISOString();
+      dispatch({ type: 'ADD_WEEKLY_TEMPLATE', payload: createEmptyWeeklyTemplate({ id: generateId(), name: templateName, now }) });
+    } else {
+      const duplicate = duplicateWeeklyTemplate({
+        source: activeTemplate,
+        id: generateId(),
+        name: templateName,
+        now: new Date().toISOString(),
+        createTaskId: generateId,
+      });
+      dispatch({ type: 'ADD_WEEKLY_TEMPLATE', payload: duplicate.template });
+      await copyRewardGrades(duplicate.taskCopies.map(copy => ({
+        sourceTaskId: getWeeklyTemplateRewardTaskId(copy.sourceTaskId),
+        targetTaskId: getWeeklyTemplateRewardTaskId(copy.targetTaskId),
+      })));
+    }
+    setSummary(null);
+    setTemplateEditorMode(null);
+  };
+
   const applyTemplate = async () => {
     if (!isValidWeekString(targetWeek) || targetWeek < currentWeek) return;
     const result = buildWeeklyTemplateApplication({
-      template: state.weeklyTemplate,
+      template: activeTemplate,
       targetWeek,
       existingTasks: state.tasks,
       now: new Date().toISOString(),
       createId: generateId,
     });
     if (result.items.length > 0) {
-      dispatch({ type: 'APPLY_WEEKLY_TEMPLATE', payload: { week: targetWeek, items: result.items } });
-      await copyGrades(result.items);
+      dispatch({
+        type: 'APPLY_WEEKLY_TEMPLATE',
+        payload: { templateId: activeTemplate.id, week: targetWeek, items: result.items },
+      });
+      await copyApplicationGrades(result.items);
     }
     setSummary({ added: result.items.length, skipped: result.skipped });
     setApplyOpen(false);
@@ -282,6 +356,43 @@ export const WeeklyTemplateView: React.FC = () => {
         </div>
       </div>
 
+      <div className="surface-card mb-3 flex items-center gap-1.5 p-2" aria-label={t('Weekly templates')}>
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{t('Selected weekly template')}</span>
+          <select
+            value={activeTemplate.id}
+            onChange={event => {
+              dispatch({ type: 'SET_ACTIVE_WEEKLY_TEMPLATE', payload: event.target.value });
+              setSummary(null);
+              setApplyOpen(false);
+            }}
+            className="field-compact w-full min-w-0 font-semibold text-slate-800"
+            aria-label={t('Selected weekly template')}
+          >
+            {state.weeklyTemplate.templates.map(template => (
+              <option key={template.id} value={template.id}>{displayTemplateName(template)}</option>
+            ))}
+          </select>
+        </label>
+        <TaskIconButton label={t('Create weekly template')} tone="primary" onClick={() => openTemplateEditor('create')}>
+          <Plus className="h-4 w-4" />
+        </TaskIconButton>
+        <TaskIconButton label={t('Duplicate weekly template')} onClick={() => openTemplateEditor('duplicate')}>
+          <Copy className="h-4 w-4" />
+        </TaskIconButton>
+        <TaskIconButton label={t('Rename weekly template')} onClick={() => openTemplateEditor('rename')}>
+          <Pencil className="h-4 w-4" />
+        </TaskIconButton>
+        <TaskIconButton
+          label={t('Delete weekly template')}
+          tone="danger"
+          disabled={state.weeklyTemplate.templates.length <= 1}
+          onClick={() => setDeleteTemplateId(activeTemplate.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </TaskIconButton>
+      </div>
+
       {summary && (
         <div className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800" role="status">
           {t('Added: {added} • Already existed: {skipped}', summary)}
@@ -296,7 +407,9 @@ export const WeeklyTemplateView: React.FC = () => {
             tasks={tasksForSlot(WEEKLY_TEMPLATE_POOL_SLOT)}
             prominent
             onAdd={title => addTask(null, title)}
-            onRename={(id, title) => dispatch({ type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { id, title } })}
+            onRename={(id, title) => dispatch({
+              type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { templateId: activeTemplate.id, id, title },
+            })}
             onDelete={setDeleteTaskId}
           />
           {days.map(day => {
@@ -308,7 +421,9 @@ export const WeeklyTemplateView: React.FC = () => {
                 slot={slot}
                 tasks={tasksForSlot(slot)}
                 onAdd={title => addTask(day.index, title)}
-                onRename={(id, title) => dispatch({ type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { id, title } })}
+                onRename={(id, title) => dispatch({
+                  type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { templateId: activeTemplate.id, id, title },
+                })}
                 onDelete={setDeleteTaskId}
               />
             );
@@ -321,7 +436,7 @@ export const WeeklyTemplateView: React.FC = () => {
           <button
             type="button"
             className="button-primary w-full sm:w-auto"
-            disabled={state.weeklyTemplate.tasks.length === 0}
+            disabled={activeTemplate.tasks.length === 0}
             onClick={() => { setTargetWeek(currentWeek); setApplyOpen(true); }}
           >
             <CalendarPlus2 className="h-4 w-4" />
@@ -337,6 +452,7 @@ export const WeeklyTemplateView: React.FC = () => {
               <div>
                 <h2 className="font-semibold text-slate-800">{t('Apply to week')}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">{t('Choose a current or future week.')}</p>
+                <p className="mt-1 text-xs font-semibold text-brand-700">{t('Template: {name}', { name: displayTemplateName(activeTemplate) })}</p>
               </div>
               <button type="button" className="text-sm text-slate-400" onClick={() => setApplyOpen(false)}>{t('Close')}</button>
             </div>
@@ -361,19 +477,97 @@ export const WeeklyTemplateView: React.FC = () => {
         </div>
       )}
 
-      {state.weeklyTemplate.tasks.length === 0 && !applyOpen && (
+      {activeTemplate.tasks.length === 0 && !applyOpen && (
         <span className="sr-only">{t('The template is empty.')}</span>
+      )}
+
+      {templateEditorMode && (
+        <div className="sheet-backdrop" onClick={() => setTemplateEditorMode(null)}>
+          <form
+            className="sheet-panel sm:w-[420px]"
+            onSubmit={event => void submitTemplateEditor(event)}
+            onClick={event => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={templateEditorMode === 'rename'
+              ? t('Rename weekly template')
+              : templateEditorMode === 'duplicate'
+                ? t('Duplicate weekly template')
+                : t('Create weekly template')}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold text-slate-800">
+                {templateEditorMode === 'rename'
+                  ? t('Rename weekly template')
+                  : templateEditorMode === 'duplicate'
+                    ? t('Duplicate weekly template')
+                    : t('Create weekly template')}
+              </h2>
+              <button type="button" className="text-sm text-slate-400" onClick={() => setTemplateEditorMode(null)}>{t('Close')}</button>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">{t('Template name')}</span>
+              <input
+                value={templateName}
+                onChange={event => setTemplateName(event.target.value)}
+                className="field w-full"
+                maxLength={80}
+                autoFocus
+              />
+            </label>
+            {!isWeeklyTemplateNameAvailable(
+              state.weeklyTemplate,
+              templateName,
+              templateEditorMode === 'rename' ? activeTemplate.id : undefined,
+            ) && templateName.trim() && (
+              <p className="text-xs font-medium text-amber-700">{t('Template names must be unique.')}</p>
+            )}
+            <div className="flex gap-2">
+              <button type="button" className="button-secondary flex-1" onClick={() => setTemplateEditorMode(null)}>{t('Cancel')}</button>
+              <button
+                type="submit"
+                className="button-primary flex-1"
+                disabled={!isWeeklyTemplateNameAvailable(
+                  state.weeklyTemplate,
+                  templateName,
+                  templateEditorMode === 'rename' ? activeTemplate.id : undefined,
+                )}
+              >
+                {templateEditorMode === 'rename' ? t('Save') : t('Create')}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       <ConfirmModal
         isOpen={deleteTaskId !== null}
         onClose={() => setDeleteTaskId(null)}
         onConfirm={() => {
-          if (deleteTaskId) dispatch({ type: 'DELETE_WEEKLY_TEMPLATE_TASK', payload: deleteTaskId });
+          if (deleteTaskId) dispatch({
+            type: 'DELETE_WEEKLY_TEMPLATE_TASK',
+            payload: { templateId: activeTemplate.id, taskId: deleteTaskId },
+          });
           setDeleteTaskId(null);
         }}
         title={t('Delete template task')}
         message={t('Delete this template task? Existing planner tasks will stay unchanged.')}
+        variant="danger"
+        confirmText={t('Delete')}
+      />
+
+      <ConfirmModal
+        isOpen={deleteTemplateId !== null}
+        onClose={() => setDeleteTemplateId(null)}
+        onConfirm={() => {
+          if (deleteTemplateId) dispatch({ type: 'DELETE_WEEKLY_TEMPLATE', payload: deleteTemplateId });
+          setDeleteTemplateId(null);
+          setSummary(null);
+        }}
+        title={t('Delete weekly template')}
+        message={t('Delete template {name}? Existing planner tasks will stay unchanged.', {
+          name: displayTemplateName(activeTemplate),
+        })}
         variant="danger"
         confirmText={t('Delete')}
       />

@@ -69,6 +69,9 @@ describe('compact planner hierarchy', () => {
     expect(weeklyTemplateSource).toContain("t('Template mode')");
     expect(weeklyTemplateSource).not.toContain("t('Mark as done')");
     expect(weeklyTemplateSource).not.toContain('<WeekTaskMove');
+    expect(weeklyTemplateSource).toContain("type: 'ADD_WEEKLY_TEMPLATE'");
+    expect(weeklyTemplateSource).toContain("type: 'SET_ACTIVE_WEEKLY_TEMPLATE'");
+    expect(weeklyTemplateSource).toContain("t('Duplicate weekly template')");
   });
 
   it('does not offer past destinations in Month and Year move menus', () => {

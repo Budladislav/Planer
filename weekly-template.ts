@@ -1,6 +1,7 @@
 import { getMonthForWeek } from './month-planning';
 import type {
   Task,
+  WeeklyTemplate,
   WeeklyTemplateDayIndex,
   WeeklyTemplateState,
   WeeklyTemplateTask,
@@ -8,6 +9,8 @@ import type {
 import { getWeekDates, isValidWeekString } from './utils';
 
 export const WEEKLY_TEMPLATE_POOL_SLOT = 'week';
+export const DEFAULT_WEEKLY_TEMPLATE_ID = 'weekly-template-default';
+export const DEFAULT_WEEKLY_TEMPLATE_NAME = 'Template 1';
 export const weeklyTemplateDaySlot = (dayIndex: WeeklyTemplateDayIndex): string => `day-${dayIndex}`;
 
 export const getWeeklyTemplateTaskSlot = (task: Pick<WeeklyTemplateTask, 'dayIndex'>): string => (
@@ -38,15 +41,20 @@ const normalizeSlotOrder = (
   return [...deduplicated, ...available.filter(id => !deduplicated.includes(id))];
 };
 
-export const migrateWeeklyTemplateState = (value: unknown, now: string): WeeklyTemplateState => {
+const migrateTemplate = (
+  value: unknown,
+  now: string,
+  fallbackId: string,
+  fallbackName: string,
+  seenTaskIds: Set<string>,
+): WeeklyTemplate => {
   const parsed = isRecord(value) ? value : {};
-  const seenIds = new Set<string>();
   const tasks = Array.isArray(parsed.tasks)
     ? parsed.tasks.flatMap((item): WeeklyTemplateTask[] => {
         if (!isRecord(item) || typeof item.title !== 'string' || !item.title.trim()) return [];
         const id = typeof item.id === 'string' && item.id ? item.id : '';
-        if (!id || seenIds.has(id)) return [];
-        seenIds.add(id);
+        if (!id || seenTaskIds.has(id)) return [];
+        seenTaskIds.add(id);
         const dayIndex = item.dayIndex === null || validDayIndex(item.dayIndex) ? item.dayIndex : null;
         const createdAt = typeof item.createdAt === 'string' ? item.createdAt : now;
         return [{
@@ -69,17 +77,116 @@ export const migrateWeeklyTemplateState = (value: unknown, now: string): WeeklyT
     ? Object.fromEntries(Object.entries(parsed.applications).flatMap(([week, mapping]) => {
         if (!isValidWeekString(week) || !isRecord(mapping)) return [];
         const links = Object.fromEntries(Object.entries(mapping).filter(
-          (entry): entry is [string, string] => seenIds.has(entry[0]) && typeof entry[1] === 'string' && Boolean(entry[1]),
+          (entry): entry is [string, string] => tasks.some(task => task.id === entry[0]) && typeof entry[1] === 'string' && Boolean(entry[1]),
         ));
         return Object.keys(links).length > 0 ? [[week, links]] : [];
       }))
     : {};
 
-  return { tasks, orderBySlot, applications };
+  const createdAt = typeof parsed.createdAt === 'string' ? parsed.createdAt : now;
+  return {
+    id: typeof parsed.id === 'string' && parsed.id ? parsed.id : fallbackId,
+    name: typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : fallbackName,
+    tasks,
+    orderBySlot,
+    applications,
+    createdAt,
+    updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : createdAt,
+  };
+};
+
+export const migrateWeeklyTemplateState = (value: unknown, now: string): WeeklyTemplateState => {
+  const parsed = isRecord(value) ? value : {};
+  const seenTemplateIds = new Set<string>();
+  const seenTemplateNames = new Set<string>();
+  const seenTaskIds = new Set<string>();
+
+  const rawTemplates = Array.isArray(parsed.templates) ? parsed.templates : null;
+  const templates = (rawTemplates ?? [parsed]).flatMap((item, index): WeeklyTemplate[] => {
+    const template = migrateTemplate(
+      item,
+      now,
+      index === 0 ? DEFAULT_WEEKLY_TEMPLATE_ID : `weekly-template-${index + 1}`,
+      index === 0 ? DEFAULT_WEEKLY_TEMPLATE_NAME : `Template ${index + 1}`,
+      seenTaskIds,
+    );
+    const normalizedName = template.name.toLocaleLowerCase();
+    if (seenTemplateIds.has(template.id) || seenTemplateNames.has(normalizedName)) return [];
+    seenTemplateIds.add(template.id);
+    seenTemplateNames.add(normalizedName);
+    return [template];
+  });
+
+  if (templates.length === 0) {
+    templates.push(migrateTemplate({}, now, DEFAULT_WEEKLY_TEMPLATE_ID, DEFAULT_WEEKLY_TEMPLATE_NAME, seenTaskIds));
+  }
+
+  const requestedActiveId = typeof parsed.activeTemplateId === 'string' ? parsed.activeTemplateId : '';
+  const activeTemplateId = templates.some(template => template.id === requestedActiveId)
+    ? requestedActiveId
+    : templates[0].id;
+  return { templates, activeTemplateId };
+};
+
+export const getActiveWeeklyTemplate = (state: WeeklyTemplateState): WeeklyTemplate => (
+  state.templates.find(template => template.id === state.activeTemplateId) ?? state.templates[0]
+);
+
+export const isWeeklyTemplateNameAvailable = (
+  state: WeeklyTemplateState,
+  name: string,
+  exceptId?: string,
+): boolean => {
+  const normalized = name.trim().toLocaleLowerCase();
+  return Boolean(normalized) && !state.templates.some(
+    template => template.id !== exceptId && template.name.toLocaleLowerCase() === normalized,
+  );
+};
+
+export const createEmptyWeeklyTemplate = ({
+  id,
+  name,
+  now,
+}: {
+  id: string;
+  name: string;
+  now: string;
+}): WeeklyTemplate => migrateTemplate({ id, name }, now, id, name, new Set());
+
+export const duplicateWeeklyTemplate = ({
+  source,
+  id,
+  name,
+  now,
+  createTaskId,
+}: {
+  source: WeeklyTemplate;
+  id: string;
+  name: string;
+  now: string;
+  createTaskId: () => string;
+}): { template: WeeklyTemplate; taskCopies: Array<{ sourceTaskId: string; targetTaskId: string }> } => {
+  const taskCopies = source.tasks.map(task => ({ sourceTaskId: task.id, targetTaskId: createTaskId() }));
+  const idMap = new Map(taskCopies.map(copy => [copy.sourceTaskId, copy.targetTaskId]));
+  return {
+    template: {
+      id,
+      name: name.trim(),
+      tasks: source.tasks.map(task => ({ ...task, id: idMap.get(task.id)!, createdAt: now, updatedAt: now })),
+      orderBySlot: Object.fromEntries(Object.entries(source.orderBySlot).map(([slot, order]) => [
+        slot,
+        order.flatMap(taskId => idMap.get(taskId) ?? []),
+      ])),
+      applications: {},
+      createdAt: now,
+      updatedAt: now,
+    },
+    taskCopies,
+  };
 };
 
 export const getOrderedWeeklyTemplateTasks = (
-  template: WeeklyTemplateState,
+  template: WeeklyTemplate,
   slot: string,
 ): WeeklyTemplateTask[] => {
   const available = template.tasks.filter(task => getWeeklyTemplateTaskSlot(task) === slot);
@@ -100,7 +207,7 @@ export interface WeeklyTemplateTaskApplication {
 }
 
 export interface BuildWeeklyTemplateApplicationOptions {
-  template: WeeklyTemplateState;
+  template: WeeklyTemplate;
   targetWeek: string;
   existingTasks: readonly Task[];
   now: string;

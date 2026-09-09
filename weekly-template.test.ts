@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Task, WeeklyTemplateState } from './types';
+import type { Task, WeeklyTemplate } from './types';
 import {
   buildWeeklyTemplateApplication,
+  DEFAULT_WEEKLY_TEMPLATE_ID,
+  duplicateWeeklyTemplate,
+  getActiveWeeklyTemplate,
   getOrderedWeeklyTemplateTasks,
   getWeeklyTemplateRewardTaskId,
   migrateWeeklyTemplateState,
@@ -9,7 +12,9 @@ import {
   weeklyTemplateDaySlot,
 } from './weekly-template';
 
-const template: WeeklyTemplateState = {
+const template: WeeklyTemplate = {
+  id: 'template-a',
+  name: 'First shift',
   tasks: [
     { id: 'pool', title: 'Plan week', dayIndex: null, createdAt: 'now', updatedAt: 'now' },
     { id: 'monday', title: 'Monday task', dayIndex: 0, createdAt: 'now', updatedAt: 'now' },
@@ -21,6 +26,8 @@ const template: WeeklyTemplateState = {
     [weeklyTemplateDaySlot(6)]: ['sunday'],
   },
   applications: {},
+  createdAt: 'now',
+  updatedAt: 'now',
 };
 
 describe('weekly template', () => {
@@ -36,13 +43,16 @@ describe('weekly template', () => {
       applications: { '2026-W40': { a: 'task-a', missing: 'task-x' }, invalid: { a: 'task-a' } },
     }, '2026-09-09T00:00:00.000Z');
 
-    expect(migrated.tasks.map(task => ({ id: task.id, title: task.title, dayIndex: task.dayIndex }))).toEqual([
+    const active = getActiveWeeklyTemplate(migrated);
+    expect(migrated.activeTemplateId).toBe(DEFAULT_WEEKLY_TEMPLATE_ID);
+    expect(active.name).toBe('Template 1');
+    expect(active.tasks.map(task => ({ id: task.id, title: task.title, dayIndex: task.dayIndex }))).toEqual([
       { id: 'a', title: 'First', dayIndex: 1 },
       { id: 'b', title: 'Second', dayIndex: null },
     ]);
-    expect(migrated.orderBySlot['day-1']).toEqual(['a']);
-    expect(migrated.orderBySlot.week).toEqual(['b']);
-    expect(migrated.applications).toEqual({ '2026-W40': { a: 'task-a' } });
+    expect(active.orderBySlot['day-1']).toEqual(['a']);
+    expect(active.orderBySlot.week).toEqual(['b']);
+    expect(active.applications).toEqual({ '2026-W40': { a: 'task-a' } });
   });
 
   it('keeps explicit order inside each template slot', () => {
@@ -53,7 +63,7 @@ describe('weekly template', () => {
         { id: 'second-pool', title: 'Second pool', dayIndex: null, createdAt: 'now', updatedAt: 'now' },
       ],
       orderBySlot: { ...template.orderBySlot, week: ['second-pool', 'pool'] },
-    } satisfies WeeklyTemplateState;
+    } satisfies WeeklyTemplate;
     expect(getOrderedWeeklyTemplateTasks(reordered, WEEKLY_TEMPLATE_POOL_SLOT).map(task => task.id)).toEqual(['second-pool', 'pool']);
   });
 
@@ -77,7 +87,7 @@ describe('weekly template', () => {
 
   it('skips live tasks from an earlier application but recreates deleted ones', () => {
     const linkedTask = { id: 'live-task' } as Task;
-    const appliedTemplate: WeeklyTemplateState = {
+    const appliedTemplate: WeeklyTemplate = {
       ...template,
       applications: { '2026-W40': { pool: 'live-task', monday: 'deleted-task' } },
     };
@@ -96,5 +106,28 @@ describe('weekly template', () => {
 
   it('uses a stable isolated Rewards Lab id for template grades', () => {
     expect(getWeeklyTemplateRewardTaskId('abc')).toBe('weekly-template:abc');
+  });
+
+  it('duplicates structure with fresh task ids and no application history', () => {
+    let id = 0;
+    const duplicate = duplicateWeeklyTemplate({
+      source: { ...template, applications: { '2026-W40': { pool: 'live-task' } } },
+      id: 'template-b',
+      name: 'Second shift',
+      now: '2026-09-10T00:00:00.000Z',
+      createTaskId: () => `copy-${++id}`,
+    });
+
+    expect(duplicate.template).toEqual(expect.objectContaining({
+      id: 'template-b', name: 'Second shift', applications: {}, createdAt: '2026-09-10T00:00:00.000Z',
+    }));
+    expect(duplicate.template.tasks.map(task => task.id)).toEqual(['copy-1', 'copy-2', 'copy-3']);
+    expect(duplicate.template.orderBySlot.week).toEqual(['copy-1']);
+    expect(duplicate.template.orderBySlot['day-0']).toEqual(['copy-2']);
+    expect(duplicate.taskCopies).toEqual([
+      { sourceTaskId: 'pool', targetTaskId: 'copy-1' },
+      { sourceTaskId: 'monday', targetTaskId: 'copy-2' },
+      { sourceTaskId: 'sunday', targetTaskId: 'copy-3' },
+    ]);
   });
 });

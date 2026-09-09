@@ -102,10 +102,19 @@ export interface WeeklyTemplateTask {
   updatedAt: string;
 }
 
-export interface WeeklyTemplateState {
+export interface WeeklyTemplate {
+  id: string;
+  name: string;
   tasks: WeeklyTemplateTask[];
   orderBySlot: Record<string, string[]>;
   applications: Record<string, Record<string, string>>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeeklyTemplateState {
+  templates: WeeklyTemplate[];
+  activeTemplateId: string;
 }
 
 export interface CalendarEvent {
@@ -144,7 +153,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 10,
+  schemaVersion: 11,
   captures: [],
   tasks: [],
   events: [],
@@ -155,7 +164,18 @@ export const INITIAL_STATE: AppState = {
   taskOrderByMonthWeek: {},
   taskOrderByYearBucket: {},
   taskOrderByYearMonth: {},
-  weeklyTemplate: { tasks: [], orderBySlot: {}, applications: {} },
+  weeklyTemplate: {
+    templates: [{
+      id: 'weekly-template-default',
+      name: 'Template 1',
+      tasks: [],
+      orderBySlot: {},
+      applications: {},
+      createdAt: '1970-01-01T00:00:00.000Z',
+      updatedAt: '1970-01-01T00:00:00.000Z',
+    }],
+    activeTemplateId: 'weekly-template-default',
+  },
   workShiftSettings: { baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'extended' },
   monthNotes: {},
   yearNotes: {},

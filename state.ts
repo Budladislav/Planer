@@ -12,6 +12,7 @@ import {
   Task,
   ViewState,
   WeekNote,
+  WeeklyTemplate,
   WeeklyTemplateTask,
   WorkShift,
   YearNote,
@@ -25,7 +26,7 @@ import {
   type WeeklyTemplateTaskApplication,
 } from './weekly-template';
 
-export const CURRENT_SCHEMA_VERSION = 10;
+export const CURRENT_SCHEMA_VERSION = 11;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -297,11 +298,15 @@ export type Action =
   | { type: 'UPDATE_TASK_ORDER_MONTH_WEEK'; payload: { key: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_YEAR_BUCKET'; payload: { year: string; order: string[] } }
   | { type: 'UPDATE_TASK_ORDER_YEAR_MONTH'; payload: { key: string; order: string[] } }
-  | { type: 'ADD_WEEKLY_TEMPLATE_TASK'; payload: WeeklyTemplateTask }
-  | { type: 'UPDATE_WEEKLY_TEMPLATE_TASK'; payload: { id: string; title: string } }
-  | { type: 'DELETE_WEEKLY_TEMPLATE_TASK'; payload: string }
-  | { type: 'UPDATE_WEEKLY_TEMPLATE_ORDER'; payload: { slot: string; order: string[] } }
-  | { type: 'APPLY_WEEKLY_TEMPLATE'; payload: { week: string; items: WeeklyTemplateTaskApplication[] } }
+  | { type: 'ADD_WEEKLY_TEMPLATE'; payload: WeeklyTemplate }
+  | { type: 'SET_ACTIVE_WEEKLY_TEMPLATE'; payload: string }
+  | { type: 'RENAME_WEEKLY_TEMPLATE'; payload: { id: string; name: string } }
+  | { type: 'DELETE_WEEKLY_TEMPLATE'; payload: string }
+  | { type: 'ADD_WEEKLY_TEMPLATE_TASK'; payload: { templateId: string; task: WeeklyTemplateTask } }
+  | { type: 'UPDATE_WEEKLY_TEMPLATE_TASK'; payload: { templateId: string; id: string; title: string } }
+  | { type: 'DELETE_WEEKLY_TEMPLATE_TASK'; payload: { templateId: string; taskId: string } }
+  | { type: 'UPDATE_WEEKLY_TEMPLATE_ORDER'; payload: { templateId: string; slot: string; order: string[] } }
+  | { type: 'APPLY_WEEKLY_TEMPLATE'; payload: { templateId: string; week: string; items: WeeklyTemplateTaskApplication[] } }
   | { type: 'UPDATE_WORK_SHIFT_SETTINGS'; payload: AppState['workShiftSettings'] }
   | { type: 'ADD_MONTH_NOTE'; payload: { month: string; text: string } }
   | { type: 'UPDATE_MONTH_NOTE'; payload: { month: string; id: string; text: string } }
@@ -554,67 +559,138 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           [action.payload.key]: action.payload.order,
         },
       };
-    case 'ADD_WEEKLY_TEMPLATE_TASK': {
-      const task = action.payload;
-      if (!task.title.trim() || state.weeklyTemplate.tasks.some(item => item.id === task.id)) return state;
-      const slot = getWeeklyTemplateTaskSlot(task);
+    case 'ADD_WEEKLY_TEMPLATE': {
+      const template = action.payload;
+      const normalizedName = template.name.trim().toLocaleLowerCase();
+      if (
+        !template.id
+        || !normalizedName
+        || state.weeklyTemplate.templates.some(item => item.id === template.id || item.name.toLocaleLowerCase() === normalizedName)
+        || template.tasks.some(task => state.weeklyTemplate.templates.some(
+          item => item.tasks.some(existing => existing.id === task.id),
+        ))
+      ) return state;
       return {
         ...state,
         weeklyTemplate: {
-          ...state.weeklyTemplate,
-          tasks: [...state.weeklyTemplate.tasks, { ...task, title: task.title.trim() }],
-          orderBySlot: {
-            ...state.weeklyTemplate.orderBySlot,
-            [slot]: [...(state.weeklyTemplate.orderBySlot[slot] ?? []), task.id],
-          },
+          templates: [...state.weeklyTemplate.templates, { ...template, name: template.name.trim() }],
+          activeTemplateId: template.id,
         },
       };
+    }
+    case 'SET_ACTIVE_WEEKLY_TEMPLATE':
+      return state.weeklyTemplate.templates.some(template => template.id === action.payload)
+        ? { ...state, weeklyTemplate: { ...state.weeklyTemplate, activeTemplateId: action.payload } }
+        : state;
+    case 'RENAME_WEEKLY_TEMPLATE': {
+      const name = action.payload.name.trim();
+      const normalizedName = name.toLocaleLowerCase();
+      if (!name || state.weeklyTemplate.templates.some(
+        template => template.id !== action.payload.id && template.name.toLocaleLowerCase() === normalizedName,
+      )) return state;
+      let changed = false;
+      const templates = state.weeklyTemplate.templates.map(template => {
+        if (template.id !== action.payload.id || template.name === name) return template;
+        changed = true;
+        return { ...template, name, updatedAt: new Date().toISOString() };
+      });
+      return changed ? { ...state, weeklyTemplate: { ...state.weeklyTemplate, templates } } : state;
+    }
+    case 'DELETE_WEEKLY_TEMPLATE': {
+      if (state.weeklyTemplate.templates.length <= 1) return state;
+      const templates = state.weeklyTemplate.templates.filter(template => template.id !== action.payload);
+      if (templates.length === state.weeklyTemplate.templates.length) return state;
+      return {
+        ...state,
+        weeklyTemplate: {
+          templates,
+          activeTemplateId: state.weeklyTemplate.activeTemplateId === action.payload
+            ? templates[0].id
+            : state.weeklyTemplate.activeTemplateId,
+        },
+      };
+    }
+    case 'ADD_WEEKLY_TEMPLATE_TASK': {
+      const task = action.payload.task;
+      const template = state.weeklyTemplate.templates.find(item => item.id === action.payload.templateId);
+      if (!template || !task.title.trim() || state.weeklyTemplate.templates.some(
+        item => item.tasks.some(existing => existing.id === task.id),
+      )) return state;
+      const slot = getWeeklyTemplateTaskSlot(task);
+      const templates = state.weeklyTemplate.templates.map(item => item.id === template.id ? {
+        ...item,
+        tasks: [...item.tasks, { ...task, title: task.title.trim() }],
+        orderBySlot: {
+          ...item.orderBySlot,
+          [slot]: [...(item.orderBySlot[slot] ?? []), task.id],
+        },
+        updatedAt: new Date().toISOString(),
+      } : item);
+      return { ...state, weeklyTemplate: { ...state.weeklyTemplate, templates } };
     }
     case 'UPDATE_WEEKLY_TEMPLATE_TASK': {
       const title = action.payload.title.trim();
       if (!title) return state;
-      return {
-        ...state,
-        weeklyTemplate: {
-          ...state.weeklyTemplate,
-          tasks: state.weeklyTemplate.tasks.map(task => task.id === action.payload.id
-            ? { ...task, title, updatedAt: new Date().toISOString() }
-            : task),
-        },
-      };
+      let changed = false;
+      const templates = state.weeklyTemplate.templates.map(template => {
+        if (template.id !== action.payload.templateId) return template;
+        const tasks = template.tasks.map(task => {
+          if (task.id !== action.payload.id || task.title === title) return task;
+          changed = true;
+          return { ...task, title, updatedAt: new Date().toISOString() };
+        });
+        return changed ? { ...template, tasks, updatedAt: new Date().toISOString() } : template;
+      });
+      return changed ? { ...state, weeklyTemplate: { ...state.weeklyTemplate, templates } } : state;
     }
-    case 'DELETE_WEEKLY_TEMPLATE_TASK':
-      return {
-        ...state,
-        weeklyTemplate: {
-          ...state.weeklyTemplate,
-          tasks: state.weeklyTemplate.tasks.filter(task => task.id !== action.payload),
+    case 'DELETE_WEEKLY_TEMPLATE_TASK': {
+      let changed = false;
+      const templates = state.weeklyTemplate.templates.map(template => {
+        if (template.id !== action.payload.templateId) return template;
+        if (!template.tasks.some(task => task.id === action.payload.taskId)) return template;
+        changed = true;
+        return {
+          ...template,
+          tasks: template.tasks.filter(task => task.id !== action.payload.taskId),
           orderBySlot: Object.fromEntries(
-            Object.entries(state.weeklyTemplate.orderBySlot).map(([slot, order]) => [
+            Object.entries(template.orderBySlot).map(([slot, order]) => [
               slot,
-              order.filter(id => id !== action.payload),
+              order.filter(id => id !== action.payload.taskId),
             ]),
           ),
-        },
-      };
+          applications: Object.fromEntries(Object.entries(template.applications).flatMap(([week, links]) => {
+            const nextLinks = Object.fromEntries(Object.entries(links).filter(([taskId]) => taskId !== action.payload.taskId));
+            return Object.keys(nextLinks).length > 0 ? [[week, nextLinks]] : [];
+          })),
+          updatedAt: new Date().toISOString(),
+        };
+      });
+      return changed ? { ...state, weeklyTemplate: { ...state.weeklyTemplate, templates } } : state;
+    }
     case 'UPDATE_WEEKLY_TEMPLATE_ORDER': {
-      const availableIds = new Set(state.weeklyTemplate.tasks
+      const template = state.weeklyTemplate.templates.find(item => item.id === action.payload.templateId);
+      if (!template) return state;
+      const availableIds = new Set(template.tasks
         .filter(task => getWeeklyTemplateTaskSlot(task) === action.payload.slot)
         .map(task => task.id));
       const order = [...new Set(action.payload.order.filter(id => availableIds.has(id)))];
       if (order.length !== availableIds.size) return state;
+      const templates = state.weeklyTemplate.templates.map(item => item.id === template.id ? {
+        ...item,
+        orderBySlot: { ...item.orderBySlot, [action.payload.slot]: order },
+        updatedAt: new Date().toISOString(),
+      } : item);
       return {
         ...state,
-        weeklyTemplate: {
-          ...state.weeklyTemplate,
-          orderBySlot: { ...state.weeklyTemplate.orderBySlot, [action.payload.slot]: order },
-        },
+        weeklyTemplate: { ...state.weeklyTemplate, templates },
       };
     }
     case 'APPLY_WEEKLY_TEMPLATE': {
       if (!isValidWeekString(action.payload.week)) return state;
-      const templateTaskIds = new Set(state.weeklyTemplate.tasks.map(task => task.id));
-      const existingLinks = state.weeklyTemplate.applications[action.payload.week] ?? {};
+      const template = state.weeklyTemplate.templates.find(item => item.id === action.payload.templateId);
+      if (!template) return state;
+      const templateTaskIds = new Set(template.tasks.map(task => task.id));
+      const existingLinks = template.applications[action.payload.week] ?? {};
       const knownTaskIds = new Set(state.tasks.map(task => task.id));
       const acceptedItems = action.payload.items.filter(item => {
         if (!templateTaskIds.has(item.templateTaskId) || item.task.plan.week !== action.payload.week) return false;
@@ -641,18 +717,20 @@ export const appReducer = (state: AppState, action: Action): AppState => {
         }
       });
 
+      const templates = state.weeklyTemplate.templates.map(item => item.id === template.id ? {
+        ...item,
+        applications: {
+          ...item.applications,
+          [action.payload.week]: links,
+        },
+        updatedAt: new Date().toISOString(),
+      } : item);
       return {
         ...state,
         tasks: [...state.tasks, ...acceptedItems.map(item => item.task)],
         taskOrderByDay,
         taskOrderByWeekBucket,
-        weeklyTemplate: {
-          ...state.weeklyTemplate,
-          applications: {
-            ...state.weeklyTemplate.applications,
-            [action.payload.week]: links,
-          },
-        },
+        weeklyTemplate: { ...state.weeklyTemplate, templates },
       };
     }
     case 'UPDATE_WORK_SHIFT_SETTINGS':

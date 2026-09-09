@@ -137,9 +137,14 @@ describe('migrateAppState', () => {
     expect(migrated.tasks[0].plan.year).toBe('2026');
     expect(migrated.taskOrderByYearBucket).toEqual({});
     expect(migrated.taskOrderByYearMonth).toEqual({});
-    expect(migrated.weeklyTemplate).toEqual({ tasks: [], orderBySlot: {
+    expect(migrated.weeklyTemplate.activeTemplateId).toBe('weekly-template-default');
+    expect(migrated.weeklyTemplate.templates).toHaveLength(1);
+    expect(migrated.weeklyTemplate.templates[0]).toEqual(expect.objectContaining({
+      id: 'weekly-template-default', name: 'Template 1', tasks: [], applications: {},
+    }));
+    expect(migrated.weeklyTemplate.templates[0].orderBySlot).toEqual({
       week: [], 'day-0': [], 'day-1': [], 'day-2': [], 'day-3': [], 'day-4': [], 'day-5': [], 'day-6': [],
-    }, applications: {} });
+    });
     expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
     expect(migrated.monthNotes).toEqual({});
     expect(migrated.yearNotes).toEqual({});
@@ -567,6 +572,7 @@ describe('appReducer day notes and long-term goals', () => {
   });
 
   it('stores, edits, orders and deletes weekly template tasks without touching generated tasks', () => {
+    const templateId = INITIAL_STATE.weeklyTemplate.activeTemplateId;
     const templateTask = {
       id: 'template-1',
       title: '  Weekly review  ',
@@ -574,14 +580,16 @@ describe('appReducer day notes and long-term goals', () => {
       createdAt: '2026-09-09T10:00:00.000Z',
       updatedAt: '2026-09-09T10:00:00.000Z',
     };
-    const added = appReducer(INITIAL_STATE, { type: 'ADD_WEEKLY_TEMPLATE_TASK', payload: templateTask });
-    expect(added.weeklyTemplate.tasks[0].title).toBe('Weekly review');
-    expect(added.weeklyTemplate.orderBySlot['day-0']).toEqual(['template-1']);
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_WEEKLY_TEMPLATE_TASK', payload: { templateId, task: templateTask },
+    });
+    expect(added.weeklyTemplate.templates[0].tasks[0].title).toBe('Weekly review');
+    expect(added.weeklyTemplate.templates[0].orderBySlot['day-0']).toEqual(['template-1']);
 
     const renamed = appReducer(added, {
-      type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { id: 'template-1', title: 'Plan the week' },
+      type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { templateId, id: 'template-1', title: 'Plan the week' },
     });
-    expect(renamed.weeklyTemplate.tasks[0].title).toBe('Plan the week');
+    expect(renamed.weeklyTemplate.templates[0].tasks[0].title).toBe('Plan the week');
 
     const generated = makeTask({
       id: 'generated-1',
@@ -590,20 +598,61 @@ describe('appReducer day notes and long-term goals', () => {
     });
     const applied = appReducer(renamed, {
       type: 'APPLY_WEEKLY_TEMPLATE',
-      payload: { week: '2026-W40', items: [{ templateTaskId: 'template-1', task: generated }] },
+      payload: { templateId, week: '2026-W40', items: [{ templateTaskId: 'template-1', task: generated }] },
     });
     expect(applied.tasks).toContainEqual(generated);
     expect(applied.taskOrderByDay['2026-09-28']).toEqual(['generated-1']);
-    expect(applied.weeklyTemplate.applications['2026-W40']).toEqual({ 'template-1': 'generated-1' });
+    expect(applied.weeklyTemplate.templates[0].applications['2026-W40']).toEqual({ 'template-1': 'generated-1' });
 
     const repeated = appReducer(applied, {
       type: 'APPLY_WEEKLY_TEMPLATE',
-      payload: { week: '2026-W40', items: [{ templateTaskId: 'template-1', task: { ...generated, id: 'duplicate' } }] },
+      payload: { templateId, week: '2026-W40', items: [{ templateTaskId: 'template-1', task: { ...generated, id: 'duplicate' } }] },
     });
     expect(repeated).toBe(applied);
 
-    const deleted = appReducer(applied, { type: 'DELETE_WEEKLY_TEMPLATE_TASK', payload: 'template-1' });
-    expect(deleted.weeklyTemplate.tasks).toEqual([]);
+    const deleted = appReducer(applied, {
+      type: 'DELETE_WEEKLY_TEMPLATE_TASK', payload: { templateId, taskId: 'template-1' },
+    });
+    expect(deleted.weeklyTemplate.templates[0].tasks).toEqual([]);
     expect(deleted.tasks).toContainEqual(generated);
+  });
+
+  it('manages named templates and scopes repeat protection to each template', () => {
+    const firstId = INITIAL_STATE.weeklyTemplate.activeTemplateId;
+    const secondTemplate = {
+      id: 'template-second',
+      name: 'Second shift',
+      tasks: [{
+        id: 'second-task', title: 'Late routine', dayIndex: null, createdAt: 'now', updatedAt: 'now',
+      }],
+      orderBySlot: { week: ['second-task'] },
+      applications: {},
+      createdAt: 'now',
+      updatedAt: 'now',
+    };
+    const added = appReducer(INITIAL_STATE, { type: 'ADD_WEEKLY_TEMPLATE', payload: secondTemplate });
+    expect(added.weeklyTemplate.activeTemplateId).toBe('template-second');
+    expect(added.weeklyTemplate.templates).toHaveLength(2);
+
+    const renamed = appReducer(added, {
+      type: 'RENAME_WEEKLY_TEMPLATE', payload: { id: 'template-second', name: 'Evening shift' },
+    });
+    expect(renamed.weeklyTemplate.templates[1].name).toBe('Evening shift');
+
+    const live = makeTask({ id: 'from-second', title: 'Late routine', plan: { day: null, week: '2026-W40', month: '2026-09', year: '2026' } });
+    const applied = appReducer(renamed, {
+      type: 'APPLY_WEEKLY_TEMPLATE',
+      payload: { templateId: 'template-second', week: '2026-W40', items: [{ templateTaskId: 'second-task', task: live }] },
+    });
+    expect(applied.tasks).toContainEqual(live);
+    expect(applied.weeklyTemplate.templates[1].applications['2026-W40']).toEqual({ 'second-task': 'from-second' });
+    expect(applied.weeklyTemplate.templates[0].applications['2026-W40']).toBeUndefined();
+
+    const selected = appReducer(applied, { type: 'SET_ACTIVE_WEEKLY_TEMPLATE', payload: firstId });
+    expect(selected.weeklyTemplate.activeTemplateId).toBe(firstId);
+    const deleted = appReducer(selected, { type: 'DELETE_WEEKLY_TEMPLATE', payload: 'template-second' });
+    expect(deleted.weeklyTemplate.templates).toHaveLength(1);
+    expect(appReducer(deleted, { type: 'DELETE_WEEKLY_TEMPLATE', payload: firstId })).toBe(deleted);
+    expect(deleted.tasks).toContainEqual(live);
   });
 });
