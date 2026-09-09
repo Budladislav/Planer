@@ -1,7 +1,7 @@
 {
   "name": "Takt Planner",
   "short_name": "Takt",
-  "description": "A minimalist, high-performance planner combining GTD capture, month-to-day planning, events, and local-first task history.",
+  "description": "A minimalist, high-performance planner combining GTD capture, year-to-day planning, events, and local-first task history.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -11,19 +11,19 @@
   "background_color": "#f6f8fb",
   "icons": [
     {
-      "src": "takt-icon-192-v5.1.0.png",
+      "src": "takt-icon-192-v5.2.0.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "takt-icon-512-v5.1.0.png",
+      "src": "takt-icon-512-v5.2.0.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "takt-icon-maskable-v5.1.0.svg",
+      "src": "takt-icon-maskable-v5.2.0.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"

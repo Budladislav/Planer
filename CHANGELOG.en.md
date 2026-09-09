@@ -2,6 +2,26 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.2.0] — 09.09.2026 — “Year Horizon”
+
+### Added
+
+- Added Year Plan under Settings with a year pool, twelve months, touch-friendly Move, drag and drop, quick actions, and collapsible past months.
+- Added dedicated year notes and month-note context inside the year horizon.
+- Added tests for year rules, migration, task ordering, and Year Plan integration.
+
+### Changed
+
+- A single task now flows through Year, Month, Week, and Today without copies: assigning a month exposes the same task in Month for further planning.
+- Moving to another year clears month, week, and day; moving to another month clears week and day.
+- Month and Year share task-card and container components so grades, Move, completion, editing, and deletion remain consistent.
+- PWA assets and application version were updated to 5.2.0.
+
+### Safety
+
+- Planner schema advanced from 8 to 9. Existing tasks derive their year safely from the planning month while legacy fields and the local storage key remain unchanged.
+- JSON export and import automatically include year tasks, notes, and ordering while remaining compatible with older backups.
+
 ## [5.1.0] — 08.09.2026 — “Compact Route”
 
 ### Added

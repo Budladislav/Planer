@@ -1,6 +1,6 @@
 // Service Worker для Takt Planner
 // Версия кэша - обновлять при изменении статики
-const STATIC_CACHE = 'monofocus-static-v5.1.0';
+const STATIC_CACHE = 'monofocus-static-v5.2.0';
 // Стабильное legacy-пространство кэшей сохраняется для бесшовного обновления установленной PWA.
 const STATIC_CACHE_PREFIX = 'monofocus-static-v';
 const RETAINED_VERSION_CACHES = 3;
@@ -16,9 +16,9 @@ const STATIC_ASSETS = [
   BASE_PATH + 'index.html',
   BASE_PATH + 'manifest.json',
   BASE_PATH + 'favicon.svg',
-  BASE_PATH + 'takt-icon-192-v5.1.0.png',
-  BASE_PATH + 'takt-icon-512-v5.1.0.png',
-  BASE_PATH + 'takt-icon-maskable-v5.1.0.svg',
+  BASE_PATH + 'takt-icon-192-v5.2.0.png',
+  BASE_PATH + 'takt-icon-512-v5.2.0.png',
+  BASE_PATH + 'takt-icon-maskable-v5.2.0.svg',
   ...BUILD_ASSETS.map((asset) => BASE_PATH + asset),
 ];
 
