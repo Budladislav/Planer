@@ -137,6 +137,9 @@ describe('migrateAppState', () => {
     expect(migrated.tasks[0].plan.year).toBe('2026');
     expect(migrated.taskOrderByYearBucket).toEqual({});
     expect(migrated.taskOrderByYearMonth).toEqual({});
+    expect(migrated.weeklyTemplate).toEqual({ tasks: [], orderBySlot: {
+      week: [], 'day-0': [], 'day-1': [], 'day-2': [], 'day-3': [], 'day-4': [], 'day-5': [], 'day-6': [],
+    }, applications: {} });
     expect(migrated.workShiftSettings.baseWeek).toBe('2026-W33');
     expect(migrated.monthNotes).toEqual({});
     expect(migrated.yearNotes).toEqual({});
@@ -561,5 +564,46 @@ describe('appReducer day notes and long-term goals', () => {
     expect(migrated.goals).toHaveLength(1);
     expect(migrated.goals[0]).toEqual(expect.objectContaining({ title: 'Emergency fund', status: 'completed' }));
     expect(migrated.goals[0].notes[0].text).toBe('Final transfer');
+  });
+
+  it('stores, edits, orders and deletes weekly template tasks without touching generated tasks', () => {
+    const templateTask = {
+      id: 'template-1',
+      title: '  Weekly review  ',
+      dayIndex: 0 as const,
+      createdAt: '2026-09-09T10:00:00.000Z',
+      updatedAt: '2026-09-09T10:00:00.000Z',
+    };
+    const added = appReducer(INITIAL_STATE, { type: 'ADD_WEEKLY_TEMPLATE_TASK', payload: templateTask });
+    expect(added.weeklyTemplate.tasks[0].title).toBe('Weekly review');
+    expect(added.weeklyTemplate.orderBySlot['day-0']).toEqual(['template-1']);
+
+    const renamed = appReducer(added, {
+      type: 'UPDATE_WEEKLY_TEMPLATE_TASK', payload: { id: 'template-1', title: 'Plan the week' },
+    });
+    expect(renamed.weeklyTemplate.tasks[0].title).toBe('Plan the week');
+
+    const generated = makeTask({
+      id: 'generated-1',
+      title: 'Plan the week',
+      plan: { day: '2026-09-28', week: '2026-W40', month: '2026-09', year: '2026' },
+    });
+    const applied = appReducer(renamed, {
+      type: 'APPLY_WEEKLY_TEMPLATE',
+      payload: { week: '2026-W40', items: [{ templateTaskId: 'template-1', task: generated }] },
+    });
+    expect(applied.tasks).toContainEqual(generated);
+    expect(applied.taskOrderByDay['2026-09-28']).toEqual(['generated-1']);
+    expect(applied.weeklyTemplate.applications['2026-W40']).toEqual({ 'template-1': 'generated-1' });
+
+    const repeated = appReducer(applied, {
+      type: 'APPLY_WEEKLY_TEMPLATE',
+      payload: { week: '2026-W40', items: [{ templateTaskId: 'template-1', task: { ...generated, id: 'duplicate' } }] },
+    });
+    expect(repeated).toBe(applied);
+
+    const deleted = appReducer(applied, { type: 'DELETE_WEEKLY_TEMPLATE_TASK', payload: 'template-1' });
+    expect(deleted.weeklyTemplate.tasks).toEqual([]);
+    expect(deleted.tasks).toContainEqual(generated);
   });
 });

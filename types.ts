@@ -1,4 +1,4 @@
-export type ViewState = 'today' | 'month' | 'year' | 'week' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
+export type ViewState = 'today' | 'month' | 'year' | 'week' | 'weekly-template' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
 
 export type AppLanguage = 'ru' | 'en';
 export type ShiftTransitionHighlight = 'off' | 'weekend' | 'extended';
@@ -92,6 +92,22 @@ export interface Task {
   completedAt: string | null;
 }
 
+export type WeeklyTemplateDayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface WeeklyTemplateTask {
+  id: string;
+  title: string;
+  dayIndex: WeeklyTemplateDayIndex | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeeklyTemplateState {
+  tasks: WeeklyTemplateTask[];
+  orderBySlot: Record<string, string[]>;
+  applications: Record<string, Record<string, string>>;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -112,6 +128,7 @@ export interface AppState {
   taskOrderByMonthWeek: Record<string, string[]>; // Maps month|week to task order in Month Plan
   taskOrderByYearBucket: Record<string, string[]>; // Maps year (YYYY) to unordered-month task IDs
   taskOrderByYearMonth: Record<string, string[]>; // Maps year|month to task order in Year Plan
+  weeklyTemplate: WeeklyTemplateState;
   workShiftSettings: WorkShiftSettings;
   monthNotes: Record<string, MonthNote[]>; // Maps month (YYYY-MM) to user-authored notes
   yearNotes: Record<string, YearNote[]>; // Maps year (YYYY) to user-authored notes
@@ -127,7 +144,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 9,
+  schemaVersion: 10,
   captures: [],
   tasks: [],
   events: [],
@@ -138,6 +155,7 @@ export const INITIAL_STATE: AppState = {
   taskOrderByMonthWeek: {},
   taskOrderByYearBucket: {},
   taskOrderByYearMonth: {},
+  weeklyTemplate: { tasks: [], orderBySlot: {}, applications: {} },
   workShiftSettings: { baseWeek: null, baseShift: null, overrides: {}, transitionHighlight: 'extended' },
   monthNotes: {},
   yearNotes: {},
