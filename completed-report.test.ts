@@ -23,6 +23,7 @@ const capture = (id: string, completedAt: string | null): Capture => ({
   id,
   text: `Idea ${id}`,
   createdAt: '2026-08-10T08:00:00.000Z',
+  startedAt: '2026-08-10T08:00:00.000Z',
   status: completedAt ? 'completed' : 'new',
   completedAt,
 });
@@ -32,6 +33,7 @@ const goal = (id: string, completedAt: string | null): LongTermGoal => ({
   title: `Goal ${id}`,
   status: completedAt ? 'completed' : 'active',
   createdAt: '2026-08-01T08:00:00.000Z',
+  startedAt: '2026-08-01T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,
   currentState: 'Halfway there',
@@ -88,7 +90,7 @@ describe('completed task report', () => {
     expect(report).toContain('title: Task one');
     expect(report).not.toContain('focus_seconds');
     expect(report).toContain('=== REALIZED WISHES ===');
-    expect(report).toContain('created_at: 2026-08-10');
+    expect(report).toContain('started_at: 2026-08-10');
     expect(report).toContain('realized_at: 2026-08-15');
     expect(report).toContain('elapsed_days: 5');
     expect(report).toContain('title: Idea one');
@@ -110,5 +112,23 @@ describe('completed task report', () => {
     expect(report).toContain('=== БОЛЬШИЕ ЦЕЛИ ===');
     expect(report).toContain('текущая_ситуация: Halfway there');
     expect(report).not.toContain('секунд_фокусировки');
+  });
+
+  it('marks an unknown start without inventing elapsed time', () => {
+    const undatedWish = { ...capture('undated', '2026-08-15T12:00:00.000Z'), startedAt: null };
+    const undatedGoal = { ...goal('undated', '2026-08-14T12:00:00.000Z'), startedAt: null };
+    const report = buildProgressReport(
+      [],
+      [undatedWish],
+      [undatedGoal],
+      { start: '2026-08-10', end: '2026-08-16' },
+      'en',
+      new Date('2026-08-16T14:00:00.000Z'),
+    );
+
+    expect(report).toContain('started_at: not specified');
+    expect(report).toContain('realized_at: 2026-08-15');
+    expect(report).toContain('completed_at: 2026-08-14');
+    expect(report).not.toContain('elapsed_days:');
   });
 });

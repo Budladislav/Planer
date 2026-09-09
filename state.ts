@@ -26,7 +26,7 @@ import {
   type WeeklyTemplateTaskApplication,
 } from './weekly-template';
 
-export const CURRENT_SCHEMA_VERSION = 11;
+export const CURRENT_SCHEMA_VERSION = 12;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -114,11 +114,15 @@ const migrateGoals = (value: unknown, now: string): LongTermGoal[] => {
       ? goal.status
       : 'active';
     const createdAt = asString(goal.createdAt, now);
+    const startedAt = Object.prototype.hasOwnProperty.call(goal, 'startedAt')
+      ? asNullableString(goal.startedAt)
+      : createdAt;
     return [{
       id: asString(goal.id, generateId()),
       title: goal.title.trim(),
       status,
       createdAt,
+      startedAt,
       updatedAt: asString(goal.updatedAt, createdAt),
       completedAt: status === 'completed' ? asString(goal.completedAt, now) : null,
       currentState: asString(goal.currentState, ''),
@@ -201,10 +205,15 @@ export const migrateAppState = (value: unknown): AppState => {
           || value.status === 'completed'
           ? value.status
           : 'new';
+        const createdAt = asString(value.createdAt, now);
+        const startedAt = Object.prototype.hasOwnProperty.call(value, 'startedAt')
+          ? asNullableString(value.startedAt)
+          : createdAt;
         return [{
           id: asString(value.id, generateId()),
           text: asString(value.text, ''),
-          createdAt: asString(value.createdAt, now),
+          createdAt,
+          startedAt,
           status,
           completedAt: status === 'completed' ? asString(value.completedAt, now) : null,
         }];
@@ -278,9 +287,9 @@ export const migrateAppState = (value: unknown): AppState => {
 export type Action =
   | { type: 'INIT_STATE'; payload: AppState }
   | { type: 'SET_VIEW'; payload: ViewState }
-  | { type: 'ADD_CAPTURE'; payload: string }
+  | { type: 'ADD_CAPTURE'; payload: { text: string; startDateKnown: boolean } }
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
-  | { type: 'UPDATE_CAPTURE_CREATED_AT'; payload: { id: string; createdAt: string } }
+  | { type: 'UPDATE_CAPTURE_STARTED_AT'; payload: { id: string; startedAt: string | null } }
   | { type: 'PROCESS_CAPTURE'; payload: { id: string; status: 'processed' | 'archived' } }
   | { type: 'COMPLETE_CAPTURE'; payload: string }
   | { type: 'UPDATE_CAPTURE_COMPLETED_AT'; payload: { id: string; completedAt: string } }
@@ -320,7 +329,7 @@ export type Action =
   | { type: 'ADD_DAY_NOTE'; payload: { date: string; text: string } }
   | { type: 'UPDATE_DAY_NOTE'; payload: { date: string; id: string; text: string } }
   | { type: 'DELETE_DAY_NOTE'; payload: { date: string; id: string } }
-  | { type: 'ADD_GOAL'; payload: { title: string } }
+  | { type: 'ADD_GOAL'; payload: { title: string; startDateKnown: boolean } }
   | { type: 'UPDATE_GOAL'; payload: Partial<Omit<LongTermGoal, 'id' | 'notes'>> & { id: string } }
   | { type: 'COMPLETE_GOAL'; payload: string }
   | { type: 'REOPEN_GOAL'; payload: string }
@@ -339,20 +348,25 @@ export const appReducer = (state: AppState, action: Action): AppState => {
       return action.payload;
     case 'SET_VIEW':
       return { ...state, lastActiveView: action.payload };
-    case 'ADD_CAPTURE':
+    case 'ADD_CAPTURE': {
+      const text = action.payload.text.trim();
+      if (!text) return state;
+      const now = new Date().toISOString();
       return {
         ...state,
         captures: [
           {
             id: generateId(),
-            text: action.payload,
-            createdAt: new Date().toISOString(),
+            text,
+            createdAt: now,
+            startedAt: action.payload.startDateKnown ? now : null,
             status: 'new',
             completedAt: null,
           },
           ...state.captures,
         ],
       };
+    }
     case 'UPDATE_CAPTURE':
       return {
         ...state,
@@ -367,11 +381,11 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           ? { ...c, status: action.payload.status }
           : c),
       };
-    case 'UPDATE_CAPTURE_CREATED_AT':
+    case 'UPDATE_CAPTURE_STARTED_AT':
       return {
         ...state,
         captures: state.captures.map(c => c.id === action.payload.id
-          ? { ...c, createdAt: action.payload.createdAt }
+          ? { ...c, startedAt: action.payload.startedAt }
           : c),
       };
     case 'COMPLETE_CAPTURE':
@@ -904,6 +918,7 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           title,
           status: 'active',
           createdAt: now,
+          startedAt: action.payload.startDateKnown ? now : null,
           updatedAt: now,
           completedAt: null,
           currentState: '',

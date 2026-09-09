@@ -80,13 +80,15 @@ describe('migrateAppState', () => {
       events: [],
       captures: [
         { id: 'dated', text: 'Already dated', createdAt: '2026-08-20T07:00:00.000Z', status: 'new' },
+        { id: 'undated', text: 'No known start', createdAt: '2026-08-25T07:00:00.000Z', startedAt: null, status: 'new' },
         { id: 'legacy', text: 'Needs a date', status: 'new' },
       ],
     });
 
     expect(migrated.captures).toEqual([
-      expect.objectContaining({ id: 'dated', createdAt: '2026-08-20T07:00:00.000Z' }),
-      expect.objectContaining({ id: 'legacy', createdAt: '2026-08-30T09:15:00.000Z' }),
+      expect.objectContaining({ id: 'dated', createdAt: '2026-08-20T07:00:00.000Z', startedAt: '2026-08-20T07:00:00.000Z' }),
+      expect.objectContaining({ id: 'undated', createdAt: '2026-08-25T07:00:00.000Z', startedAt: null }),
+      expect.objectContaining({ id: 'legacy', createdAt: '2026-08-30T09:15:00.000Z', startedAt: '2026-08-30T09:15:00.000Z' }),
     ]);
   });
 
@@ -204,13 +206,14 @@ describe('appReducer Inbox captures', () => {
 
     const added = appReducer(INITIAL_STATE, {
       type: 'ADD_CAPTURE',
-      payload: 'Remember this',
+      payload: { text: 'Remember this', startDateKnown: true },
     });
 
     expect(added.captures).toHaveLength(1);
     expect(added.captures[0]).toEqual(expect.objectContaining({
       text: 'Remember this',
       createdAt: '2026-08-30T10:20:30.000Z',
+      startedAt: '2026-08-30T10:20:30.000Z',
       status: 'new',
       completedAt: null,
     }));
@@ -225,6 +228,7 @@ describe('appReducer Inbox captures', () => {
         id: 'capture-1',
         text: 'Build a reading nook',
         createdAt: '2026-08-20T07:00:00.000Z',
+        startedAt: '2026-08-20T07:00:00.000Z',
         status: 'new',
         completedAt: null,
       }],
@@ -237,10 +241,13 @@ describe('appReducer Inbox captures', () => {
     });
 
     const recreated = appReducer(completed, {
-      type: 'UPDATE_CAPTURE_CREATED_AT',
-      payload: { id: 'capture-1', createdAt: '2026-08-18T07:00:00.000Z' },
+      type: 'UPDATE_CAPTURE_STARTED_AT',
+      payload: { id: 'capture-1', startedAt: null },
     });
-    expect(recreated.captures[0].createdAt).toBe('2026-08-18T07:00:00.000Z');
+    expect(recreated.captures[0]).toMatchObject({
+      createdAt: '2026-08-20T07:00:00.000Z',
+      startedAt: null,
+    });
 
     const redated = appReducer(recreated, {
       type: 'UPDATE_CAPTURE_COMPLETED_AT',
@@ -250,6 +257,21 @@ describe('appReducer Inbox captures', () => {
 
     const reopened = appReducer(redated, { type: 'REOPEN_CAPTURE', payload: 'capture-1' });
     expect(reopened.captures[0]).toMatchObject({ status: 'new', completedAt: null });
+  });
+
+  it('creates wishes without a start date while retaining their technical creation time', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T12:30:00.000Z'));
+
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_CAPTURE',
+      payload: { text: 'A long-standing wish', startDateKnown: false },
+    });
+
+    expect(added.captures[0]).toMatchObject({
+      createdAt: '2026-09-02T12:30:00.000Z',
+      startedAt: null,
+    });
   });
 
   it('migrates completed Inbox ideas and backfills their realization date', () => {
@@ -506,9 +528,13 @@ describe('appReducer day notes and long-term goals', () => {
   it('keeps the complete long-term goal lifecycle and its progress notes', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
-    const added = appReducer(INITIAL_STATE, { type: 'ADD_GOAL', payload: { title: '  Renew permit  ' } });
+    const added = appReducer(INITIAL_STATE, {
+      type: 'ADD_GOAL', payload: { title: '  Renew permit  ', startDateKnown: false },
+    });
     const goal = added.goals[0];
-    expect(goal).toEqual(expect.objectContaining({ title: 'Renew permit', status: 'active', notes: [] }));
+    expect(goal).toEqual(expect.objectContaining({
+      title: 'Renew permit', status: 'active', startedAt: null, notes: [],
+    }));
 
     const detailed = appReducer(added, {
       type: 'UPDATE_GOAL',
@@ -567,7 +593,9 @@ describe('appReducer day notes and long-term goals', () => {
     expect(migrated.taskOrderByYearBucket['2027']).toEqual(['task-a', 'task-b']);
     expect(migrated.taskOrderByYearMonth['2027|2027-03']).toEqual(['task-b']);
     expect(migrated.goals).toHaveLength(1);
-    expect(migrated.goals[0]).toEqual(expect.objectContaining({ title: 'Emergency fund', status: 'completed' }));
+    expect(migrated.goals[0]).toEqual(expect.objectContaining({
+      title: 'Emergency fund', status: 'completed', startedAt: '2026-01-01T10:00:00.000Z',
+    }));
     expect(migrated.goals[0].notes[0].text).toBe('Final transfer');
   });
 

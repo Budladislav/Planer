@@ -146,17 +146,20 @@ export const buildProgressReport = (
     lines.push(ru ? '(нет реализованных желаний)' : '(no realized wishes)');
   } else {
     realizedCaptures.forEach((capture, index) => {
-      lines.push(...(ru ? [
-        `${index + 1}. создано: ${formatTimestamp(capture.createdAt)}`,
-        `   реализовано: ${formatTimestamp(capture.completedAt as string)}`,
-        `   прошло_дней: ${elapsedDays(capture.createdAt, capture.completedAt as string)}`,
-        `   название: ${singleLine(capture.text)}`,
-      ] : [
-        `${index + 1}. created_at: ${formatTimestamp(capture.createdAt)}`,
-        `   realized_at: ${formatTimestamp(capture.completedAt as string)}`,
-        `   elapsed_days: ${elapsedDays(capture.createdAt, capture.completedAt as string)}`,
-        `   title: ${singleLine(capture.text)}`,
-      ]));
+      const startLine = capture.startedAt
+        ? `${index + 1}. ${ru ? 'начало' : 'started_at'}: ${formatTimestamp(capture.startedAt)}`
+        : `${index + 1}. ${ru ? 'начало' : 'started_at'}: ${ru ? 'не указано' : 'not specified'}`;
+      lines.push(startLine, ...(
+        ru ? [
+          `   реализовано: ${formatTimestamp(capture.completedAt as string)}`,
+          ...(capture.startedAt ? [`   прошло_дней: ${elapsedDays(capture.startedAt, capture.completedAt as string)}`] : []),
+          `   название: ${singleLine(capture.text)}`,
+        ] : [
+          `   realized_at: ${formatTimestamp(capture.completedAt as string)}`,
+          ...(capture.startedAt ? [`   elapsed_days: ${elapsedDays(capture.startedAt, capture.completedAt as string)}`] : []),
+          `   title: ${singleLine(capture.text)}`,
+        ]
+      ));
     });
   }
 
@@ -165,12 +168,12 @@ export const buildProgressReport = (
   if (activeGoals.length === 0) lines.push(ru ? '(нет активных целей)' : '(no active goals)');
   else activeGoals.forEach((goal, index) => {
     lines.push(...(ru ? [
-      `${index + 1}. начало: ${formatTimestamp(goal.createdAt)}`,
+      `${index + 1}. начало: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'не указано'}`,
       `   название: ${singleLine(goal.title)}`,
       `   текущая_ситуация: ${singleLine(goal.currentState) || '—'}`,
       `   следующий_шаг: ${singleLine(goal.nextStep) || '—'}`,
     ] : [
-      `${index + 1}. started_at: ${formatTimestamp(goal.createdAt)}`,
+      `${index + 1}. started_at: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'not specified'}`,
       `   title: ${singleLine(goal.title)}`,
       `   current_situation: ${singleLine(goal.currentState) || '—'}`,
       `   next_step: ${singleLine(goal.nextStep) || '—'}`,
@@ -181,14 +184,14 @@ export const buildProgressReport = (
   if (completedGoals.length === 0) lines.push(ru ? '(нет завершённых целей)' : '(no completed goals)');
   else completedGoals.forEach((goal, index) => {
     lines.push(...(ru ? [
-      `${index + 1}. начало: ${formatTimestamp(goal.createdAt)}`,
+      `${index + 1}. начало: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'не указано'}`,
       `   завершено: ${formatTimestamp(goal.completedAt as string)}`,
-      `   прошло_дней: ${elapsedDays(goal.createdAt, goal.completedAt as string)}`,
+      ...(goal.startedAt ? [`   прошло_дней: ${elapsedDays(goal.startedAt, goal.completedAt as string)}`] : []),
       `   название: ${singleLine(goal.title)}`,
     ] : [
-      `${index + 1}. started_at: ${formatTimestamp(goal.createdAt)}`,
+      `${index + 1}. started_at: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'not specified'}`,
       `   completed_at: ${formatTimestamp(goal.completedAt as string)}`,
-      `   elapsed_days: ${elapsedDays(goal.createdAt, goal.completedAt as string)}`,
+      ...(goal.startedAt ? [`   elapsed_days: ${elapsedDays(goal.startedAt, goal.completedAt as string)}`] : []),
       `   title: ${singleLine(goal.title)}`,
     ]));
   });

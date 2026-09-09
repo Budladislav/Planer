@@ -52,6 +52,7 @@ export interface LongTermGoal {
   title: string;
   status: 'active' | 'completed' | 'archived';
   createdAt: string;
+  startedAt: string | null;
   updatedAt: string;
   completedAt: string | null;
   currentState: string;
@@ -71,6 +72,7 @@ export interface Capture {
   id: string;
   text: string;
   createdAt: string; // ISO string
+  startedAt: string | null; // User-defined start; null when the origin is unknown
   status: 'new' | 'processed' | 'archived' | 'completed';
   completedAt: string | null;
 }
@@ -153,7 +155,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 11,
+  schemaVersion: 12,
   captures: [],
   tasks: [],
   events: [],

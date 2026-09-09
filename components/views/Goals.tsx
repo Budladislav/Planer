@@ -13,29 +13,12 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { GoalNote, LongTermGoal } from '../../types';
-import { getDateString, getTodayString } from '../../utils';
+import { getTodayString } from '../../utils';
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
 import { EmptyState } from '../ui/Primitives';
-
-const toDateInputValue = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? '' : getDateString(date);
-};
-
-const replaceLocalDate = (timestamp: string, dateString: string): string | null => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
-  if (!match) return null;
-  const original = new Date(timestamp);
-  const updated = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    Number.isNaN(original.getTime()) ? 12 : original.getHours(),
-    Number.isNaN(original.getTime()) ? 0 : original.getMinutes(),
-  );
-  return Number.isNaN(updated.getTime()) ? null : updated.toISOString();
-};
+import { OptionalStartDateField, StartDateModeButton } from '../ui/OptionalStartDate';
+import { replaceOptionalStartDate, toOptionalDateInputValue } from '../../optional-start-date';
 
 const GoalNoteRow: React.FC<{ goalId: string; note: GoalNote }> = ({ goalId, note }) => {
   const { dispatch } = useAppStore();
@@ -157,29 +140,23 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
             <h3 className={`break-words font-semibold ${goal.status === 'completed' ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{goal.title}</h3>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
-            <label className="flex items-center gap-1">
-              <span>{t('Started')}</span>
-              <input
-                type="date"
-                value={toDateInputValue(goal.createdAt)}
-                max={goal.completedAt ? toDateInputValue(goal.completedAt) : getTodayString()}
-                onChange={event => {
-                  const createdAt = replaceLocalDate(goal.createdAt, event.target.value);
-                  if (createdAt) update({ createdAt });
-                }}
-                className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-violet-400"
-              />
-            </label>
+            <OptionalStartDateField
+              value={goal.startedAt}
+              label={t('Started')}
+              ariaLabel={t('Start date for {title}', { title: goal.title })}
+              max={goal.completedAt ? toOptionalDateInputValue(goal.completedAt) : getTodayString()}
+              onChange={startedAt => update({ startedAt })}
+            />
             {goal.status === 'completed' && goal.completedAt && (
               <label className="flex items-center gap-1">
                 <span>{t('Finished')}</span>
                 <input
                   type="date"
-                  value={toDateInputValue(goal.completedAt)}
-                  min={toDateInputValue(goal.createdAt)}
+                  value={toOptionalDateInputValue(goal.completedAt)}
+                  min={toOptionalDateInputValue(goal.startedAt)}
                   max={getTodayString()}
                   onChange={event => {
-                    const completedAt = replaceLocalDate(goal.completedAt!, event.target.value);
+                    const completedAt = replaceOptionalStartDate(goal.completedAt, event.target.value);
                     if (completedAt) update({ completedAt });
                   }}
                   className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none focus:border-violet-400"
@@ -299,6 +276,7 @@ export const GoalsView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const { t } = useI18n();
   const [draft, setDraft] = useState('');
+  const [startDateUnknown, setStartDateUnknown] = useState(false);
   const [completedExpanded, setCompletedExpanded] = useState(false);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -309,7 +287,7 @@ export const GoalsView: React.FC = () => {
   const addGoal = (event: React.FormEvent) => {
     event.preventDefault();
     if (!draft.trim()) return;
-    dispatch({ type: 'ADD_GOAL', payload: { title: draft } });
+    dispatch({ type: 'ADD_GOAL', payload: { title: draft, startDateKnown: !startDateUnknown } });
     setDraft('');
   };
 
@@ -335,15 +313,16 @@ export const GoalsView: React.FC = () => {
 
   return (
     <div className="page-container space-y-4">
-      <form onSubmit={addGoal} className="section-card flex gap-2">
+      <form onSubmit={addGoal} className="section-card flex flex-wrap gap-2">
         <input
           value={draft}
           onChange={event => setDraft(event.target.value)}
           placeholder={t('Name a big goal…')}
           className="field min-w-0 flex-1"
         />
-        <button type="submit" disabled={!draft.trim()} className="button-primary">
-          <Plus className="h-4 w-4" /> {t('Add')}
+        <StartDateModeButton unknown={startDateUnknown} onChange={setStartDateUnknown} />
+        <button type="submit" disabled={!draft.trim()} className="button-primary px-3" title={t('Add')} aria-label={t('Add')}>
+          <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t('Add')}</span>
         </button>
       </form>
 

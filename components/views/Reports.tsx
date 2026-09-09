@@ -136,7 +136,7 @@ export const ReportsView: React.FC = () => {
         </p>
 
         <p className="mt-4 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-500">
-          {t('The report keeps tasks, realized wishes and long-term goals in separate sections. Wish entries include creation date, realization date, and elapsed days.')}
+          {t('The report keeps tasks, realized wishes and long-term goals in separate sections. Start dates and elapsed time are included only when the start is known.')}
         </p>
       </section>
     </div>

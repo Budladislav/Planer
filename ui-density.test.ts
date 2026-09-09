@@ -12,6 +12,9 @@ import planningSettingsSource from './components/settings/PlanningSettings.tsx?r
 import dataSettingsSource from './components/settings/DataSettings.tsx?raw';
 import calendarSource from './components/events/EventsCalendar.tsx?raw';
 import gradeControlsSource from './features/rewards-lab/ui/ActiveRewardGradeControls.tsx?raw';
+import inboxSource from './components/views/Inbox.tsx?raw';
+import goalsSource from './components/views/Goals.tsx?raw';
+import optionalStartDateSource from './components/ui/OptionalStartDate.tsx?raw';
 
 const viewSources = import.meta.glob('./components/views/*.tsx', {
   query: '?raw',
@@ -109,5 +112,14 @@ describe('compact planner hierarchy', () => {
     expect(settingsSource).not.toContain('JSON.stringify(state');
     expect(settingsSource).not.toContain('RewardsLabSettingsRow');
     expect(settingsSource).not.toContain('WorkShiftSettingsPanel');
+  });
+
+  it('shares an explicit optional start-date control between wishes and goals', () => {
+    expect(inboxSource).toContain('<OptionalStartDateField');
+    expect(inboxSource).toContain('<StartDateModeButton');
+    expect(goalsSource).toContain('<OptionalStartDateField');
+    expect(goalsSource).toContain('<StartDateModeButton');
+    expect(optionalStartDateSource).toContain("t('Start date not specified')");
+    expect(optionalStartDateSource).toContain("onClick={() => onChange(null)}");
   });
 });

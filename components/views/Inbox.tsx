@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Capture } from '../../types';
-import { getDateString, getTodayString } from '../../utils';
+import { getTodayString } from '../../utils';
 import {
   Check,
   ChevronDown,
@@ -14,37 +14,14 @@ import {
 import { ConfirmModal } from '../Modal';
 import { useI18n } from '../../i18n';
 import { EmptyState } from '../ui/Primitives';
-
-const toDateInputValue = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? '' : getDateString(date);
-};
-
-const replaceLocalDate = (timestamp: string, dateString: string): string | null => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
-  if (!match) return null;
-
-  const original = new Date(timestamp);
-  const hours = Number.isNaN(original.getTime()) ? 12 : original.getHours();
-  const minutes = Number.isNaN(original.getTime()) ? 0 : original.getMinutes();
-  const seconds = Number.isNaN(original.getTime()) ? 0 : original.getSeconds();
-  const milliseconds = Number.isNaN(original.getTime()) ? 0 : original.getMilliseconds();
-  const updated = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-  );
-  return Number.isNaN(updated.getTime()) ? null : updated.toISOString();
-};
+import { OptionalStartDateField, StartDateModeButton } from '../ui/OptionalStartDate';
+import { replaceOptionalStartDate, toOptionalDateInputValue } from '../../optional-start-date';
 
 export const InboxView: React.FC = () => {
   const { state, dispatch } = useAppStore();
   const { t } = useI18n();
   const [captureInput, setCaptureInput] = useState('');
+  const [startDateUnknown, setStartDateUnknown] = useState(false);
   const [completedExpanded, setCompletedExpanded] = useState(false);
   const [editingCaptureId, setEditingCaptureId] = useState<string | null>(null);
   const [editingCaptureText, setEditingCaptureText] = useState('');
@@ -71,7 +48,10 @@ export const InboxView: React.FC = () => {
   const handleCapture = (e: React.FormEvent) => {
     e.preventDefault();
     if (captureInput.trim()) {
-      dispatch({ type: 'ADD_CAPTURE', payload: captureInput.trim() });
+      dispatch({
+        type: 'ADD_CAPTURE',
+        payload: { text: captureInput.trim(), startDateKnown: !startDateUnknown },
+      });
       setCaptureInput('');
     }
   };
@@ -115,20 +95,17 @@ export const InboxView: React.FC = () => {
             ) : (
               <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
             )}
-            <label className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-400">
-              <span>{t('Created')}</span>
-              <input
-                type="date"
-                value={toDateInputValue(item.createdAt)}
+            <div className="mt-1 text-[11px] text-slate-400">
+              <OptionalStartDateField
+                value={item.startedAt}
+                label={t('Wanted since')}
+                ariaLabel={t('Start date for {title}', { title: item.text })}
                 max={getTodayString()}
-                onChange={event => {
-                  const createdAt = replaceLocalDate(item.createdAt, event.target.value);
-                  if (createdAt) dispatch({ type: 'UPDATE_CAPTURE_CREATED_AT', payload: { id: item.id, createdAt } });
-                }}
-                aria-label={t('Creation date for {title}', { title: item.text })}
-                className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
+                onChange={startedAt => dispatch({
+                  type: 'UPDATE_CAPTURE_STARTED_AT', payload: { id: item.id, startedAt },
+                })}
               />
-            </label>
+            </div>
           </div>
           <button
             type="button"
@@ -213,34 +190,24 @@ export const InboxView: React.FC = () => {
                           <p className="break-words text-sm font-medium text-slate-700">{item.text}</p>
                         )}
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-slate-400">
-                          <label className="flex items-center gap-1">
-                            <span>{t('Created')}</span>
-                            <input
-                              type="date"
-                              value={toDateInputValue(item.createdAt)}
-                              max={toDateInputValue(item.completedAt!)}
-                              onChange={event => {
-                                const createdAt = replaceLocalDate(item.createdAt, event.target.value);
-                                if (createdAt) {
-                                  dispatch({
-                                    type: 'UPDATE_CAPTURE_CREATED_AT',
-                                    payload: { id: item.id, createdAt },
-                                  });
-                                }
-                              }}
-                              aria-label={t('Creation date for {title}', { title: item.text })}
-                              className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
-                            />
-                          </label>
+                          <OptionalStartDateField
+                            value={item.startedAt}
+                            label={t('Wanted since')}
+                            ariaLabel={t('Start date for {title}', { title: item.text })}
+                            max={toOptionalDateInputValue(item.completedAt)}
+                            onChange={startedAt => dispatch({
+                              type: 'UPDATE_CAPTURE_STARTED_AT', payload: { id: item.id, startedAt },
+                            })}
+                          />
                           <label className="flex items-center gap-1">
                             <span>{t('Realized')}</span>
                             <input
                               type="date"
-                              value={toDateInputValue(item.completedAt!)}
-                              min={toDateInputValue(item.createdAt)}
+                              value={toOptionalDateInputValue(item.completedAt)}
+                              min={toOptionalDateInputValue(item.startedAt)}
                               max={getTodayString()}
                               onChange={event => {
-                                const completedAt = replaceLocalDate(item.completedAt!, event.target.value);
+                                const completedAt = replaceOptionalStartDate(item.completedAt, event.target.value);
                                 if (completedAt) {
                                   dispatch({
                                     type: 'UPDATE_CAPTURE_COMPLETED_AT',
@@ -252,9 +219,11 @@ export const InboxView: React.FC = () => {
                               className="rounded-lg border border-line bg-white px-1 py-0.5 text-[11px] text-slate-600 outline-none"
                             />
                           </label>
-                          <span className="basis-full font-medium text-emerald-600">
-                            {formatElapsed(item.createdAt, item.completedAt!)}
-                          </span>
+                          {item.startedAt && (
+                            <span className="basis-full font-medium text-emerald-600">
+                              {formatElapsed(item.startedAt, item.completedAt!)}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <button
@@ -308,7 +277,7 @@ export const InboxView: React.FC = () => {
 
       {/* Add Form - Fixed at bottom */}
       <form onSubmit={handleCapture} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+        <div className="max-w-3xl mx-auto flex items-center gap-2">
           <input
             type="text"
             value={captureInput}
@@ -316,6 +285,7 @@ export const InboxView: React.FC = () => {
             placeholder={t("What's on your mind?")}
             className="field min-w-0 flex-1"
           />
+          <StartDateModeButton unknown={startDateUnknown} onChange={setStartDateUnknown} />
           <button 
             type="submit"
             className="composer-submit"
@@ -327,7 +297,7 @@ export const InboxView: React.FC = () => {
       </form>
 
       {/* Add Form - Desktop */}
-      <form onSubmit={handleCapture} className="hidden lg:flex items-center gap-3">
+      <form onSubmit={handleCapture} className="hidden lg:flex items-center gap-2">
         <input
           type="text"
           value={captureInput}
@@ -335,6 +305,7 @@ export const InboxView: React.FC = () => {
           placeholder={t("What's on your mind?")}
           className="field min-w-0 flex-1"
         />
+        <StartDateModeButton unknown={startDateUnknown} onChange={setStartDateUnknown} />
         <button 
           type="submit"
           className="composer-submit"
