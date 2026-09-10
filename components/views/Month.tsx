@@ -19,6 +19,7 @@ import {
   monthWeekOrderKey,
   partitionMonthWeeks,
   planTaskForMonth,
+  planTaskForMonthBucket,
   shiftMonthString,
 } from '../../month-planning';
 import { generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
@@ -134,7 +135,7 @@ export const MonthView: React.FC = () => {
         id: taskId,
         plan: targetWeek
           ? { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null }
-          : planTaskForMonth(task, targetMonth),
+          : planTaskForMonthBucket(task, targetMonth),
       },
     });
 

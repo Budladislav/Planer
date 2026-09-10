@@ -24,6 +24,7 @@ This is the user-facing release history. Dates for older versions were reconstru
 
 - Mobile add forms now meet the bottom navigation without a strip of content showing through.
 - Explicitly moving a dated task into a week pool now always clears its day assignment.
+- Explicitly moving a task from a week into the month pool now always clears its week and day assignments.
 - Moving into a next-week or next-month pool preserves the order of tasks already there.
 
 ### Safety

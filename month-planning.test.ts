@@ -4,6 +4,7 @@ import {
   getMonthWeeks,
   partitionMonthWeeks,
   planTaskForMonth,
+  planTaskForMonthBucket,
   shiftMonthString,
 } from './month-planning';
 import { Task } from './types';
@@ -29,6 +30,12 @@ describe('month planning', () => {
   it('moves a task to another month pool without copying it', () => {
     expect(planTaskForMonth(task, '2026-09')).toEqual({ year: '2026', month: '2026-09', week: null, day: null });
     expect(planTaskForMonth(task, '2027-01')).toEqual({ year: '2027', month: '2027-01', week: null, day: null });
+  });
+
+  it('explicitly moves a task from a week to the pool of the same month', () => {
+    expect(planTaskForMonthBucket(task, '2026-08')).toEqual({
+      year: '2026', month: '2026-08', week: null, day: null,
+    });
   });
 
   it('moves to the next month across a year boundary', () => {

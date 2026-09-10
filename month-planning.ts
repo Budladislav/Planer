@@ -56,4 +56,10 @@ export const planTaskForMonth = (task: Task, targetMonth: string): Task['plan'] 
   return { year: targetMonth.slice(0, 4), month: targetMonth, week: null, day: null };
 };
 
+export const planTaskForMonthBucket = (task: Task, targetMonth: string): Task['plan'] => ({
+  ...planTaskForMonth(task, targetMonth),
+  week: null,
+  day: null,
+});
+
 export const monthWeekOrderKey = (month: string, week: string): string => `${month}|${week}`;
