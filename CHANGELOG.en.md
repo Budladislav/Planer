@@ -2,6 +2,34 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.5.0] — 10.09.2026 — “Continuous Route”
+
+### Added
+
+- A complete overview for any selected day can now be opened from Calendar or a Week day heading, including its tasks, notes, and actual completions.
+- Main navigation can be configured and reordered. On phones, Takt derives capacity from the viewport, keeps Settings fixed, and continues the remaining selected sections in a horizontal scroller.
+- Interface settings now include a live menu preview showing which items are immediately visible and which are available by swiping.
+- Quick move now offers the next week's undated pool and the next month's pool.
+
+### Changed
+
+- Year shows only tasks not yet assigned to weeks inside each month, while Month shows only tasks not yet assigned to days; events remain visible at both horizons.
+- The Week move sheet no longer uses a destination-like highlight for the current day: Today is a separate caption and past destinations are hidden.
+- Tasks linked to either an event or a long-term goal start at Uncommon grade, with Common fully removed from their selector.
+- Delete and edit actions for Week, Month, and Year tasks moved into the expanded card, while the two day quick-add actions now use compact directional buttons around the title field.
+- Ordinary completion from every horizon records the actual day of the action without rewriting the planned date. The dedicated Done yesterday command remains available only in Today.
+- Applying a weekly template to an in-progress week now adds its pool, today, and future days while skipping elapsed days.
+
+### Fixed
+
+- Mobile add forms now meet the bottom navigation without a strip of content showing through.
+- Explicitly moving a dated task into a week pool now always clears its day assignment.
+- Moving into a next-week or next-month pool preserves the order of tasks already there.
+
+### Safety
+
+- The core schema advances to 14 only for navigation preferences and the transient day-overview target; existing tasks, events, notes, goals, and reward data are neither recalculated nor duplicated.
+
 ## [5.4.1] — 09.09.2026 — “Moment of Luck”
 
 ### Added
