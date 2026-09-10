@@ -159,9 +159,9 @@ export const DoneView: React.FC = () => {
 
     return (
       <TaskCard>
-        <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+        <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
         <div className="flex min-w-0 items-start gap-2">
-          <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
+          <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
           <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-950 line-through">
             {task.title}
           </span>
@@ -259,7 +259,7 @@ export const DoneView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom */}
-      <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
+      <form onSubmit={handleQuickAdd} className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input 
             type="text" 

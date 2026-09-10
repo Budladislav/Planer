@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { AppProvider, useAppStore } from './store';
 import { Layout } from './components/Layout';
-import { TodayView } from './components/views/Today';
+import { DayView, TodayView } from './components/views/Today';
 import { WeekView } from './components/views/Week';
 import { EventsView } from './components/views/Events';
 import { ViewState } from './types';
@@ -38,6 +38,7 @@ const Main: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'today': return <TodayView />;
+      case 'day': return <DayView />;
       case 'inbox': return <InboxView />;
       case 'week': return <WeekView />;
       case 'month': return <MonthView />;

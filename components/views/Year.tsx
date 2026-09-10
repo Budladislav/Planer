@@ -22,7 +22,6 @@ import {
   planTaskForYear,
   yearMonthOrderKey,
 } from '../../year-planning';
-import { getTaskPlanningMonth } from '../../month-planning';
 import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { ConfirmModal } from '../Modal';
@@ -30,6 +29,8 @@ import { MonthMetaBadges, MonthNotesEditor } from '../MonthNotes';
 import { YearMetaBadges, YearNotesEditor } from '../YearNotes';
 import { PeriodTaskCard, PeriodTaskContainer } from '../planning/PeriodTaskCard';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
+import { PlanningEventList } from '../planning/PlanningEventList';
+import { getCompletedTasksForLocalPeriod, getEventsForMonth, getMonthPoolTasks, getYearPoolTasks } from '../../planning-visibility';
 
 const poolContainer = (year: string): string => `year-pool:${year}`;
 const monthContainer = (month: string): string => `year-month:${month}`;
@@ -69,25 +70,25 @@ export const YearView: React.FC = () => {
     [currentCalendarMonth, months],
   );
   const canMoveToYearPool = currentYear >= today.slice(0, 4);
-  const todoTasks = useMemo(
-    () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningYear(task) === currentYear),
-    [currentYear, state.tasks],
-  );
   const doneTasks = useMemo(
-    () => state.tasks.filter(task => task.status === 'done' && getTaskPlanningYear(task) === currentYear),
+    () => getCompletedTasksForLocalPeriod(state.tasks, currentYear),
     [currentYear, state.tasks],
   );
   const yearPoolTasks = useMemo(
-    () => applyOrder(todoTasks.filter(task => !getTaskPlanningMonth(task)), state.taskOrderByYearBucket[currentYear]),
-    [currentYear, state.taskOrderByYearBucket, todoTasks],
+    () => applyOrder(getYearPoolTasks(state.tasks, currentYear), state.taskOrderByYearBucket[currentYear]),
+    [currentYear, state.taskOrderByYearBucket, state.tasks],
   );
   const tasksByMonth = useMemo(() => Object.fromEntries(months.map(month => [
     month,
     applyOrder(
-      todoTasks.filter(task => getTaskPlanningMonth(task) === month),
+      getMonthPoolTasks(state.tasks, month),
       state.taskOrderByYearMonth[yearMonthOrderKey(currentYear, month)],
     ),
-  ])) as Record<string, Task[]>, [currentYear, months, state.taskOrderByYearMonth, todoTasks]);
+  ])) as Record<string, Task[]>, [currentYear, months, state.taskOrderByYearMonth, state.tasks]);
+  const eventsByMonth = useMemo(() => Object.fromEntries(
+    months.map(month => [month, getEventsForMonth(state.events, month)]),
+  ), [months, state.events]);
+  const visibleTodoCount = yearPoolTasks.length + Object.values(tasksByMonth).reduce((sum, tasks) => sum + tasks.length, 0);
   const containerByTask = useMemo(() => {
     const map = new Map<string, string>();
     yearPoolTasks.forEach(task => map.set(task.id, poolContainer(currentYear)));
@@ -227,6 +228,7 @@ export const YearView: React.FC = () => {
 
   const renderMonth = (month: string) => {
     const tasks = tasksByMonth[month] ?? [];
+    const monthEvents = eventsByMonth[month] ?? [];
     const label = new Date(`${month}-01T12:00:00`).toLocaleDateString(locale, { month: 'long' });
     return (
       <section key={month} className="section-card p-2">
@@ -240,6 +242,7 @@ export const YearView: React.FC = () => {
         <PeriodTaskContainer id={monthContainer(month)} tasks={tasks} emptyText={t('Drop a year task into this month')}>
           {tasks.map(task => renderTask(task, monthContainer(month)))}
         </PeriodTaskContainer>
+        <PlanningEventList events={monthEvents} onOpenDay={day => dispatch({ type: 'OPEN_DAY', payload: day })} />
       </section>
     );
   };
@@ -248,7 +251,7 @@ export const YearView: React.FC = () => {
     <div className="page-container">
       <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 text-sm text-muted">
         <YearMetaBadges year={currentYear} onEdit={() => setNotesEditorYear(currentYear)} showNotes={false} />
-        <span>{t('{todo} left • {done} done', { todo: todoTasks.length, done: doneTasks.length })}</span>
+        <span>{t('{todo} left • {done} done', { todo: visibleTodoCount, done: doneTasks.length })}</span>
         <RewardsBalancePill />
       </div>
       {(state.yearNotes[currentYear]?.length ?? 0) > 0 && (

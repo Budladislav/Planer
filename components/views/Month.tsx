@@ -19,6 +19,7 @@ import {
   monthWeekOrderKey,
   partitionMonthWeeks,
   planTaskForMonth,
+  shiftMonthString,
 } from '../../month-planning';
 import { generateId, getTodayString, getWeekDateRange, getWeekString } from '../../utils';
 import { ConfirmModal } from '../Modal';
@@ -28,6 +29,10 @@ import { completeTask, deleteTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { PeriodTaskCard, PeriodTaskContainer } from '../planning/PeriodTaskCard';
+import { PlanningEventList } from '../planning/PlanningEventList';
+import { getCompletedTasksForLocalPeriod, getEventsForWeek, getMonthPoolTasks, getWeekPoolTasks } from '../../planning-visibility';
+
+type MonthMoveTarget = { type: 'month'; month: string } | { type: 'week'; week: string };
 
 const poolContainer = (month: string): string => `month-pool:${month}`;
 const weekContainer = (week: string): string => `month-week:${week}`;
@@ -65,28 +70,27 @@ export const MonthView: React.FC = () => {
     () => partitionMonthWeeks(weeks, getWeekString(today)),
     [today, weeks],
   );
-  const todoTasks = useMemo(
-    () => state.tasks.filter(task => task.status === 'todo' && getTaskPlanningMonth(task) === currentMonth),
-    [currentMonth, state.tasks],
-  );
   const canMoveToMonthPool = currentMonth >= today.slice(0, 7);
+  const nextMonth = shiftMonthString(currentMonth, 1);
+  const canMoveToNextMonth = nextMonth >= today.slice(0, 7);
   const doneTasks = useMemo(
-    () => state.tasks.filter(task => task.status === 'done' && getTaskPlanningMonth(task) === currentMonth),
+    () => getCompletedTasksForLocalPeriod(state.tasks, currentMonth),
     [currentMonth, state.tasks],
   );
 
   const monthPoolTasks = useMemo(() => applyOrder(
-    todoTasks.filter(task => !task.plan.day && !task.plan.week),
+    getMonthPoolTasks(state.tasks, currentMonth),
     state.taskOrderByMonthBucket[currentMonth],
-  ), [currentMonth, state.taskOrderByMonthBucket, todoTasks]);
+  ), [currentMonth, state.taskOrderByMonthBucket, state.tasks]);
 
   const tasksByWeek = useMemo(() => Object.fromEntries(weeks.map(week => {
-    const raw = todoTasks.filter(task => {
-      const taskWeek = task.plan.day ? getWeekString(task.plan.day) : task.plan.week;
-      return taskWeek === week;
-    });
+    const raw = getWeekPoolTasks(state.tasks, week);
     return [week, applyOrder(raw, state.taskOrderByMonthWeek[monthWeekOrderKey(currentMonth, week)])];
-  })) as Record<string, Task[]>, [currentMonth, state.taskOrderByMonthWeek, todoTasks, weeks]);
+  })) as Record<string, Task[]>, [currentMonth, state.taskOrderByMonthWeek, state.tasks, weeks]);
+  const eventsByWeek = useMemo(() => Object.fromEntries(
+    weeks.map(week => [week, getEventsForWeek(state.events, week)]),
+  ), [state.events, weeks]);
+  const visibleTodoCount = monthPoolTasks.length + Object.values(tasksByWeek).reduce((sum, tasks) => sum + tasks.length, 0);
 
   const containerByTask = useMemo(() => {
     const map = new Map<string, string>();
@@ -119,16 +123,18 @@ export const MonthView: React.FC = () => {
     });
   };
 
-  const moveTaskTo = (taskId: string, targetWeek: string | null) => {
+  const moveTaskTo = (taskId: string, target: MonthMoveTarget) => {
     const task = state.tasks.find(item => item.id === taskId);
     if (!task) return;
+    const targetWeek = target.type === 'week' ? target.week : null;
+    const targetMonth = target.type === 'month' ? target.month : currentMonth;
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id: taskId,
         plan: targetWeek
           ? { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null }
-          : { year: currentMonth.slice(0, 4), month: currentMonth, week: null, day: null },
+          : planTaskForMonth(task, targetMonth),
       },
     });
 
@@ -141,8 +147,13 @@ export const MonthView: React.FC = () => {
       const weekBucketIds = (state.taskOrderByWeekBucket[targetWeek] ?? []).filter(id => id !== taskId);
       dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: { week: targetWeek, order: [...weekBucketIds, taskId] } });
     } else {
-      const poolIds = monthPoolTasks.map(item => item.id).filter(id => id !== taskId);
-      dispatch({ type: 'UPDATE_TASK_ORDER_MONTH_BUCKET', payload: { month: currentMonth, order: [...poolIds, taskId] } });
+      const savedTargetOrder = state.taskOrderByMonthBucket[targetMonth] ?? [];
+      const targetTaskIds = getMonthPoolTasks(state.tasks, targetMonth).map(item => item.id);
+      const poolIds = [
+        ...savedTargetOrder.filter(id => targetTaskIds.includes(id) && id !== taskId),
+        ...targetTaskIds.filter(id => !savedTargetOrder.includes(id) && id !== taskId),
+      ];
+      dispatch({ type: 'UPDATE_TASK_ORDER_MONTH_BUCKET', payload: { month: targetMonth, order: [...poolIds, taskId] } });
     }
     setMoveTaskId(null);
   };
@@ -169,7 +180,9 @@ export const MonthView: React.FC = () => {
     const targetWeek = targetContainer.startsWith('month-week:')
       ? targetContainer.slice('month-week:'.length)
       : null;
-    moveTaskTo(activeId, targetWeek);
+    moveTaskTo(activeId, targetWeek
+      ? { type: 'week', week: targetWeek }
+      : { type: 'month', month: currentMonth });
   };
 
   const changeMonth = (delta: number) => {
@@ -260,6 +273,7 @@ export const MonthView: React.FC = () => {
   const renderWeek = (week: string) => {
     const range = getWeekDateRange(week);
     const tasks = tasksByWeek[week] ?? [];
+    const weekEvents = eventsByWeek[week] ?? [];
     return (
       <section key={week} className="section-card p-2">
         <div className="mb-1 flex min-w-0 items-center gap-2 px-1">
@@ -279,6 +293,7 @@ export const MonthView: React.FC = () => {
         <PeriodTaskContainer id={weekContainer(week)} tasks={tasks} emptyText={t('Drop a month task into this week')}>
           {tasks.map(task => renderTask(task, weekContainer(week)))}
         </PeriodTaskContainer>
+        <PlanningEventList events={weekEvents} onOpenDay={day => dispatch({ type: 'OPEN_DAY', payload: day })} />
       </section>
     );
   };
@@ -287,7 +302,7 @@ export const MonthView: React.FC = () => {
     <div className="page-container">
       <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2 text-sm text-muted">
         <MonthMetaBadges month={currentMonth} onEdit={() => setNotesEditorMonth(currentMonth)} showNotes={false} />
-        <span>{t('{todo} left • {done} done', { todo: todoTasks.length, done: doneTasks.length })}</span>
+        <span>{t('{todo} left • {done} done', { todo: visibleTodoCount, done: doneTasks.length })}</span>
         <RewardsBalancePill />
       </div>
       {(state.monthNotes[currentMonth]?.length ?? 0) > 0 && (
@@ -354,14 +369,22 @@ export const MonthView: React.FC = () => {
               <button type="button" onClick={() => setMoveTaskId(null)} className="text-sm text-slate-400">{t('Close')}</button>
             </div>
             <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto">
+              {canMoveToNextMonth && (
+                <button type="button" onClick={() => moveTaskTo(moveTaskId, { type: 'month', month: nextMonth })} className="button-secondary h-auto justify-start p-3 text-left">
+                  {t('Next month')}
+                </button>
+              )}
               {canMoveToMonthPool && (
-                <button type="button" onClick={() => moveTaskTo(moveTaskId, null)} className="button-secondary h-auto justify-start p-3 text-left">
+                <button type="button" onClick={() => moveTaskTo(moveTaskId, { type: 'month', month: currentMonth })} className="button-secondary h-auto justify-start p-3 text-left">
                   {t('Month pool')}
                 </button>
               )}
               {currentAndFutureWeeks.map(week => (
-                <button key={week} type="button" onClick={() => moveTaskTo(moveTaskId, week)} className="button-secondary h-auto justify-start p-3 text-left">
-                  {t('Week {week}', { week: week.split('-W')[1] })}
+                <button key={week} type="button" onClick={() => moveTaskTo(moveTaskId, { type: 'week', week })} className="button-secondary h-auto justify-start p-3 text-left">
+                  <span className="flex flex-col items-start">
+                    <span>{t('Week {week}', { week: week.split('-W')[1] })}</span>
+                    {week === getWeekString(today) && <span className="text-[10px] font-normal text-brand-600">{t('Current week')}</span>}
+                  </span>
                 </button>
               ))}
               {!canMoveToMonthPool && currentAndFutureWeeks.length === 0 && (

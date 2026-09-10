@@ -16,3 +16,8 @@ export const planTaskForWeek = (task: Task, targetWeek: string): Task['plan'] =>
     year: (getMonthForWeek(targetWeek) ?? getTaskPlanningMonth(task))?.slice(0, 4) ?? task.plan.year,
   };
 };
+
+export const planTaskForWeekBucket = (task: Task, targetWeek: string): Task['plan'] => ({
+  ...planTaskForWeek(task, targetWeek),
+  day: null,
+});

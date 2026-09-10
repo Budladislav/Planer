@@ -68,12 +68,25 @@
 }
 
 @layer components {
+  :root {
+    --mobile-nav-height: calc(63px + max(4px, env(safe-area-inset-bottom)));
+    --mobile-composer-height: 69px;
+  }
+
   .app-main {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
 
   .mobile-nav-shell {
     padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav-scroll {
+    scrollbar-width: none;
+  }
+
+  .mobile-nav-scroll::-webkit-scrollbar {
+    display: none;
   }
 
   @media (min-width: 1024px) {
@@ -179,8 +192,20 @@
     @apply border-t border-line bg-canvas/95 p-3 backdrop-blur-lg;
   }
 
+  .mobile-composer-fixed {
+    bottom: var(--mobile-nav-height);
+  }
+
+  .mobile-week-switcher-fixed {
+    bottom: calc(var(--mobile-nav-height) + var(--mobile-composer-height));
+  }
+
   .composer-submit {
     @apply flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-quiet transition-[background-color,transform] hover:bg-brand-700 active:translate-y-px;
+  }
+
+  .directional-add-button {
+    @apply flex h-11 w-11 flex-shrink-0 items-center justify-center text-brand-600 transition-[color,transform] hover:text-brand-700 active:translate-y-px;
   }
 
   .sheet-backdrop {

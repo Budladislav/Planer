@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
 import { getWeekString, getWeekRange, generateId, getTodayString, getWeekDateRange, shiftWeekString } from '../../utils';
-import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
 import { ConfirmModal } from '../Modal';
 import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+import { planTaskForWeekBucket } from '../../task-planning';
 import { partitionWeekDays } from '../../week-days';
 import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
@@ -13,6 +14,8 @@ import { useI18n } from '../../i18n';
 import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { GradedTaskRow } from '../ui/Primitives';
+import { getCompletedTasksForLocalPeriod, getWeekPoolTasks } from '../../planning-visibility';
+import { getCompletedTasksForLocalDay } from '../../today-tasks';
 import {
   DndContext,
   closestCenter,
@@ -33,7 +36,7 @@ import {
   WeekTaskDropZone,
 } from '../week/WeekTaskItems';
 import { weekBucketContainer, weekDayContainer } from '../week/weekTaskContainers';
-import { WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
+import { WeekTaskMoveSheet, type WeekTaskMoveTarget } from '../week/WeekTaskMoveControl';
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -128,7 +131,10 @@ export const WeekView: React.FC = () => {
   }, [state.tasks, currentWeek, weekDays]);
 
   const todoWeekTasks = allWeekTasks.filter(t => t.status === 'todo');
-  const doneWeekTasks = allWeekTasks.filter(t => t.status === 'done');
+  const doneWeekTasks = useMemo(
+    () => getCompletedTasksForLocalPeriod(state.tasks, currentWeek),
+    [currentWeek, state.tasks],
+  );
 
   // When a day in the current week moves into the past, move its remaining TODO tasks to week bucket
   useEffect(() => {
@@ -230,9 +236,7 @@ export const WeekView: React.FC = () => {
   const completedDayTasks = useMemo(() => {
     const map: Record<string, Task[]> = {};
     weekDays.forEach(day => {
-      map[day.date] = state.tasks
-        .filter(task => task.plan.day === day.date && task.status === 'done')
-        .sort((a, b) => (b.completedAt ?? b.updatedAt).localeCompare(a.completedAt ?? a.updatedAt));
+      map[day.date] = getCompletedTasksForLocalDay(state.tasks, day.date);
     });
     return map;
   }, [state.tasks, weekDays]);
@@ -304,18 +308,17 @@ export const WeekView: React.FC = () => {
     setCurrentWeek(week => shiftWeekString(week, delta));
   };
 
-  const moveTask = (id: string, day: string | null) => {
+  const moveTask = (id: string, target: WeekTaskMoveTarget) => {
     const task = state.tasks.find(item => item.id === id);
     if (!task) return;
-    const planningMonth = getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek);
+    const targetWeek = target.type === 'day' ? getWeekString(target.day) : target.week;
+    const day = target.type === 'day' ? target.day : null;
+    const plan = day
+      ? { day, week: targetWeek, month: day.slice(0, 7), year: day.slice(0, 4) }
+      : planTaskForWeekBucket(task, targetWeek);
     dispatch({
       type: 'UPDATE_TASK',
-      payload: {
-        id,
-        plan: day
-          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) }
-          : { week: currentWeek, day: null, month: planningMonth, year: planningMonth?.slice(0, 4) ?? null },
-      },
+      payload: { id, plan },
     });
     // If moving to a day, update the order (add to end)
     if (day) {
@@ -327,19 +330,24 @@ export const WeekView: React.FC = () => {
         });
       }
       // Remove from week bucket order if present
-      const bucketOrder = state.taskOrderByWeekBucket[currentWeek] || [];
-      if (bucketOrder.includes(id)) {
-        const newBucketOrder = bucketOrder.filter(taskId => taskId !== id);
+      const sourceBucketOrder = state.taskOrderByWeekBucket[task.plan.week ?? currentWeek] || [];
+      if (sourceBucketOrder.includes(id)) {
+        const newBucketOrder = sourceBucketOrder.filter(taskId => taskId !== id);
         dispatch({
           type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
-          payload: { week: currentWeek, order: newBucketOrder },
+          payload: { week: task.plan.week ?? currentWeek, order: newBucketOrder },
         });
       }
     } else {
-      const bucketOrder = (state.taskOrderByWeekBucket[currentWeek] || []).filter(taskId => taskId !== id);
+      const savedTargetOrder = state.taskOrderByWeekBucket[targetWeek] || [];
+      const targetTaskIds = getWeekPoolTasks(state.tasks, targetWeek).map(item => item.id);
+      const bucketOrder = [
+        ...savedTargetOrder.filter(taskId => targetTaskIds.includes(taskId) && taskId !== id),
+        ...targetTaskIds.filter(taskId => !savedTargetOrder.includes(taskId) && taskId !== id),
+      ];
       dispatch({
         type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
-        payload: { week: currentWeek, order: [...bucketOrder, id] },
+        payload: { week: targetWeek, order: [...bucketOrder, id] },
       });
     }
     setMoveTaskId(null);
@@ -470,9 +478,9 @@ export const WeekView: React.FC = () => {
             : null;
           return (
             <GradedTaskRow key={task.id} className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
-              <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+              <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-              <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
+              <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
               <span className="min-w-0 flex-1 truncate text-slate-950 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <RewardCompletionMeta taskId={task.id} />
@@ -512,6 +520,9 @@ export const WeekView: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => dispatch({ type: 'OPEN_DAY', payload: day.date })} className="icon-button-compact h-7 w-7 text-slate-500 hover:bg-slate-100" title={t('Open day overview')}>
+                <CalendarDays className="h-4 w-4" />
+              </button>
               {canPlanDay && (
                 <button onClick={() => setQuickAddDay(day.date)} className="icon-button-compact h-7 w-7 text-brand-600 hover:bg-brand-50" title={t('Add task to this day')}>
                   <Plus className="h-4 w-4" />
@@ -707,7 +718,7 @@ export const WeekView: React.FC = () => {
       <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
 
       {/* Week Selector - Fixed at bottom (mobile) */}
-      <div className="sticky-composer fixed bottom-[137px] left-0 right-0 z-10 p-2.5 lg:hidden">
+      <div className="sticky-composer mobile-week-switcher-fixed fixed left-0 right-0 z-10 p-2.5 lg:hidden">
         <div className="max-w-3xl mx-auto w-full">
           <div className="period-switcher mb-0">
             <button 
@@ -735,7 +746,7 @@ export const WeekView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom (mobile) */}
-      <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
+      <form onSubmit={handleQuickAdd} className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input 
             type="text" 

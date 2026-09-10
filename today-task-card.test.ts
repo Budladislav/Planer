@@ -17,36 +17,44 @@ describe('Today task card presentation', () => {
   });
 
   it('keeps one-step grade promotion available on collapsed planning cards', () => {
-    expect(todayViewSource).toContain('<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />');
-    expect(periodTaskCardSource).toContain('<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />');
+    const incrementControl = '<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />';
+    expect(todayViewSource).toContain(incrementControl);
+    expect(periodTaskCardSource).toContain(incrementControl);
     expect(monthViewSource).toContain('<PeriodTaskCard');
     expect(yearViewSource).toContain('<PeriodTaskCard');
-    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(2);
+    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} goalLinked=\{task\.goalId !== null\} eventLinked=\{task\.eventId !== null\} \/>/g)).toHaveLength(2);
   });
 
-  it('keeps task controls collapsed and leaves only planning details under the grade selector', () => {
-    expect(todayViewSource.match(/<TaskIconButton/g)).toHaveLength(5);
-    expect(periodTaskCardSource.match(/<TaskIconButton/g)).toHaveLength(4);
-    expect(weekTaskItemsSource.match(/<TaskIconButton/g)).toHaveLength(6);
-    expect(todayViewSource.match(/<WeekTaskMoveButton/g)).toHaveLength(1);
-    expect(weekTaskItemsSource.match(/<WeekTaskMoveButton/g)).toHaveLength(2);
-    expect(weekTaskItemsSource.match(/label=\{t\('Mark as done'\)\}/g)).toHaveLength(2);
-    expect(todayViewSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(1);
-    expect(periodTaskCardSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(1);
-    expect(weekTaskItemsSource.match(/<RewardGradeSelector taskId=\{task\.id\} compact goalLinked=\{task\.goalId !== null\} \/>/g)).toHaveLength(2);
-    expect(todayViewSource.indexOf('<WeekTaskMoveButton')).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
-    expect(todayViewSource.indexOf("label={t('Record this task as completed yesterday')}")).toBeGreaterThan(todayViewSource.indexOf('showActions &&'));
-    expect(periodTaskCardSource.indexOf("label={t('Delete')}")).toBeLessThan(periodTaskCardSource.indexOf('showActions &&'));
-    expect(periodTaskCardSource.indexOf("label={t('Edit task')}")).toBeLessThan(periodTaskCardSource.indexOf('showActions &&'));
-    expect(weekTaskItemsSource.indexOf("label={t('Delete')}")).toBeLessThan(weekTaskItemsSource.indexOf('showActions &&'));
-    expect(weekTaskItemsSource.indexOf("label={t('Edit task')}")).toBeLessThan(weekTaskItemsSource.indexOf('showActions &&'));
+  it('keeps secondary controls inside the expanded card', () => {
+    const todayCard = todayViewSource.slice(todayViewSource.indexOf('const SortableTaskItem'), todayViewSource.indexOf('const DayOverview'));
+    const todayExpanded = todayCard.indexOf('showActions &&');
+    expect(todayCard.indexOf('<WeekTaskMoveButton')).toBeGreaterThan(todayExpanded);
+    expect(todayCard.indexOf("label={t('Record this task as completed yesterday')}")).toBeGreaterThan(todayExpanded);
+    expect(todayCard.indexOf("label={t('Edit task')}")).toBeLessThan(todayExpanded);
+
+    const expectPeriodControls = (source: string) => {
+      const expanded = source.indexOf('showActions &&');
+      expect(source.indexOf("label={t('Delete')}")).toBeGreaterThan(expanded);
+      expect(source.indexOf("label={t('Edit task')}")).toBeGreaterThan(expanded);
+      expect(source.indexOf("label={t('Mark as done')}")).toBeLessThan(expanded);
+    };
+    expectPeriodControls(periodTaskCardSource);
+    expectPeriodControls(weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const DayTaskItem'), weekTaskItemsSource.indexOf('// Sortable wrapper for DayTaskItem')));
+    expectPeriodControls(weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const BucketTaskItem')));
+
+    const gradeSelector = '<RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />';
+    expect(todayViewSource).toContain(gradeSelector);
+    expect(periodTaskCardSource).toContain(gradeSelector);
+    expect(weekTaskItemsSource.split(gradeSelector)).toHaveLength(3);
   });
 
   it('reuses the weekly destination picker for Today and Week tasks', () => {
     expect(todayViewSource).toContain('<WeekTaskMoveSheet');
     expect(weekTaskMoveControlSource).toContain("t('Week bucket (no date)')");
     expect(weekTaskMoveControlSource).toContain('getWeekDates(week)');
-    expect(weekTaskMoveControlSource).toContain('day.date >= today');
+    expect(weekTaskMoveControlSource).toContain('.filter((day) => day.date >= today)');
+    expect(weekTaskMoveControlSource).toContain('canMoveToNextWeek');
+    expect(weekTaskMoveControlSource).toContain('canMoveToWeekPool');
   });
 
   it('offers distinct quick-add controls for the start and end of Today', () => {
@@ -58,7 +66,7 @@ describe('Today task card presentation', () => {
   });
 
   it('combines the active grade marker with its promotion button', () => {
-    const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('export const TodayView'));
+    const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('const DayOverview'));
     expect(activeTodayCard).not.toContain('<RewardGradeMarker');
     expect(periodTaskCardSource).not.toContain('<RewardGradeMarker');
     expect(weekTaskItemsSource).not.toContain('<RewardGradeMarker');
@@ -69,51 +77,42 @@ describe('Today task card presentation', () => {
       const surface = source.indexOf('<RewardGradeSurface', start);
       return source.slice(surface, source.indexOf('className={`overflow-hidden', surface));
     };
-    const expectControlOrder = (
-      source: string,
-      deleteLabel: string,
-      options: { move?: string; complete?: string } = {},
-    ) => {
+    const expectTodayControlOrder = (source: string) => {
+      const deleteLabel = "label={t('Delete task')}";
+      const completeLabel = "label={t('Mark as done')}";
       const deleteIndex = source.indexOf(deleteLabel);
       const titleIndex = source.indexOf('{task.title}');
-      const moveIndex = options.move ? source.indexOf(options.move) : -1;
       const gradeIndex = source.indexOf('<RewardGradeIncrementButton');
       const editIndex = source.indexOf("label={t('Edit task')}");
-      const completeIndex = options.complete ? source.indexOf(options.complete) : -1;
+      const completeIndex = source.indexOf(completeLabel);
 
       expect(deleteIndex).toBeGreaterThanOrEqual(0);
       expect(titleIndex).toBeGreaterThan(deleteIndex);
       expect(gradeIndex).toBeGreaterThan(titleIndex);
-      if (options.move) {
-        expect(moveIndex).toBeGreaterThan(gradeIndex);
-        expect(editIndex).toBeGreaterThan(moveIndex);
-      } else {
-        expect(editIndex).toBeGreaterThan(gradeIndex);
-      }
-      if (options.complete) expect(completeIndex).toBeGreaterThan(editIndex);
+      expect(editIndex).toBeGreaterThan(gradeIndex);
+      expect(completeIndex).toBeGreaterThan(editIndex);
     };
 
-    expectControlOrder(
-      cardHeader(todayViewSource),
-      "label={t('Delete task')}",
-      { complete: "label={t('Mark as done')}" },
-    );
-    expectControlOrder(
-      cardHeader(periodTaskCardSource),
-      "label={t('Delete')}",
-      { move: "label={t('Move')}", complete: "label={t('Mark as done')}" },
-    );
+    const expectPeriodControlOrder = (source: string, moveLabel: string) => {
+      const titleIndex = source.indexOf('{task.title}');
+      const gradeIndex = source.indexOf('<RewardGradeIncrementButton');
+      const moveIndex = source.indexOf(moveLabel);
+      const completeIndex = source.indexOf("label={t('Mark as done')}");
+      const expandedIndex = source.indexOf('showActions &&');
+      expect(gradeIndex).toBeGreaterThan(titleIndex);
+      expect(moveIndex).toBeGreaterThan(gradeIndex);
+      expect(completeIndex).toBeGreaterThan(moveIndex);
+      expect(source.indexOf("label={t('Delete')}")).toBeGreaterThan(expandedIndex);
+      expect(source.indexOf("label={t('Edit task')}")).toBeGreaterThan(expandedIndex);
+    };
 
-    expectControlOrder(
-      cardHeader(weekTaskItemsSource, weekTaskItemsSource.indexOf('const DayTaskItem')),
-      "label={t('Delete')}",
-      { move: '<WeekTaskMoveButton', complete: "label={t('Mark as done')}" },
+    expectTodayControlOrder(cardHeader(todayViewSource));
+    expectPeriodControlOrder(periodTaskCardSource, "label={t('Move')}");
+    expectPeriodControlOrder(
+      weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const DayTaskItem'), weekTaskItemsSource.indexOf('// Sortable wrapper for DayTaskItem')),
+      '<WeekTaskMoveButton',
     );
-    expectControlOrder(
-      cardHeader(weekTaskItemsSource, weekTaskItemsSource.indexOf('const BucketTaskItem')),
-      "label={t('Delete')}",
-      { move: '<WeekTaskMoveButton', complete: "label={t('Mark as done')}" },
-    );
+    expectPeriodControlOrder(weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const BucketTaskItem')), '<WeekTaskMoveButton');
 
     const templateHeader = cardHeader(weeklyTemplateSource);
     const templateDelete = templateHeader.indexOf("label={t('Delete template task')}");

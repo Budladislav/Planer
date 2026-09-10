@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowRightLeft } from 'lucide-react';
 import { useI18n } from '../../i18n';
-import { getTodayString, getWeekDates, getWeekString } from '../../utils';
+import { getTodayString, getWeekDates, getWeekString, shiftWeekString } from '../../utils';
 import { TaskIconButton } from '../ui/Primitives';
 
 type WeekTaskMoveButtonProps = {
@@ -29,14 +29,21 @@ export const WeekTaskMoveButton: React.FC<WeekTaskMoveButtonProps> = ({ onClick 
 
 type WeekTaskMoveSheetProps = {
   week: string;
-  onMove: (day: string | null) => void;
+  onMove: (target: WeekTaskMoveTarget) => void;
   onClose: () => void;
 };
+
+export type WeekTaskMoveTarget =
+  | { type: 'week'; week: string }
+  | { type: 'day'; day: string };
 
 export const WeekTaskMoveSheet: React.FC<WeekTaskMoveSheetProps> = ({ week, onMove, onClose }) => {
   const { locale, t } = useI18n();
   const today = getTodayString();
   const currentWeek = getWeekString(today);
+  const nextWeek = shiftWeekString(week, 1);
+  const canMoveToNextWeek = nextWeek >= currentWeek;
+  const canMoveToWeekPool = week >= currentWeek;
   const days = useMemo(
     () => getWeekDates(week).map((date) => {
       const value = new Date(`${date}T12:00:00Z`);
@@ -59,25 +66,40 @@ export const WeekTaskMoveSheet: React.FC<WeekTaskMoveSheetProps> = ({ week, onMo
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onMove(null)}
-            className="button-secondary h-auto justify-start p-3 text-left"
-          >
-            {t('Week bucket (no date)')}
-          </button>
+          {canMoveToNextWeek && (
+            <button
+              type="button"
+              onClick={() => onMove({ type: 'week', week: nextWeek })}
+              className="button-secondary h-auto justify-start p-3 text-left"
+            >
+              <span className="flex flex-col items-start">
+                <span>{t('Next week')}</span>
+                <span className="text-[10px] font-normal text-slate-400">{nextWeek}</span>
+              </span>
+            </button>
+          )}
+          {canMoveToWeekPool && (
+            <button
+              type="button"
+              onClick={() => onMove({ type: 'week', week })}
+              className="button-secondary h-auto justify-start p-3 text-left"
+            >
+              {t('Week bucket (no date)')}
+            </button>
+          )}
           {days
-            .filter((day) => week !== currentWeek || day.date >= today)
+            .filter((day) => day.date >= today)
             .map((day) => (
               <button
                 type="button"
                 key={day.date}
-                onClick={() => onMove(day.date)}
-                className={`button-secondary h-auto justify-start p-3 text-left ${
-                  day.date === today ? 'border-brand-100 bg-brand-50 hover:bg-brand-50' : ''
-                }`}
+                onClick={() => onMove({ type: 'day', day: day.date })}
+                className="button-secondary h-auto justify-start p-3 text-left"
               >
-                {day.weekday} {day.label}
+                <span className="flex flex-col items-start">
+                  <span>{day.weekday} {day.label}</span>
+                  {day.date === today && <span className="text-[10px] font-normal text-brand-600">{t('Today')}</span>}
+                </span>
               </button>
             ))}
         </div>

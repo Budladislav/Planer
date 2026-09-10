@@ -1,4 +1,5 @@
-export type ViewState = 'today' | 'month' | 'year' | 'week' | 'weekly-template' | 'inbox' | 'events' | 'settings' | 'done' | 'reports' | 'goals';
+export type PrimaryNavigationView = 'today' | 'week' | 'month' | 'year' | 'inbox' | 'weekly-template' | 'goals' | 'events';
+export type ViewState = PrimaryNavigationView | 'day' | 'settings' | 'done' | 'reports';
 
 export type AppLanguage = 'ru' | 'en';
 export type ShiftTransitionHighlight = 'off' | 'weekend' | 'extended';
@@ -66,6 +67,7 @@ export interface UiPreferences {
   eventsPastExpanded: boolean;
   language: AppLanguage;
   calendarNoteHighlight: boolean;
+  navigationItems: PrimaryNavigationView[];
 }
 
 export interface Capture {
@@ -135,6 +137,7 @@ export interface AppState {
   events: CalendarEvent[];
   lastActiveView: ViewState;
   goalNavigationTargetId: string | null;
+  dayNavigationTarget: string | null;
   taskOrderByDay: Record<string, string[]>; // Maps day (YYYY-MM-DD) to ordered task IDs
   taskOrderByWeekBucket: Record<string, string[]>; // Maps week (YYYY-WW) to ordered task IDs in bucket
   taskOrderByMonthBucket: Record<string, string[]>; // Maps month (YYYY-MM) to unordered-week task IDs
@@ -157,12 +160,13 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 13,
+  schemaVersion: 14,
   captures: [],
   tasks: [],
   events: [],
   lastActiveView: 'today',
   goalNavigationTargetId: null,
+  dayNavigationTarget: null,
   taskOrderByDay: {},
   taskOrderByWeekBucket: {},
   taskOrderByMonthBucket: {},
@@ -193,5 +197,6 @@ export const INITIAL_STATE: AppState = {
     eventsPastExpanded: false,
     language: getDeviceLanguage(),
     calendarNoteHighlight: true,
+    navigationItems: ['events', 'week', 'today'],
   },
 };

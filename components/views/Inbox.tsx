@@ -276,7 +276,7 @@ export const InboxView: React.FC = () => {
       </div>
 
       {/* Add Form - Fixed at bottom */}
-      <form onSubmit={handleCapture} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
+      <form onSubmit={handleCapture} className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:hidden">
         <div className="max-w-3xl mx-auto flex items-center gap-2">
           <input
             type="text"

@@ -354,7 +354,7 @@ export const createRewardsLabRuntime = (
         if (unavailable()) return false;
 
         if (event.type === 'task.completed') {
-          const preparedState = event.goalLinked
+          const preparedState = event.minimumUncommon || event.goalLinked
             ? ensureTaskMinimumGrade(snapshot.state!, event.taskId, 'uncommon', economyRuntime).state
             : snapshot.state!;
           const result = claimTaskCompletion(preparedState, {

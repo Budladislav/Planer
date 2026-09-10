@@ -35,22 +35,12 @@ describe('compact planner hierarchy', () => {
     });
   });
 
-  it('keeps only daily routes in primary navigation and places Settings first on mobile', () => {
-    const primaryNavigation = layoutSource.slice(
-      layoutSource.indexOf('const primaryNavItems'),
-      layoutSource.indexOf('const mobileNavItems'),
-    );
-    const mobileNavigation = layoutSource.slice(
-      layoutSource.indexOf('const mobileNavItems'),
-      layoutSource.indexOf('const settingsViews'),
-    );
-    expect(primaryNavigation).toContain("view: 'events'");
-    expect(primaryNavigation).toContain("view: 'week'");
-    expect(primaryNavigation).toContain("view: 'today'");
-    expect(primaryNavigation).not.toContain("view: 'inbox'");
-    expect(primaryNavigation).not.toContain("view: 'month'");
-    expect(primaryNavigation).not.toContain("view: 'year'");
-    expect(mobileNavigation.indexOf("view: 'settings'")).toBeLessThan(mobileNavigation.indexOf('...primaryNavItems'));
+  it('uses a configurable priority menu with fixed Settings and horizontal overflow on mobile', () => {
+    expect(layoutSource).toContain('state.uiPreferences.navigationItems.map');
+    expect(layoutSource).toContain('<MobileNavItem view="settings"');
+    expect(layoutSource).toContain('primaryNavItems.map');
+    expect(layoutSource).toContain('overflow-x-auto');
+    expect(layoutSource).toContain('getMobileNavigationCapacity(navWidth)');
     expect(layoutSource).not.toContain('fixed right-3 top-3');
     expect(layoutSource).toContain('fixed bottom-0 left-0 right-0');
   });
@@ -83,6 +73,7 @@ describe('compact planner hierarchy', () => {
 
   it('does not offer past destinations in Month and Year move menus', () => {
     expect(monthSource).toContain('canMoveToMonthPool');
+    expect(monthSource).toContain('canMoveToNextMonth');
     expect(monthSource).toContain('{currentAndFutureWeeks.map(week => (');
     expect(monthSource).not.toContain('{weeks.map(week => (');
     expect(yearSource).toContain('canMoveToYearPool');
@@ -99,7 +90,7 @@ describe('compact planner hierarchy', () => {
   it('renders grade color beneath task content', () => {
     expect(gradeControlsSource).toContain('reward-grade-surface');
     expect(gradeControlsSource).toContain("runtime.ensureTaskMinimumGrade(taskId, 'uncommon')");
-    expect(gradeControlsSource).toContain("goalLinked && option === 'common'");
+    expect(gradeControlsSource).toContain("GRADES.filter(option => !minimumUncommon || option !== 'common')");
   });
 
   it('splits Settings into seven focused responsive sections', () => {

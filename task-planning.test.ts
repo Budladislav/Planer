@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Task } from './types';
-import { planTaskForWeek } from './task-planning';
+import { planTaskForWeek, planTaskForWeekBucket } from './task-planning';
 
 const datedTask: Task = {
   id: 'dated',
@@ -28,6 +28,15 @@ describe('planTaskForWeek', () => {
   it('preserves the day when only task text is saved in the same week', () => {
     expect(planTaskForWeek(datedTask, '2026-W33')).toEqual({
       day: '2026-08-12',
+      week: '2026-W33',
+      month: '2026-08',
+      year: '2026',
+    });
+  });
+
+  it('always clears the day when the week bucket is explicitly selected', () => {
+    expect(planTaskForWeekBucket(datedTask, '2026-W33')).toEqual({
+      day: null,
       week: '2026-W33',
       month: '2026-08',
       year: '2026',

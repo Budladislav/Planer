@@ -6,7 +6,7 @@ import type {
   WeeklyTemplateState,
   WeeklyTemplateTask,
 } from './types';
-import { getWeekDates, isValidWeekString } from './utils';
+import { getWeekDates, getWeekString, isValidWeekString } from './utils';
 
 export const WEEKLY_TEMPLATE_POOL_SLOT = 'week';
 export const DEFAULT_WEEKLY_TEMPLATE_ID = 'weekly-template-default';
@@ -209,6 +209,7 @@ export interface WeeklyTemplateTaskApplication {
 export interface BuildWeeklyTemplateApplicationOptions {
   template: WeeklyTemplate;
   targetWeek: string;
+  today: string;
   existingTasks: readonly Task[];
   now: string;
   createId: () => string;
@@ -217,13 +218,16 @@ export interface BuildWeeklyTemplateApplicationOptions {
 export const buildWeeklyTemplateApplication = ({
   template,
   targetWeek,
+  today,
   existingTasks,
   now,
   createId,
-}: BuildWeeklyTemplateApplicationOptions): { items: WeeklyTemplateTaskApplication[]; skipped: number } => {
-  if (!isValidWeekString(targetWeek)) return { items: [], skipped: template.tasks.length };
+}: BuildWeeklyTemplateApplicationOptions): { items: WeeklyTemplateTaskApplication[]; skipped: number; skippedExisting: number; skippedPast: number } => {
+  if (!isValidWeekString(targetWeek) || targetWeek < getWeekString(today)) {
+    return { items: [], skipped: template.tasks.length, skippedExisting: 0, skippedPast: template.tasks.length };
+  }
   const dates = getWeekDates(targetWeek);
-  if (dates.length !== 7) return { items: [], skipped: template.tasks.length };
+  if (dates.length !== 7) return { items: [], skipped: template.tasks.length, skippedExisting: 0, skippedPast: template.tasks.length };
 
   const liveTaskIds = new Set(existingTasks.map(task => task.id));
   const applied = template.applications[targetWeek] ?? {};
@@ -234,16 +238,21 @@ export const buildWeeklyTemplateApplication = ({
     )).flat(),
   ];
   const items: WeeklyTemplateTaskApplication[] = [];
-  let skipped = 0;
+  let skippedExisting = 0;
+  let skippedPast = 0;
 
   orderedTemplateTasks.forEach(templateTask => {
     const existingTaskId = applied[templateTask.id];
     if (existingTaskId && liveTaskIds.has(existingTaskId)) {
-      skipped += 1;
+      skippedExisting += 1;
       return;
     }
 
     const day = templateTask.dayIndex === null ? null : dates[templateTask.dayIndex];
+    if (day && day < today) {
+      skippedPast += 1;
+      return;
+    }
     const month = day?.slice(0, 7) ?? getMonthForWeek(targetWeek);
     items.push({
       templateTaskId: templateTask.id,
@@ -262,5 +271,5 @@ export const buildWeeklyTemplateApplication = ({
     });
   });
 
-  return { items, skipped };
+  return { items, skipped: skippedExisting + skippedPast, skippedExisting, skippedPast };
 };

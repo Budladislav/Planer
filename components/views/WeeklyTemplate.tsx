@@ -199,7 +199,7 @@ export const WeeklyTemplateView: React.FC = () => {
   const currentWeek = getWeekString(getTodayString());
   const [applyOpen, setApplyOpen] = useState(false);
   const [targetWeek, setTargetWeek] = useState(currentWeek);
-  const [summary, setSummary] = useState<{ added: number; skipped: number } | null>(null);
+  const [summary, setSummary] = useState<{ added: number; skippedExisting: number; skippedPast: number } | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const [templateEditorMode, setTemplateEditorMode] = useState<'create' | 'duplicate' | 'rename' | null>(null);
@@ -324,6 +324,7 @@ export const WeeklyTemplateView: React.FC = () => {
     const result = buildWeeklyTemplateApplication({
       template: activeTemplate,
       targetWeek,
+      today: getTodayString(),
       existingTasks: state.tasks,
       now: new Date().toISOString(),
       createId: generateId,
@@ -335,7 +336,7 @@ export const WeeklyTemplateView: React.FC = () => {
       });
       await copyApplicationGrades(result.items);
     }
-    setSummary({ added: result.items.length, skipped: result.skipped });
+    setSummary({ added: result.items.length, skippedExisting: result.skippedExisting, skippedPast: result.skippedPast });
     setApplyOpen(false);
   };
 
@@ -395,7 +396,11 @@ export const WeeklyTemplateView: React.FC = () => {
 
       {summary && (
         <div className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800" role="status">
-          {t('Added: {added} • Already existed: {skipped}', summary)}
+          {t('Added: {added} • Already existed: {existing} • Past days skipped: {past}', {
+            added: summary.added,
+            existing: summary.skippedExisting,
+            past: summary.skippedPast,
+          })}
         </div>
       )}
 
@@ -431,7 +436,7 @@ export const WeeklyTemplateView: React.FC = () => {
         </div>
       </DndContext>
 
-      <div className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:static lg:mt-1">
+      <div className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:static lg:mt-1">
         <div className="mx-auto flex max-w-3xl justify-end">
           <button
             type="button"

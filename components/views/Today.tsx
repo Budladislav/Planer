@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { CalendarCheck2, Check, ChevronDown, Pencil, RotateCcw, X } from 'lucide-react';
-import { getTodayString, generateId, getWeekString } from '../../utils';
+import { CalendarCheck2, Check, ChevronDown, ChevronLeft, ChevronRight, Pencil, RotateCcw, X } from 'lucide-react';
+import { formatDateReadable, getTodayString, generateId, getDateString, getWeekString } from '../../utils';
 import {
   getCompletedTasksForLocalDay,
-  getLocalDateFromTimestamp,
   getPreviousLocalDayTimestamp,
   getTaskCompletionTimestamp,
 } from '../../today-tasks';
@@ -34,21 +33,22 @@ import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalance
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
 import { EmptyState, GradedTaskRow, TaskCard, TaskIconButton } from '../ui/Primitives';
-import { WeekTaskMoveButton, WeekTaskMoveSheet } from '../week/WeekTaskMoveControl';
-import { getMonthForWeek, getTaskPlanningMonth } from '../../month-planning';
+import { WeekTaskMoveButton, WeekTaskMoveSheet, type WeekTaskMoveTarget } from '../week/WeekTaskMoveControl';
 import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
+import { planTaskForWeekBucket } from '../../task-planning';
+import { getWeekPoolTasks } from '../../planning-visibility';
 
 const AddToStartIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-    <path d="M5 13h14M12 20V5" />
-    <path d="m8 8 4-4 4 4" />
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+    <path d="M12 2 3 11h5v10h8V11h5L12 2Z" fill="currentColor" />
+    <path d="M12 8v8M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
 const AddToEndIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-    <path d="M5 11h14M12 4v15" />
-    <path d="m8 16 4 4 4-4" />
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+    <path d="m12 22 9-9h-5V3H8v10H3l9 9Z" fill="currentColor" />
+    <path d="M12 8v8M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -56,7 +56,7 @@ const AddToEndIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const SortableTaskItem: React.FC<{ 
   task: Task; 
   onComplete: (id: string) => void;
-  onCompleteYesterday: (id: string) => void;
+  onCompleteYesterday?: (id: string) => void;
   onMove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDeleteConfirm: (id: string) => void;
@@ -152,7 +152,7 @@ const SortableTaskItem: React.FC<{
       style={style}
       onClick={() => setShowActions((prev) => !prev)}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
       <div
         {...attributes}
         {...listeners}
@@ -174,7 +174,7 @@ const SortableTaskItem: React.FC<{
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
           <TaskIconButton
             label={t('Edit task')}
             onClick={(e) => {
@@ -207,18 +207,20 @@ const SortableTaskItem: React.FC<{
           <div className="space-y-2">
             <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <WeekTaskMoveButton onClick={() => onMove(task.id)} />
-              <TaskIconButton
-                label={t('Record this task as completed yesterday')}
-                tone="warning"
-                onClick={() => onCompleteYesterday(task.id)}
-              >
-                <CalendarCheck2 className="h-3.5 w-3.5" />
-              </TaskIconButton>
+              {onCompleteYesterday && (
+                <TaskIconButton
+                  label={t('Record this task as completed yesterday')}
+                  tone="warning"
+                  onClick={() => onCompleteYesterday(task.id)}
+                >
+                  <CalendarCheck2 className="h-3.5 w-3.5" />
+                </TaskIconButton>
+              )}
             </div>
           </div>
         )}
@@ -228,26 +230,24 @@ const SortableTaskItem: React.FC<{
 };
 
 
-export const TodayView: React.FC = () => {
+const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, navigable = false }) => {
   const { state, dispatch } = useAppStore();
   const { locale, t } = useI18n();
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
-  const todayStr = getTodayString();
+  const actualToday = getTodayString();
+  const todayStr = date;
+  const isToday = todayStr === actualToday;
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
     isOpen: false,
     taskId: null,
   });
 
-  // All tasks for today and past days that are not done
-  // Show tasks scheduled for today OR past days that are still todo
+  // Today keeps the carry-forward behavior; another day shows only its own pending tasks.
   const allTodayTasks = state.tasks.filter(t => {
-    if (!t.plan.day) return false;
-    // Show today's tasks regardless of status
-    if (t.plan.day === todayStr) return true;
-    // Show past days' tasks only if they are still todo
-    return t.plan.day < todayStr && t.status === 'todo';
+    if (!t.plan.day || t.status !== 'todo') return false;
+    return isToday ? t.plan.day <= todayStr : t.plan.day === todayStr;
   });
   const todoTasks = allTodayTasks.filter(t => t.status === 'todo');
   const completedTodayTasks = getCompletedTasksForLocalDay(state.tasks, todayStr);
@@ -320,7 +320,7 @@ export const TodayView: React.FC = () => {
         id: newTaskId,
         title: quickAdd.trim(),
         status: 'todo',
-        plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
+        plan: { day: todayStr, week: getWeekString(todayStr), month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
         projectId: null,
         eventId: null,
         goalId: null,
@@ -352,10 +352,7 @@ export const TodayView: React.FC = () => {
     // Remove from task order if present
     const newOrder = orderedIds.filter(taskId => taskId !== id);
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    // Always set plan.day to today when completing, so it appears in Done under today's date
-    completeTask(dispatch, task, {
-      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
-    });
+    completeTask(dispatch, task);
   };
 
   const handleCompleteYesterday = (id: string) => {
@@ -363,27 +360,22 @@ export const TodayView: React.FC = () => {
     if (!task) return;
     const newOrder = orderedIds.filter(taskId => taskId !== id);
     const completedAt = getPreviousLocalDayTimestamp();
-    const completedDay = getLocalDateFromTimestamp(completedAt) ?? todayStr;
     dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: newOrder } });
-    completeTask(dispatch, task, {
-      completedAt,
-      plan: { day: completedDay, week: getWeekString(completedDay), month: completedDay.slice(0, 7), year: completedDay.slice(0, 4) },
-    });
+    completeTask(dispatch, task, { completedAt });
   };
 
-  const handleMove = (id: string, day: string | null) => {
+  const handleMove = (id: string, target: WeekTaskMoveTarget) => {
     const task = state.tasks.find(candidate => candidate.id === id);
     if (!task) return;
-    const currentWeek = getWeekString(todayStr);
-    const planningMonth = getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek);
-
+    const targetWeek = target.type === 'day' ? getWeekString(target.day) : target.week;
+    const day = target.type === 'day' ? target.day : null;
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
         id,
         plan: day
-          ? { day, week: getWeekString(day), month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) }
-          : { day: null, week: currentWeek, month: planningMonth, year: (planningMonth ?? getMonthForWeek(currentWeek))?.slice(0, 4) ?? null },
+          ? { day, week: getWeekString(day), month: day.slice(0, 7), year: day.slice(0, 4) }
+          : planTaskForWeekBucket(task, targetWeek),
       },
     });
 
@@ -410,10 +402,15 @@ export const TodayView: React.FC = () => {
         dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day, order: [...targetOrder, id] } });
       }
     } else {
-      const bucketOrder = (state.taskOrderByWeekBucket[currentWeek] || []).filter(taskId => taskId !== id);
+      const savedTargetOrder = state.taskOrderByWeekBucket[targetWeek] || [];
+      const targetTaskIds = getWeekPoolTasks(state.tasks, targetWeek).map(item => item.id);
+      const bucketOrder = [
+        ...savedTargetOrder.filter(taskId => targetTaskIds.includes(taskId) && taskId !== id),
+        ...targetTaskIds.filter(taskId => !savedTargetOrder.includes(taskId) && taskId !== id),
+      ];
       dispatch({
         type: 'UPDATE_TASK_ORDER_WEEK_BUCKET',
-        payload: { week: currentWeek, order: [...bucketOrder, id] },
+        payload: { week: targetWeek, order: [...bucketOrder, id] },
       });
     }
     setMoveTaskId(null);
@@ -427,7 +424,7 @@ export const TodayView: React.FC = () => {
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day: todayStr, order: [...currentOrder, id] } });
     }
     reopenTask(dispatch, task, {
-      plan: { day: todayStr, week: null, month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
+      plan: { day: todayStr, week: getWeekString(todayStr), month: todayStr.slice(0, 7), year: todayStr.slice(0, 4) },
     });
   };
 
@@ -442,9 +439,26 @@ export const TodayView: React.FC = () => {
     dispatch({ type: 'UPDATE_TASK', payload: { id, ...updates } });
   };
 
+  const navigateDay = (delta: number) => {
+    const next = new Date(`${todayStr}T12:00:00`);
+    next.setDate(next.getDate() + delta);
+    const target = getDateString(next);
+    dispatch(target === actualToday ? { type: 'SET_VIEW', payload: 'today' } : { type: 'OPEN_DAY', payload: target });
+  };
+
   return (
     <>
       <div className="page-container">
+          {navigable && (
+            <div className="period-switcher">
+              <button type="button" onClick={() => navigateDay(-1)} className="icon-button" title={t('Previous day')}><ChevronLeft className="h-5 w-5" /></button>
+              <div className="min-w-0 flex-1 text-center">
+                <div className="truncate font-semibold text-slate-700">{formatDateReadable(todayStr, state.uiPreferences.language)}</div>
+                {!isToday && <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', payload: 'today' })} className="mt-0.5 text-xs font-semibold text-brand-600 hover:text-brand-700">{t('Go to today')}</button>}
+              </div>
+              <button type="button" onClick={() => navigateDay(1)} className="icon-button" title={t('Next day')}><ChevronRight className="h-5 w-5" /></button>
+            </div>
+          )}
           <div className="mb-2 flex min-h-10 flex-wrap items-center justify-center gap-2">
             <DayMetaBadges
               date={todayStr}
@@ -477,7 +491,7 @@ export const TodayView: React.FC = () => {
                 {todayTasks.length === 0 ? (
                   <div className="flex items-center justify-center">
                     <EmptyState>
-                      {t('No pending tasks for today. Check your Week plan?')}
+                      {isToday ? t('No pending tasks for today. Check your Week plan?') : t('No pending tasks for this day.')}
                     </EmptyState>
                   </div>
                 ) : (
@@ -489,7 +503,7 @@ export const TodayView: React.FC = () => {
                           key={task.id} 
                           task={task} 
                           onComplete={handleComplete}
-                          onCompleteYesterday={handleCompleteYesterday}
+                          onCompleteYesterday={isToday ? handleCompleteYesterday : undefined}
                           onMove={setMoveTaskId}
                           onUpdate={handleUpdate}
                           onDeleteConfirm={handleDeleteConfirm}
@@ -513,7 +527,9 @@ export const TodayView: React.FC = () => {
                   <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
                     <Check className="h-3.5 w-3.5" />
                   </span>
-                  {t('Completed today ({count})', { count: completedTodayTasks.length })}
+                  {isToday
+                    ? t('Completed today ({count})', { count: completedTodayTasks.length })
+                    : t('Completed on this day ({count})', { count: completedTodayTasks.length })}
                 </span>
                 <span className="flex flex-shrink-0 items-center gap-2 text-xs text-slate-500">
                   <ChevronDown className={`h-4 w-4 transition-transform ${state.uiPreferences.todayCompletedExpanded ? 'rotate-180' : ''}`} />
@@ -523,11 +539,11 @@ export const TodayView: React.FC = () => {
               {state.uiPreferences.todayCompletedExpanded && (
                 <div className="divide-y divide-slate-100 border-t border-slate-100">
                   {completedTodayTasks.length === 0 ? (
-                    <p className="px-3 py-4 text-center text-sm italic text-slate-400">{t('No tasks completed today yet.')}</p>
+                    <p className="px-3 py-4 text-center text-sm italic text-slate-400">{isToday ? t('No tasks completed today yet.') : t('No tasks completed on this day.')}</p>
                   ) : completedTodayTasks.map(task => (
                     <GradedTaskRow key={task.id} className="flex items-center gap-2 overflow-hidden px-3 py-2.5">
-                      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
-                      <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} />
+                      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+                      <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-950 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">
@@ -550,73 +566,69 @@ export const TodayView: React.FC = () => {
           </div>
 
           {/* Add Form - Fixed at bottom */}
-          <form onSubmit={handleQuickAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
-            <div className="max-w-3xl mx-auto flex items-center gap-3">
-              <input 
-                type="text" 
-                value={quickAdd}
-                onChange={e => setQuickAdd(e.target.value)}
-                placeholder={t('Add a task for today...')}
-                className="field min-w-0 flex-1"
-              />
-              <div className="flex flex-shrink-0 gap-1.5">
-                <button
-                  type="button"
-                  className="composer-submit"
-                  title={t('Add task to start')}
-                  aria-label={t('Add task to start')}
-                  onClick={(event) => handleQuickAdd(event, 'start')}
-                >
-                  <AddToStartIcon className="h-6 w-6" />
-                </button>
-                <button
-                  type="submit"
-                  className="composer-submit"
-                  title={t('Add task to end')}
-                  aria-label={t('Add task to end')}
-                >
-                  <AddToEndIcon className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-          </form>
-          <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
-
-          {/* Add Form - Desktop */}
-          <form onSubmit={handleQuickAdd} className="hidden lg:flex items-center gap-3">
-            <input 
-              type="text" 
-              value={quickAdd}
-              onChange={e => setQuickAdd(e.target.value)}
-              placeholder={t('Add a task for today...')}
-              className="field min-w-0 flex-1"
-            />
-            <div className="flex flex-shrink-0 gap-1.5">
+          {todayStr >= actualToday && <form onSubmit={handleQuickAdd} className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:hidden">
+            <div className="max-w-3xl mx-auto flex items-center gap-2">
               <button
                 type="button"
-                className="composer-submit"
+                className="directional-add-button"
                 title={t('Add task to start')}
                 aria-label={t('Add task to start')}
                 onClick={(event) => handleQuickAdd(event, 'start')}
               >
-                <AddToStartIcon className="h-6 w-6" />
+                <AddToStartIcon className="h-9 w-9" />
               </button>
+              <input 
+                type="text" 
+                value={quickAdd}
+                onChange={e => setQuickAdd(e.target.value)}
+                placeholder={isToday ? t('Add a task for today...') : t('Add a task for this day...')}
+                className="field min-w-0 flex-1"
+              />
               <button
                 type="submit"
-                className="composer-submit"
+                className="directional-add-button"
                 title={t('Add task to end')}
                 aria-label={t('Add task to end')}
               >
-                <AddToEndIcon className="h-6 w-6" />
+                <AddToEndIcon className="h-9 w-9" />
               </button>
             </div>
-          </form>
+          </form>}
+          <DayNotesEditor date={notesEditorDate} onClose={() => setNotesEditorDate(null)} />
+
+          {/* Add Form - Desktop */}
+          {todayStr >= actualToday && <form onSubmit={handleQuickAdd} className="hidden lg:flex items-center gap-2">
+            <button
+              type="button"
+              className="directional-add-button"
+              title={t('Add task to start')}
+              aria-label={t('Add task to start')}
+              onClick={(event) => handleQuickAdd(event, 'start')}
+            >
+              <AddToStartIcon className="h-9 w-9" />
+            </button>
+            <input 
+              type="text" 
+              value={quickAdd}
+              onChange={e => setQuickAdd(e.target.value)}
+              placeholder={isToday ? t('Add a task for today...') : t('Add a task for this day...')}
+              className="field min-w-0 flex-1"
+            />
+            <button
+              type="submit"
+              className="directional-add-button"
+              title={t('Add task to end')}
+              aria-label={t('Add task to end')}
+            >
+              <AddToEndIcon className="h-9 w-9" />
+            </button>
+          </form>}
       </div>
 
       {moveTaskId && (
         <WeekTaskMoveSheet
           week={getWeekString(todayStr)}
-          onMove={(day) => handleMove(moveTaskId, day)}
+          onMove={(target) => handleMove(moveTaskId, target)}
           onClose={() => setMoveTaskId(null)}
         />
       )}
@@ -637,4 +649,12 @@ export const TodayView: React.FC = () => {
       />
     </>
   );
+};
+
+export const TodayView: React.FC = () => <DayOverview date={getTodayString()} />;
+
+export const DayView: React.FC = () => {
+  const { state } = useAppStore();
+  const date = state.dayNavigationTarget ?? getTodayString();
+  return <DayOverview date={date} navigable />;
 };

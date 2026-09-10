@@ -9,7 +9,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Check, Pencil, X } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Task } from '../../types';
-import { getTodayString, getWeekString, isValidWeekString } from '../../utils';
+import { getWeekString, isValidWeekString } from '../../utils';
 import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
 import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
@@ -173,7 +173,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
       <div className="flex items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -196,16 +196,6 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
-          <TaskIconButton
-            label={t('Delete')}
-            tone="danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteConfirm(task.id);
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <span
             className={`min-w-0 flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
             title={task.title}
@@ -214,25 +204,14 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
-          <TaskIconButton
-            label={t('Edit task')}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
             onClick={(e) => {
               e.stopPropagation();
-              completeTask(dispatch, task, {
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7), year: getTodayString().slice(0, 4) },
-              });
+              completeTask(dispatch, task);
             }}
           >
             <Check className="h-4 w-4" />
@@ -250,9 +229,17 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
+            </div>
           </div>
         )}
       </div>
@@ -442,7 +429,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -466,16 +453,6 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
-          <TaskIconButton
-            label={t('Delete')}
-            tone="danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteConfirm(task.id);
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <span
             className={`min-w-0 max-w-full flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
           >
@@ -483,25 +460,14 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
-          <TaskIconButton
-            label={t('Edit task')}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <TaskIconButton
             label={t('Mark as done')}
             tone="success"
             onClick={(e) => {
               e.stopPropagation();
-              completeTask(dispatch, task, {
-                plan: { week: null, day: getTodayString(), month: getTodayString().slice(0, 7), year: getTodayString().slice(0, 4) },
-              });
+              completeTask(dispatch, task);
             }}
           >
             <Check className="h-4 w-4" />
@@ -519,9 +485,17 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} />
+              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
             </div>
             <TaskGoalLinkControl task={task} />
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => setIsEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
+            </div>
           </div>
         )}
       </div>

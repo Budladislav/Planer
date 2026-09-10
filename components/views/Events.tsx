@@ -199,6 +199,7 @@ export const EventsView: React.FC = () => {
             month={calendarMonth}
             onMonthChange={setCalendarMonth}
             onEditEvent={handleStartEdit}
+            onOpenDay={date => dispatch({ type: 'OPEN_DAY', payload: date })}
           />
 
           <section>
@@ -238,7 +239,7 @@ export const EventsView: React.FC = () => {
           />
         </div>
 
-        <form onSubmit={handleAdd} className="sticky-composer fixed bottom-[72px] left-0 right-0 z-20 lg:hidden">
+        <form onSubmit={handleAdd} className="sticky-composer mobile-composer-fixed fixed left-0 right-0 z-20 lg:hidden">
           <div className="mx-auto max-w-3xl space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <input type="date" required value={newDate} onChange={event => setNewDate(event.target.value)} className="field w-full" />

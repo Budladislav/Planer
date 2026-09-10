@@ -20,7 +20,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const migrated = migrateAppState(parsed);
           // A fresh app session always starts with the day's tasks. Navigation
           // during the session still updates lastActiveView normally.
-          dispatch({ type: 'INIT_STATE', payload: { ...migrated, lastActiveView: 'today' } });
+          dispatch({ type: 'INIT_STATE', payload: { ...migrated, lastActiveView: 'today', dayNavigationTarget: null } });
         } else {
           console.warn("Invalid data format in localStorage, starting with empty state");
         }

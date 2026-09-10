@@ -72,6 +72,7 @@ describe('weekly template', () => {
     const result = buildWeeklyTemplateApplication({
       template,
       targetWeek: '2027-W01',
+      today: '2026-12-30',
       existingTasks: [],
       now: '2026-12-30T12:00:00.000Z',
       createId: () => `task-${++id}`,
@@ -95,6 +96,7 @@ describe('weekly template', () => {
     const result = buildWeeklyTemplateApplication({
       template: appliedTemplate,
       targetWeek: '2026-W40',
+      today: '2026-09-28',
       existingTasks: [linkedTask],
       now: '2026-09-09T12:00:00.000Z',
       createId: () => `new-${++id}`,
@@ -102,6 +104,33 @@ describe('weekly template', () => {
 
     expect(result.skipped).toBe(1);
     expect(result.items.map(item => item.templateTaskId)).toEqual(['monday', 'sunday']);
+  });
+
+  it('keeps the pool, today and future days but skips elapsed days in a started week', () => {
+    let id = 0;
+    const result = buildWeeklyTemplateApplication({
+      template,
+      targetWeek: '2027-W01',
+      today: '2027-01-05',
+      existingTasks: [],
+      now: '2027-01-05T08:00:00.000Z',
+      createId: () => `current-${++id}`,
+    });
+
+    expect(result.items.map(item => item.templateTaskId)).toEqual(['pool', 'sunday']);
+    expect(result).toMatchObject({ skipped: 1, skippedExisting: 0, skippedPast: 1 });
+  });
+
+  it('rejects an entirely past week defensively', () => {
+    const result = buildWeeklyTemplateApplication({
+      template,
+      targetWeek: '2027-W01',
+      today: '2027-01-11',
+      existingTasks: [],
+      now: '2027-01-11T08:00:00.000Z',
+      createId: () => 'unused',
+    });
+    expect(result).toMatchObject({ items: [], skipped: 3, skippedPast: 3 });
   });
 
   it('uses a stable isolated Rewards Lab id for template grades', () => {

@@ -161,6 +161,7 @@ describe('migrateAppState', () => {
       eventsPastExpanded: false,
       language: 'ru',
       calendarNoteHighlight: true,
+      navigationItems: ['events', 'week', 'today'],
     });
   });
 
@@ -180,6 +181,7 @@ describe('migrateAppState', () => {
         todayCompletedExpanded: true,
         eventsDistantExpanded: 'yes',
         eventsPastExpanded: true,
+        navigationItems: ['year', 'today', 'year', 'unknown'],
       },
     });
 
@@ -197,6 +199,7 @@ describe('migrateAppState', () => {
       eventsPastExpanded: true,
       language: 'ru',
       calendarNoteHighlight: true,
+      navigationItems: ['year', 'today'],
     });
   });
 });
@@ -493,6 +496,7 @@ describe('appReducer period notes and UI preferences', () => {
       eventsPastExpanded: true,
       language: INITIAL_STATE.uiPreferences.language,
       calendarNoteHighlight: true,
+      navigationItems: ['events', 'week', 'today'],
     });
   });
 });
@@ -635,6 +639,15 @@ describe('appReducer day notes and long-term goals', () => {
     expect(opened.lastActiveView).toBe('goals');
     expect(opened.goalNavigationTargetId).toBe(goalId);
     expect(appReducer(opened, { type: 'SET_VIEW', payload: 'today' }).goalNavigationTargetId).toBeNull();
+  });
+
+  it('opens a valid day overview and clears its target when navigating away', () => {
+    const opened = appReducer(INITIAL_STATE, { type: 'OPEN_DAY', payload: '2026-09-10' });
+
+    expect(opened.lastActiveView).toBe('day');
+    expect(opened.dayNavigationTarget).toBe('2026-09-10');
+    expect(appReducer(opened, { type: 'SET_VIEW', payload: 'week' }).dayNavigationTarget).toBeNull();
+    expect(appReducer(INITIAL_STATE, { type: 'OPEN_DAY', payload: 'invalid' })).toBe(INITIAL_STATE);
   });
 
   it('deleting a goal keeps its tasks and only removes their link', () => {

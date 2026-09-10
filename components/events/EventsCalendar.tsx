@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, NotebookPen, Pencil } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, NotebookPen, Pencil } from 'lucide-react';
 import { buildEventCalendarMonth, partitionEventCalendarWeeks } from '../../event-calendar';
 import { CalendarEvent } from '../../types';
 import { formatDateReadable, getTodayString, getWeekString } from '../../utils';
@@ -16,6 +16,7 @@ interface EventsCalendarProps {
   month: string;
   onMonthChange: (month: string) => void;
   onEditEvent: (event: CalendarEvent) => void;
+  onOpenDay: (date: string) => void;
 }
 
 const WEEKDAYS = {
@@ -34,6 +35,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
   month,
   onMonthChange,
   onEditEvent,
+  onOpenDay,
 }) => {
   const { state } = useAppStore();
   const { language, locale, t } = useI18n();
@@ -215,11 +217,22 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({
       >
         <div className="space-y-4">
           {selectedDate && (
-            <DayMetaBadges
-              date={selectedDate}
-              onEdit={() => setEditingDate(selectedDate)}
-              maxNotes={3}
-            />
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => { setSelectedDate(null); onOpenDay(selectedDate); }}
+                className="button-primary w-full"
+              >
+                <CalendarDays className="h-4 w-4" />
+                {t('Open day overview')}
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+              <DayMetaBadges
+                date={selectedDate}
+                onEdit={() => setEditingDate(selectedDate)}
+                maxNotes={3}
+              />
+            </div>
           )}
           {selectedEvents.length === 0 ? (
             <div className="empty-state py-8">

@@ -88,6 +88,24 @@ describe('task lifecycle commands', () => {
     });
   });
 
+  it('records an ordinary completion now without moving the task plan to today', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-10T10:30:00.000Z'));
+    const dispatch = vi.fn<(action: Action) => void>();
+    const futurePlan = { day: '2026-10-05', week: '2026-W41', month: '2026-10', year: '2026' };
+
+    completeTask(dispatch, makeTask({ plan: futurePlan }));
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: 'task-1',
+        status: 'done',
+        completedAt: '2026-09-10T10:30:00.000Z',
+      },
+    });
+  });
+
   it('does not emit or dispatch when asked to complete an already done task', () => {
     const dispatch = vi.fn<(action: Action) => void>();
     const listener = vi.fn();

@@ -35,7 +35,7 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
       className="px-2"
       onClick={() => setShowActions(value => !value)}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} />
+      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
       <div className="flex min-w-0 items-center gap-2">
         <div
           {...attributes}
@@ -43,13 +43,6 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
           className="flex min-w-0 flex-1 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
           title={t('Drag task')}
         >
-          <TaskIconButton
-            label={t('Delete')}
-            tone="danger"
-            onClick={event => { event.stopPropagation(); onDelete(task.id); }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </TaskIconButton>
           <span className={`min-w-0 flex-1 text-slate-950 ${showActions ? 'sr-only' : 'truncate'}`}>{task.title}</span>
           {task.plan.day && (
             <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
@@ -58,12 +51,9 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} />
+          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
           <TaskIconButton label={t('Move')} tone="primary" onClick={event => { event.stopPropagation(); onMove(task.id); }}>
             <ArrowRightLeft className="h-3.5 w-3.5" />
-          </TaskIconButton>
-          <TaskIconButton label={t('Edit task')} onClick={event => { event.stopPropagation(); onEdit(task); }}>
-            <Pencil className="h-3.5 w-3.5" />
           </TaskIconButton>
           <TaskIconButton label={t('Mark as done')} tone="success" onClick={event => { event.stopPropagation(); onComplete(task.id); }}>
             <Check className="h-4 w-4" />
@@ -77,8 +67,16 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
         {showActions && (
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
-            <div className="mx-auto w-full max-w-sm"><RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} /></div>
+            <div className="mx-auto w-full max-w-sm"><RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} /></div>
             <TaskGoalLinkControl task={task} />
+            <div className="flex justify-center gap-1">
+              <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDelete(task.id)}>
+                <X className="h-3.5 w-3.5" />
+              </TaskIconButton>
+              <TaskIconButton label={t('Edit task')} onClick={() => onEdit(task)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </TaskIconButton>
+            </div>
           </div>
         )}
       </div>

@@ -37,24 +37,24 @@ const GRADE_META_STYLES: Record<RewardGrade, string> = {
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
 
-const useTaskRewardGrade = (taskId: string, goalLinked: boolean) => {
+const useTaskRewardGrade = (taskId: string, minimumUncommon: boolean) => {
   const { runtime, snapshot } = useRewardsLab();
   const claim = snapshot.state?.claims[taskId];
   const storedGrade = snapshot.state ? (claim?.grade ?? getTaskGrade(snapshot.state, taskId)) : 'common';
-  const grade: RewardGrade = goalLinked && storedGrade === 'common' ? 'uncommon' : storedGrade;
+  const grade: RewardGrade = minimumUncommon && storedGrade === 'common' ? 'uncommon' : storedGrade;
 
   useEffect(() => {
-    if (snapshot.enabled && snapshot.state && goalLinked && storedGrade === 'common') {
+    if (snapshot.enabled && snapshot.state && minimumUncommon && storedGrade === 'common') {
       runtime.ensureTaskMinimumGrade(taskId, 'uncommon');
     }
-  }, [goalLinked, runtime, snapshot.enabled, snapshot.state, storedGrade, taskId]);
+  }, [minimumUncommon, runtime, snapshot.enabled, snapshot.state, storedGrade, taskId]);
 
-  return { runtime, snapshot, claim, grade, goalLinked };
+  return { runtime, snapshot, claim, grade, minimumUncommon };
 };
 
-export const ActiveRewardGradeMarker: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
+export const ActiveRewardGradeMarker: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
   const { t } = useI18n();
-  const { snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
+  const { snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
   if (!snapshot.enabled || !snapshot.state) return null;
   if (grade === 'common') return null;
   const meta = REWARD_GRADES[grade];
@@ -72,8 +72,8 @@ export const ActiveRewardGradeMarker: React.FC<{ taskId: string; goalLinked?: bo
   );
 };
 
-export const ActiveRewardGradeSurface: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
-  const { snapshot, grade } = useTaskRewardGrade(taskId, goalLinked);
+export const ActiveRewardGradeSurface: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
+  const { snapshot, grade } = useTaskRewardGrade(taskId, minimumUncommon);
   if (!snapshot.enabled || !snapshot.state) return null;
   if (grade === 'common') return null;
   return (
@@ -84,9 +84,9 @@ export const ActiveRewardGradeSurface: React.FC<{ taskId: string; goalLinked?: b
   );
 };
 
-export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked = false }) => {
+export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
   const { t } = useI18n();
-  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
   if (!snapshot.enabled || !snapshot.state) return null;
 
   const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
@@ -146,9 +146,9 @@ export const ActiveRewardCompletionMeta: React.FC<{ taskId: string }> = ({ taskI
   );
 };
 
-export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean; goalLinked?: boolean }> = ({ taskId, compact = false, goalLinked = false }) => {
+export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean; minimumUncommon?: boolean }> = ({ taskId, compact = false, minimumUncommon = false }) => {
   const { t } = useI18n();
-  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, goalLinked);
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
   if (!snapshot.enabled || !snapshot.state) return null;
 
   const selectedMeta = REWARD_GRADES[grade];
@@ -165,14 +165,14 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
     >
       <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('Grade')}</span>
       <div className="flex items-center gap-1" role="group" aria-label={t('Task reward grade')}>
-        {GRADES.map(option => {
+        {GRADES.filter(option => !minimumUncommon || option !== 'common').map(option => {
           const meta = REWARD_GRADES[option];
           const selected = option === grade;
           return (
             <button
               key={option}
               type="button"
-              disabled={locked || (goalLinked && option === 'common')}
+              disabled={locked}
               onClick={event => {
                 event.stopPropagation();
                 runtime.setTaskGrade(taskId, option);
@@ -182,9 +182,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
               }`}
               aria-label={t('{grade}, reward {min}–{max}', { grade: t(meta.label), min: meta.min, max: meta.max })}
               aria-pressed={selected}
-              title={goalLinked && option === 'common'
-                ? t('Tasks linked to a big goal cannot be Common.')
-                : `${t(meta.label)} · ${claim?.economyVersion === 1 ? `×${meta.legacyMultiplier}` : `${meta.min}–${meta.max}`}${locked ? ` · ${t('locked while completed')}` : ''}`}
+              title={`${t(meta.label)} · ${claim?.economyVersion === 1 ? `×${meta.legacyMultiplier}` : `${meta.min}–${meta.max}`}${locked ? ` · ${t('locked while completed')}` : ''}`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${GRADE_STYLES[option].dot}`} />
             </button>
@@ -194,6 +192,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
       <span className="min-w-0 flex-1 truncate text-right text-[11px] font-medium text-slate-600">
         {t(selectedMeta.label)} {selectedRule}{locked ? ` · ${t('locked')}` : claim ? ` · ${t('editable after Undo')}` : ''}
       </span>
+      {minimumUncommon && <span className="sr-only">{t('Linked tasks start at Uncommon grade.')}</span>}
     </div>
   );
 };

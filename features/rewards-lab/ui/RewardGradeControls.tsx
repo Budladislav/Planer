@@ -18,42 +18,44 @@ const ActiveRewardCompletionMeta = lazy(() => import('./ActiveRewardGradeControl
   default: module.ActiveRewardCompletionMeta,
 })));
 
-const GateAwareMarker: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => {
+type LinkedGradeProps = { taskId: string; goalLinked?: boolean; eventLinked?: boolean };
+
+const GateAwareMarker: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => {
   const gate = useRewardsLabGate();
   if (!gate.enabled) return null;
   return (
     <Suspense fallback={null}>
-      <ActiveRewardGradeMarker taskId={taskId} goalLinked={goalLinked} />
+      <ActiveRewardGradeMarker taskId={taskId} minimumUncommon={Boolean(goalLinked || eventLinked)} />
     </Suspense>
   );
 };
 
-const GateAwareSelector: React.FC<{ taskId: string; compact?: boolean; goalLinked?: boolean }> = ({ taskId, compact, goalLinked }) => {
+const GateAwareSelector: React.FC<LinkedGradeProps & { compact?: boolean }> = ({ taskId, compact, goalLinked, eventLinked }) => {
   const gate = useRewardsLabGate();
   if (!gate.enabled) return null;
   return (
     <Suspense fallback={null}>
-      <ActiveRewardGradeSelector taskId={taskId} compact={compact} goalLinked={goalLinked} />
+      <ActiveRewardGradeSelector taskId={taskId} compact={compact} minimumUncommon={Boolean(goalLinked || eventLinked)} />
     </Suspense>
   );
 };
 
-const GateAwareSurface: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => {
+const GateAwareSurface: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => {
   const gate = useRewardsLabGate();
   if (!gate.enabled) return null;
   return (
     <Suspense fallback={null}>
-      <ActiveRewardGradeSurface taskId={taskId} goalLinked={goalLinked} />
+      <ActiveRewardGradeSurface taskId={taskId} minimumUncommon={Boolean(goalLinked || eventLinked)} />
     </Suspense>
   );
 };
 
-const GateAwareIncrementButton: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => {
+const GateAwareIncrementButton: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => {
   const gate = useRewardsLabGate();
   if (!gate.enabled) return null;
   return (
     <Suspense fallback={null}>
-      <ActiveRewardGradeIncrementButton taskId={taskId} goalLinked={goalLinked} />
+      <ActiveRewardGradeIncrementButton taskId={taskId} minimumUncommon={Boolean(goalLinked || eventLinked)} />
     </Suspense>
   );
 };
@@ -68,27 +70,27 @@ const GateAwareCompletionMeta: React.FC<{ taskId: string }> = ({ taskId }) => {
   );
 };
 
-export const RewardGradeMarker: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => (
+export const RewardGradeMarker: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => (
   <RewardsErrorBoundary>
-    <GateAwareMarker taskId={taskId} goalLinked={goalLinked} />
+    <GateAwareMarker taskId={taskId} goalLinked={goalLinked} eventLinked={eventLinked} />
   </RewardsErrorBoundary>
 );
 
-export const RewardGradeSelector: React.FC<{ taskId: string; compact?: boolean; goalLinked?: boolean }> = ({ taskId, compact, goalLinked }) => (
+export const RewardGradeSelector: React.FC<LinkedGradeProps & { compact?: boolean }> = ({ taskId, compact, goalLinked, eventLinked }) => (
   <RewardsErrorBoundary>
-    <GateAwareSelector taskId={taskId} compact={compact} goalLinked={goalLinked} />
+    <GateAwareSelector taskId={taskId} compact={compact} goalLinked={goalLinked} eventLinked={eventLinked} />
   </RewardsErrorBoundary>
 );
 
-export const RewardGradeSurface: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => (
+export const RewardGradeSurface: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => (
   <RewardsErrorBoundary>
-    <GateAwareSurface taskId={taskId} goalLinked={goalLinked} />
+    <GateAwareSurface taskId={taskId} goalLinked={goalLinked} eventLinked={eventLinked} />
   </RewardsErrorBoundary>
 );
 
-export const RewardGradeIncrementButton: React.FC<{ taskId: string; goalLinked?: boolean }> = ({ taskId, goalLinked }) => (
+export const RewardGradeIncrementButton: React.FC<LinkedGradeProps> = ({ taskId, goalLinked, eventLinked }) => (
   <RewardsErrorBoundary>
-    <GateAwareIncrementButton taskId={taskId} goalLinked={goalLinked} />
+    <GateAwareIncrementButton taskId={taskId} goalLinked={goalLinked} eventLinked={eventLinked} />
   </RewardsErrorBoundary>
 );
 

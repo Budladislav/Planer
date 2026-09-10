@@ -10,6 +10,8 @@ export interface RewardsLabLifecycleCompletedEvent {
   title: string;
   occurredAt: string;
   completedAt: string;
+  minimumUncommon?: boolean;
+  /** Legacy field retained so pending pre-5.5.0 events can still be read. */
   goalLinked?: boolean;
 }
 
@@ -68,6 +70,7 @@ const sanitizeEvent = (value: unknown): RewardsLabLifecycleEvent | null => {
       title: value.title,
       occurredAt: value.occurredAt,
       completedAt: value.completedAt,
+      minimumUncommon: value.minimumUncommon === true || value.goalLinked === true,
       goalLinked: value.goalLinked === true,
     };
   }
@@ -150,6 +153,7 @@ export const toRewardsLabLifecycleEvent = (event: TaskLifecycleEvent): RewardsLa
         title: event.title,
         occurredAt: event.occurredAt,
         completedAt: event.completedAt,
+        minimumUncommon: Boolean(event.task.goalId || event.task.eventId),
         goalLinked: Boolean(event.task.goalId),
       }
     : {

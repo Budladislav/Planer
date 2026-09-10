@@ -9,6 +9,13 @@ export const isValidMonthString = (month: string): boolean => {
   return year >= 2020 && year <= 2100 && monthNumber >= 1 && monthNumber <= 12;
 };
 
+export const shiftMonthString = (month: string, delta: number): string => {
+  if (!isValidMonthString(month)) return month;
+  const [year, monthNumber] = month.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, monthNumber - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${(shifted.getUTCMonth() + 1).toString().padStart(2, '0')}`;
+};
+
 export const getMonthForWeek = (week: string): string | null => {
   if (!isValidWeekString(week)) return null;
   return getWeekDates(week)[3]?.slice(0, 7) ?? null;

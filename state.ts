@@ -25,8 +25,9 @@ import {
   migrateWeeklyTemplateState,
   type WeeklyTemplateTaskApplication,
 } from './weekly-template';
+import { normalizeNavigationItems } from './navigation';
 
-export const CURRENT_SCHEMA_VERSION = 13;
+export const CURRENT_SCHEMA_VERSION = 14;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -148,7 +149,7 @@ export const migrateAppState = (value: unknown): AppState => {
   const parsed = isRecord(value) ? value : {};
   const now = new Date().toISOString();
   const today = getTodayString();
-  const allowedViews: ViewState[] = ['today', 'month', 'year', 'week', 'weekly-template', 'inbox', 'events', 'settings', 'done', 'reports', 'goals'];
+  const allowedViews: ViewState[] = ['today', 'day', 'month', 'year', 'week', 'weekly-template', 'inbox', 'events', 'settings', 'done', 'reports', 'goals'];
   const requestedView = parsed.lastActiveView === 'focus' ? 'today' : parsed.lastActiveView;
   const lastActiveView = allowedViews.includes(requestedView as ViewState)
     ? requestedView as ViewState
@@ -261,6 +262,7 @@ export const migrateAppState = (value: unknown): AppState => {
     events,
     lastActiveView,
     goalNavigationTargetId: null,
+    dayNavigationTarget: null,
     taskOrderByDay: migrateOrderMap(parsed.taskOrderByDay),
     taskOrderByWeekBucket: migrateOrderMap(parsed.taskOrderByWeekBucket),
     taskOrderByMonthBucket: migrateOrderMap(parsed.taskOrderByMonthBucket),
@@ -285,6 +287,7 @@ export const migrateAppState = (value: unknown): AppState => {
       eventsPastExpanded: rawUiPreferences.eventsPastExpanded === true,
       language: requestedLanguage,
       calendarNoteHighlight: rawUiPreferences.calendarNoteHighlight !== false,
+      navigationItems: normalizeNavigationItems(rawUiPreferences.navigationItems),
     },
   };
 };
@@ -293,6 +296,7 @@ export type Action =
   | { type: 'INIT_STATE'; payload: AppState }
   | { type: 'SET_VIEW'; payload: ViewState }
   | { type: 'OPEN_GOAL'; payload: string }
+  | { type: 'OPEN_DAY'; payload: string }
   | { type: 'ADD_CAPTURE'; payload: { text: string; startDateKnown: boolean } }
   | { type: 'UPDATE_CAPTURE'; payload: { id: string; text: string } }
   | { type: 'UPDATE_CAPTURE_STARTED_AT'; payload: { id: string; startedAt: string | null } }
@@ -353,10 +357,14 @@ export const appReducer = (state: AppState, action: Action): AppState => {
     case 'INIT_STATE':
       return action.payload;
     case 'SET_VIEW':
-      return { ...state, lastActiveView: action.payload, goalNavigationTargetId: null };
+      return { ...state, lastActiveView: action.payload, goalNavigationTargetId: null, dayNavigationTarget: null };
     case 'OPEN_GOAL':
       return state.goals.some(goal => goal.id === action.payload)
-        ? { ...state, lastActiveView: 'goals', goalNavigationTargetId: action.payload }
+        ? { ...state, lastActiveView: 'goals', goalNavigationTargetId: action.payload, dayNavigationTarget: null }
+        : state;
+    case 'OPEN_DAY':
+      return isValidDateKey(action.payload)
+        ? { ...state, lastActiveView: 'day', dayNavigationTarget: action.payload, goalNavigationTargetId: null }
         : state;
     case 'ADD_CAPTURE': {
       const text = action.payload.text.trim();

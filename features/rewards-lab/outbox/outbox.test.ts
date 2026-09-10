@@ -70,14 +70,17 @@ const deletedEvent = (taskId = 'task-1'): TaskLifecycleEvent => ({
 });
 
 describe('Rewards Lab lifecycle outbox', () => {
-  it('keeps the big-goal link as a minimum-grade signal', () => {
+  it.each([
+    ['big goal', { goalId: 'goal-1' }],
+    ['calendar event', { eventId: 'event-1' }],
+  ])('keeps the %s link as a minimum-grade signal', (_label, link) => {
     const event = completedEvent();
     const converted = toRewardsLabLifecycleEvent({
       ...event,
-      task: { ...event.task, goalId: 'goal-1' },
+      task: { ...event.task, ...link },
     });
 
-    expect(converted).toMatchObject({ type: 'task.completed', goalLinked: true });
+    expect(converted).toMatchObject({ type: 'task.completed', minimumUncommon: true });
   });
 
   it('survives a reload boundary and drains strictly in insertion order', () => {

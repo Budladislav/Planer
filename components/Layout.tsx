@@ -1,10 +1,13 @@
 import React from 'react';
 import { ViewState } from '../types';
 import {
-  Target, Calendar, ChevronLeft, List, Settings, type LucideIcon,
+  Target, Calendar, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CopyPlus, Flag, Heart, List, Settings, type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
+import { useAppStore } from '../store';
+import { getMobileNavigationCapacity } from '../navigation';
+import type { PrimaryNavigationView } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,34 +16,80 @@ interface LayoutProps {
 }
 
 interface NavigationItem {
-  view: ViewState;
+  view: PrimaryNavigationView | 'settings';
   icon: LucideIcon;
   label: string;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigate }) => {
+  const { state } = useAppStore();
   const { language, t } = useI18n();
+  const navRef = React.useRef<HTMLElement>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [navWidth, setNavWidth] = React.useState(360);
+  const [scrollEdges, setScrollEdges] = React.useState({ left: false, right: false });
 
   React.useEffect(() => {
     document.documentElement.lang = language;
     document.title = language === 'ru' ? 'Планировщик Takt' : 'Takt Planner';
   }, [language]);
 
-  const primaryNavItems: NavigationItem[] = [
-    { view: 'events', icon: Calendar, label: t('Calendar') },
-    { view: 'week', icon: List, label: t('Week') },
-    { view: 'today', icon: Target, label: t('Today') },
+  const navigationDefinitions: Record<PrimaryNavigationView, Omit<NavigationItem, 'view'>> = {
+    today: { icon: Target, label: t('Today') },
+    week: { icon: List, label: t('Week') },
+    month: { icon: CalendarRange, label: t('Month') },
+    year: { icon: CalendarDays, label: t('Year') },
+    inbox: { icon: Heart, label: t('I wish') },
+    'weekly-template': { icon: CopyPlus, label: t('Plans') },
+    goals: { icon: Flag, label: t('Long-term goals') },
+    events: { icon: Calendar, label: t('Calendar') },
+  };
+  const primaryNavItems: NavigationItem[] = state.uiPreferences.navigationItems.map(view => ({
+    view,
+    ...navigationDefinitions[view],
+  }));
+  const selectedViews = new Set(state.uiPreferences.navigationItems);
+  const settingsChildViews: ViewState[] = [
+    'inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals', 'events', 'week', 'today',
   ];
-  const mobileNavItems: NavigationItem[] = [
-    { view: 'settings', icon: Settings, label: t('Settings') },
-    ...primaryNavItems,
+  const settingsViews: ViewState[] = [
+    'settings', 'done', 'reports',
+    ...settingsChildViews.filter(view => !selectedViews.has(view as PrimaryNavigationView)),
   ];
-  const settingsChildViews: ViewState[] = ['inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals'];
-  const settingsViews: ViewState[] = ['settings', ...settingsChildViews];
-  const isSettingsChildView = settingsChildViews.includes(currentView);
+  const isSettingsChildView = settingsChildViews.includes(currentView) || currentView === 'day';
+  const hasPrimaryNavigationItem = currentView === 'day'
+    ? selectedViews.has('today')
+    : selectedViews.has(currentView as PrimaryNavigationView);
   const isNavigationActive = (view: ViewState) => view === 'settings'
-    ? settingsViews.includes(currentView)
-    : currentView === view;
+    ? settingsViews.includes(currentView) || (currentView === 'day' && !selectedViews.has('today'))
+    : view === 'today' ? currentView === 'today' || currentView === 'day' : currentView === view;
+
+  const updateScrollEdges = React.useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    setScrollEdges({
+      left: element.scrollLeft > 2,
+      right: element.scrollLeft + element.clientWidth < element.scrollWidth - 2,
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const element = navRef.current;
+    if (!element) return;
+    const updateWidth = () => setNavWidth(element.clientWidth || window.innerWidth);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    const frame = window.requestAnimationFrame(updateScrollEdges);
+    return () => window.cancelAnimationFrame(frame);
+  }, [navWidth, primaryNavItems.length, updateScrollEdges]);
+
+  const capacity = getMobileNavigationCapacity(navWidth);
+  const itemWidth = Math.max(68, Math.floor((navWidth - 8 - (capacity - 1) * 2) / capacity));
 
   const DesktopNavItem = ({ view, icon: Icon, label }: NavigationItem) => {
     const isActive = isNavigationActive(view);
@@ -70,7 +119,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       <button
         type="button"
         onClick={() => onNavigate(view)}
-        className={`relative flex h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition-colors ${
+        style={{ width: itemWidth }}
+        className={`relative flex h-[58px] flex-none flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition-colors ${
           isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
         }`}
         title={label}
@@ -105,7 +155,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <main className={`app-main mx-auto w-full flex-1 overflow-y-auto px-3 pt-3 lg:px-6 lg:pt-5 ${currentView === 'settings' ? 'max-w-6xl' : 'max-w-4xl'}`}>
-          {isSettingsChildView && (
+          {isSettingsChildView && !hasPrimaryNavigationItem && (
             <button
               type="button"
               onClick={() => onNavigate('settings')}
@@ -118,9 +168,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           {children}
         </main>
 
-        <nav className="mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden" aria-label={t('Main navigation')}>
-          <div className="flex w-full items-center gap-0.5">
-            {mobileNavItems.map(item => <MobileNavItem key={item.view} {...item} />)}
+        <nav ref={navRef} className="mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden" aria-label={t('Main navigation')}>
+          <MobileNavItem view="settings" icon={Settings} label={t('Settings')} />
+          <div className="relative min-w-0 flex-1">
+            <div
+              ref={scrollRef}
+              onScroll={updateScrollEdges}
+              className="mobile-nav-scroll flex snap-x snap-mandatory items-center gap-0.5 overflow-x-auto overscroll-x-contain"
+            >
+              {primaryNavItems.map(item => (
+                <span key={item.view} className="flex-none snap-start"><MobileNavItem {...item} /></span>
+              ))}
+            </div>
+            {scrollEdges.left && <span className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-white to-transparent" aria-hidden="true" />}
+            {scrollEdges.right && (
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex w-7 items-center justify-end bg-gradient-to-l from-white via-white/90 to-transparent pr-0.5 text-slate-400" aria-hidden="true">
+                <ChevronRight className="h-3.5 w-3.5" />
+              </span>
+            )}
           </div>
         </nav>
       </div>
