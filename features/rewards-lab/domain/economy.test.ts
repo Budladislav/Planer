@@ -17,9 +17,11 @@ import {
   redeemReward,
   redeemPurchase,
   refundRedemption,
+  reorderRewardDefinitions,
   regradeReversedTaskClaim,
   reverseTaskCompletion,
   setTaskGrade,
+  setRewardCatalogView,
   updateRewardDefinition,
   undoLatestKeyUpgrade,
   upgradeRewardKeys,
@@ -324,6 +326,68 @@ describe('reward catalog and wallet', () => {
     expect(refunded.outcome).toBe('refunded');
     expect(getWalletBalance(refunded.state)).toBe(10);
     expect(refundRedemption(refunded.state, redeemed.transaction!.id, runtime).outcome).toBe('already-refunded');
+  });
+
+  it('supports credit-only rewards without consuming a key', () => {
+    const runtime = makeRuntime();
+    const funded = adjustWalletBalance(createDefaultRewardsLabState(), 10, 'Seed', runtime).state;
+    const added = addRewardDefinition(funded, {
+      title: 'Music', cost: 3, paymentMode: 'credits',
+    }, runtime);
+    const redeemed = redeemReward(added.state, added.reward.id, runtime);
+
+    expect(redeemed.outcome).toBe('redeemed');
+    expect(redeemed.transaction).toMatchObject({ amount: -3 });
+    expect(redeemed.transaction).not.toHaveProperty('keyId');
+    expect(getWalletBalance(redeemed.state)).toBe(7);
+    const refunded = refundRedemption(redeemed.state, redeemed.transaction!.id, runtime).state;
+    expect(refunded.keys).toEqual([]);
+    expect(getWalletBalance(refunded)).toBe(10);
+  });
+
+  it('supports key-only rewards and records a reversible zero-credit redemption', () => {
+    const runtime = makeRuntime();
+    const added = addRewardDefinition(withCommonKey(), {
+      title: 'Free pass', cost: 0, paymentMode: 'key', variableCost: true,
+    }, runtime);
+    expect(added.reward).toMatchObject({ cost: 0, variableCost: false, paymentMode: 'key' });
+
+    const redeemed = redeemReward(added.state, added.reward.id, runtime);
+    expect(redeemed.outcome).toBe('redeemed');
+    expect(redeemed.transaction).toMatchObject({ amount: 0, keyId: 'key-1' });
+    expect(getWalletBalance(redeemed.state)).toBe(0);
+    expect(getAvailableKeyCounts(redeemed.state).common).toBe(0);
+
+    const refunded = refundRedemption(redeemed.state, redeemed.transaction!.id, runtime);
+    expect(refunded.outcome).toBe('refunded');
+    expect(getAvailableKeyCounts(refunded.state).common).toBe(1);
+  });
+
+  it('reports every current redemption blocker', () => {
+    const runtime = makeRuntime();
+    const added = addRewardDefinition(createDefaultRewardsLabState(), {
+      title: 'Treat', cost: 5, paymentMode: 'credits-and-key',
+    }, runtime);
+    const availability = getRedemptionAvailability(added.state, {
+      ...added.reward, kind: 'reward', active: true,
+    });
+
+    expect(availability.outcome).toBe('insufficient-balance');
+    expect(availability.blockers?.map(blocker => blocker.outcome)).toEqual([
+      'insufficient-balance', 'missing-key',
+    ]);
+  });
+
+  it('persists one reward order across views while preserving archived positions', () => {
+    const runtime = makeRuntime();
+    const first = addRewardDefinition(createDefaultRewardsLabState(), { title: 'A', cost: 1 }, runtime);
+    const second = addRewardDefinition(first.state, { title: 'B', cost: 1 }, runtime);
+    const third = addRewardDefinition(second.state, { title: 'C', cost: 1 }, runtime);
+    const archived = archiveRewardDefinition(third.state, second.reward.id, runtime).state;
+    const reordered = reorderRewardDefinitions(archived, [third.reward.id, first.reward.id]);
+
+    expect([...reordered.rewards].sort((a, b) => a.displayOrder - b.displayOrder).map(item => item.title)).toEqual(['C', 'B', 'A']);
+    expect(setRewardCatalogView(reordered, 'compact').rewardCatalogView).toBe('compact');
   });
 
   it('prevents spending an unrefunded one-time reward twice', () => {

@@ -1,4 +1,4 @@
-export const REWARDS_LAB_SCHEMA_VERSION = 3 as const;
+export const REWARDS_LAB_SCHEMA_VERSION = 4 as const;
 export const REWARDS_ECONOMY_VERSION = 3 as const;
 export const REWARDS_ECONOMY_V3_RELEASED_AT = '2026-09-07T00:00:00.000Z';
 
@@ -11,6 +11,8 @@ export const REWARD_GRADES = {
 } as const;
 
 export type RewardGrade = keyof typeof REWARD_GRADES;
+export type RewardPaymentMode = 'credits' | 'key' | 'credits-and-key';
+export type RewardCatalogView = 'detailed' | 'compact';
 export type RewardImportanceReason = 'week' | 'month' | 'year' | 'goal' | 'event';
 export type RewardRoll = 2 | 3 | 4;
 export type RewardLuckSlot = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -129,6 +131,8 @@ export interface RewardDefinition extends RewardLimitSettings {
   cost: number;
   variableCost: boolean;
   grade: RewardGrade;
+  paymentMode: RewardPaymentMode;
+  displayOrder: number;
   note: string;
   active: boolean;
   repeatable: boolean;
@@ -181,6 +185,7 @@ export interface RewardsLabState {
   keys: RewardKey[];
   keyUpgrades: RewardKeyUpgrade[];
   rewards: RewardDefinition[];
+  rewardCatalogView: RewardCatalogView;
   purchases: PurchaseItem[];
   starterCatalogInstalled: boolean;
   metrics: RewardsLabMetrics;
@@ -211,6 +216,7 @@ export const createDefaultRewardsLabState = (): RewardsLabState => ({
   keys: [],
   keyUpgrades: [],
   rewards: [],
+  rewardCatalogView: 'detailed',
   purchases: [],
   starterCatalogInstalled: false,
   metrics: {

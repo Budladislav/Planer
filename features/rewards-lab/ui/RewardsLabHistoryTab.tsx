@@ -113,17 +113,22 @@ export const HistoryTab = ({ state, onConfirm }: HistoryTabProps) => {
                   {t(transactionKindLabel[transaction.kind])} · {formatDateTime(transaction.occurredAt, locale)}
                   {economyVersion ? ` · v${economyVersion}` : ''}
                 </p>
+                {claim && (
+                  <span className={`mt-1 inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${gradeStyles[claim.grade].badge}`}>
+                    {t(REWARD_GRADES[claim.grade].label)}
+                  </span>
+                )}
                 {(claimKey || spentKey) && (() => {
                   const key = (transaction.kind === 'spend' ? spentKey ?? claimKey : claimKey ?? spentKey)!;
                   return <p className={`mt-0.5 flex items-center gap-1 text-xs ${gradeStyles[key.grade].keyText}`}><KeyRound className="h-3 w-3" />{transaction.kind === 'spend' ? t('{grade} key spent', { grade: t(REWARD_GRADES[key.grade].label) }) : t('{grade} key found', { grade: t(REWARD_GRADES[key.grade].label) })}</p>;
                 })()}
               </div>
-              <div className="shrink-0 text-right">
+              {transaction.amount !== 0 && <div className="shrink-0 text-right">
                 <p className={`font-semibold tabular-nums ${positive ? 'text-emerald-700' : 'text-slate-700'}`}>
                   {positive ? '+' : '−'}{Math.abs(transaction.amount)}
                 </p>
                 <p className="max-w-20 truncate text-[11px] text-slate-400">{state.currencyName}</p>
-              </div>
+              </div>}
               {refundable && (
                 <button
                   type="button"

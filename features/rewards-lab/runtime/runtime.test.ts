@@ -409,6 +409,20 @@ describe('Rewards Lab task lifecycle', () => {
 });
 
 describe('Rewards Lab wallet, catalog and controls', () => {
+  it('persists catalog view and manual reward order through the runtime', () => {
+    const storage = new MemoryStorage();
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    runtime.enable();
+    const first = runtime.addReward({ title: 'First', cost: 1 })!;
+    const second = runtime.addReward({ title: 'Second', cost: 1 })!;
+
+    expect(runtime.reorderRewards([second.id, first.id])).toBe(true);
+    expect(runtime.updateRewardCatalogView('compact')).toBe(true);
+    const state = runtime.getSnapshot().state!;
+    expect([...state.rewards].sort((a, b) => a.displayOrder - b.displayOrder).map(item => item.title)).toEqual(['Second', 'First']);
+    expect(loadRewardsLabState(storage).rewardCatalogView).toBe('compact');
+  });
+
   it('runs catalog, redemption, refund and settings actions through persisted state', () => {
     const storage = new MemoryStorage();
     const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());

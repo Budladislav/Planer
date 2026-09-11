@@ -16,6 +16,7 @@ import {
   RewardKeyUpgrade,
   RewardLuckSlot,
   RewardRoll,
+  RewardPaymentMode,
   RewardsEconomyVersion,
   RewardsLabMetrics,
   RewardsLabState,
@@ -72,6 +73,9 @@ const isRewardGrade = (value: unknown): value is RewardGrade => typeof value ===
 const isRewardRoll = (value: unknown): value is RewardRoll => value === 2 || value === 3 || value === 4;
 const isRewardLuckSlot = (value: unknown): value is RewardLuckSlot => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 8;
 const isEconomyVersion = (value: unknown): value is RewardsEconomyVersion => value === 1 || value === 2 || value === 3;
+const isRewardPaymentMode = (value: unknown): value is RewardPaymentMode => (
+  value === 'credits' || value === 'key' || value === 'credits-and-key'
+);
 
 const safeParse = (serialized: string | null): unknown => {
   if (serialized === null) return null;
@@ -186,11 +190,16 @@ const TRANSACTION_KINDS = new Set<WalletTransactionKind>(['earn', 'reverse', 're
 const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
   if (!isRecord(value) || !nonEmptyString(value.id) || typeof value.kind !== 'string'
     || !TRANSACTION_KINDS.has(value.kind as WalletTransactionKind)
-    || !Number.isInteger(value.amount) || Number(value.amount) === 0
+    || !Number.isInteger(value.amount)
+    || (Number(value.amount) === 0 && value.kind !== 'spend' && value.kind !== 'refund')
     || !nonEmptyString(value.occurredAt) || typeof value.label !== 'string'
     || !optionalString(value.taskId) || !optionalString(value.claimId)
     || !optionalString(value.rewardId) || !optionalString(value.purchaseId)
     || !optionalString(value.keyId) || !optionalString(value.relatedTransactionId)
+    || (Number(value.amount) === 0 && value.kind === 'spend'
+      && (!nonEmptyString(value.rewardId) || !nonEmptyString(value.keyId)))
+    || (Number(value.amount) === 0 && value.kind === 'refund'
+      && (!nonEmptyString(value.keyId) || !nonEmptyString(value.relatedTransactionId)))
     || (value.economyVersion !== undefined && !isEconomyVersion(value.economyVersion))) return null;
   return {
     id: value.id, kind: value.kind as WalletTransactionKind, amount: Number(value.amount),
@@ -225,15 +234,21 @@ const limitSettings = (value: Record<string, unknown>) => ({
 
 const sanitizeReward = (value: unknown): RewardDefinition | null => {
   if (!isRecord(value) || !nonEmptyString(value.id) || !nonEmptyString(value.title)
-    || !Number.isInteger(value.cost) || Number(value.cost) <= 0
+    || !Number.isInteger(value.cost) || Number(value.cost) < 0
     || typeof value.note !== 'string' || typeof value.active !== 'boolean'
     || typeof value.repeatable !== 'boolean' || !nonEmptyString(value.createdAt)
     || !nonEmptyString(value.updatedAt)) return null;
+  const paymentMode = isRewardPaymentMode(value.paymentMode) ? value.paymentMode : 'credits-and-key';
+  if (paymentMode !== 'key' && Number(value.cost) <= 0) return null;
   return {
     id: value.id, title: value.title, cost: Number(value.cost), note: value.note,
     active: value.active, repeatable: value.repeatable,
-    variableCost: typeof value.variableCost === 'boolean' ? value.variableCost : false,
+    variableCost: paymentMode !== 'key' && typeof value.variableCost === 'boolean' ? value.variableCost : false,
     grade: isRewardGrade(value.grade) ? value.grade : 'common',
+    paymentMode,
+    displayOrder: Number.isInteger(value.displayOrder) && Number(value.displayOrder) >= 0
+      ? Number(value.displayOrder)
+      : 0,
     ...limitSettings(value),
     ...(nonEmptyString(value.starterTemplateId) ? { starterTemplateId: value.starterTemplateId } : {}),
     createdAt: value.createdAt, updatedAt: value.updatedAt,
@@ -345,25 +360,32 @@ const sanitizeMetrics = (value: unknown): RewardsLabMetrics => {
 
 export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   const defaults = createDefaultRewardsLabState();
-  if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3)) {
+  if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2
+    && value.schemaVersion !== 3 && value.schemaVersion !== 4)) {
     return defaults;
   }
   const previousSchema = Number(value.schemaVersion);
   const claims = sanitizeClaims(value.claims);
-  const keys = previousSchema === 3 ? sanitizeKeys(value.keys) : [];
-  const rewards = sanitizeRewards(value.rewards);
+  const keys = previousSchema >= 3 ? sanitizeKeys(value.keys) : [];
+  const sanitizedRewards = sanitizeRewards(value.rewards);
+  const rewards = (previousSchema === 4
+    ? sanitizedRewards.sort((left, right) => left.displayOrder - right.displayOrder || left.createdAt.localeCompare(right.createdAt))
+    : sanitizedRewards).map((reward, index) => ({
+    ...reward,
+    displayOrder: index,
+  }));
   const storedCurrency = nonEmptyString(value.currencyName) ? value.currencyName.trim().slice(0, 40) : defaults.currencyName;
   const state: RewardsLabState = {
     schemaVersion: REWARDS_LAB_SCHEMA_VERSION,
     economyVersion: REWARDS_ECONOMY_VERSION,
-    economyActivatedAt: previousSchema === 3 && nonEmptyString(value.economyActivatedAt)
+    economyActivatedAt: previousSchema >= 3 && nonEmptyString(value.economyActivatedAt)
       ? value.economyActivatedAt
       : defaults.economyActivatedAt,
     currencyName: storedCurrency === 'Tokens' || storedCurrency === 'points' ? defaults.currencyName : storedCurrency,
     animationsEnabled: typeof value.animationsEnabled === 'boolean' ? value.animationsEnabled : defaults.animationsEnabled,
     taskGrades: sanitizeTaskGrades(value.taskGrades),
     fairBag: previousSchema === 1 ? defaults.fairBag : sanitizeFairBag(value.fairBag),
-    keyDropState: previousSchema === 3 && isRecord(value.keyDropState)
+    keyDropState: previousSchema >= 3 && isRecord(value.keyDropState)
       && Number.isInteger(value.keyDropState.dryStreak) && Number(value.keyDropState.dryStreak) >= 0
       ? { dryStreak: Math.min(7, Number(value.keyDropState.dryStreak)) }
       : defaults.keyDropState,
@@ -371,10 +393,11 @@ export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
     gradeCorrections: previousSchema === 1 ? [] : sanitizeGradeCorrections(value.gradeCorrections, claims),
     ledger: sanitizeLedger(value.ledger),
     keys,
-    keyUpgrades: previousSchema === 3 ? sanitizeKeyUpgrades(value.keyUpgrades, keys) : [],
+    keyUpgrades: previousSchema >= 3 ? sanitizeKeyUpgrades(value.keyUpgrades, keys) : [],
     rewards,
-    purchases: previousSchema === 3 ? sanitizePurchases(value.purchases) : [],
-    starterCatalogInstalled: previousSchema === 3 && value.starterCatalogInstalled === true,
+    rewardCatalogView: previousSchema === 4 && value.rewardCatalogView === 'compact' ? 'compact' : 'detailed',
+    purchases: previousSchema >= 3 ? sanitizePurchases(value.purchases) : [],
+    starterCatalogInstalled: previousSchema >= 3 && value.starterCatalogInstalled === true,
     metrics: sanitizeMetrics(value.metrics),
   };
   return state;
@@ -451,7 +474,8 @@ const restoreRaw = (storage: StorageLike, key: string, value: string | null): vo
 
 export const restoreRewardsBackupPayload = (storage: StorageLike, value: unknown): boolean => {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.enabled !== 'boolean'
-    || !isRecord(value.state) || (value.state.schemaVersion !== 1 && value.state.schemaVersion !== 2 && value.state.schemaVersion !== 3)
+    || !isRecord(value.state) || (value.state.schemaVersion !== 1 && value.state.schemaVersion !== 2
+      && value.state.schemaVersion !== 3 && value.state.schemaVersion !== 4)
     || (value.legacyLabArchive !== null && sanitizeLegacyArchive(value.legacyLabArchive) === null)) return false;
 
   const previous = {

@@ -7,6 +7,7 @@ import {
   REWARD_GRADES,
   REWARDS_ECONOMY_VERSION,
   RewardClaim,
+  RewardCatalogView,
   RewardDefinition,
   RewardGrade,
   RewardGradeCorrection,
@@ -14,6 +15,7 @@ import {
   RewardKeyUpgrade,
   RewardLuckSlot,
   RewardLimitSettings,
+  RewardPaymentMode,
   RewardsLabState,
   WalletTransaction,
 } from './types';
@@ -481,6 +483,7 @@ export interface RewardDefinitionInput extends Partial<RewardLimitSettings> {
   cost: number;
   variableCost?: boolean;
   grade?: RewardGrade;
+  paymentMode?: RewardPaymentMode;
   note?: string;
   active?: boolean;
   repeatable?: boolean;
@@ -503,15 +506,23 @@ const normalizeLimitSettings = (input: Partial<RewardLimitSettings>): RewardLimi
 
 const normalizeDefinitionInput = (
   input: RewardDefinitionInput,
-): Omit<RewardDefinition, 'id' | 'createdAt' | 'updatedAt'> => {
+): Omit<RewardDefinition, 'id' | 'createdAt' | 'updatedAt' | 'displayOrder'> => {
   const title = input.title.trim();
   if (!title) throw new Error('Reward title is required.');
-  if (!Number.isInteger(input.cost) || input.cost <= 0) throw new Error('Reward cost must be a positive integer.');
+  const paymentMode = input.paymentMode === 'credits' || input.paymentMode === 'key'
+    || input.paymentMode === 'credits-and-key'
+    ? input.paymentMode
+    : 'credits-and-key';
+  const usesCredits = paymentMode !== 'key';
+  if (usesCredits && (!Number.isInteger(input.cost) || input.cost <= 0)) {
+    throw new Error('Reward cost must be a positive integer.');
+  }
   return {
     title,
-    cost: input.cost,
-    variableCost: input.variableCost ?? false,
+    cost: usesCredits ? input.cost : 0,
+    variableCost: usesCredits ? input.variableCost ?? false : false,
     grade: input.grade && Object.hasOwn(REWARD_GRADES, input.grade) ? input.grade : 'common',
+    paymentMode,
     note: input.note?.trim() ?? '',
     active: input.active ?? true,
     repeatable: input.repeatable ?? true,
@@ -527,7 +538,9 @@ export const addRewardDefinition = (
 ): { state: RewardsLabState; reward: RewardDefinition } => {
   const timestamp = now(runtime);
   const reward: RewardDefinition = {
-    id: createId(runtime), ...normalizeDefinitionInput(input), createdAt: timestamp, updatedAt: timestamp,
+    id: createId(runtime), ...normalizeDefinitionInput(input),
+    displayOrder: state.rewards.reduce((maximum, item) => Math.max(maximum, item.displayOrder), -1) + 1,
+    createdAt: timestamp, updatedAt: timestamp,
   };
   return { state: { ...state, rewards: [...state.rewards, reward] }, reward };
 };
@@ -542,11 +555,41 @@ export const updateRewardDefinition = (
   if (!existing) return { state, reward: null };
   const reward: RewardDefinition = {
     ...existing, ...normalizeDefinitionInput(input),
+    displayOrder: existing.displayOrder,
     starterTemplateId: existing.starterTemplateId ?? input.starterTemplateId,
     updatedAt: now(runtime),
   };
   return { state: { ...state, rewards: state.rewards.map(item => item.id === rewardId ? reward : item) }, reward };
 };
+
+export const reorderRewardDefinitions = (
+  state: RewardsLabState,
+  orderedRewardIds: string[],
+): RewardsLabState => {
+  const activeIds = state.rewards.filter(reward => reward.active).map(reward => reward.id);
+  if (orderedRewardIds.length !== activeIds.length
+    || new Set(orderedRewardIds).size !== activeIds.length
+    || activeIds.some(id => !orderedRewardIds.includes(id))) return state;
+  let activeIndex = 0;
+  const mergedIds = [...state.rewards]
+    .sort((left, right) => left.displayOrder - right.displayOrder || left.createdAt.localeCompare(right.createdAt))
+    .map(reward => reward.active ? orderedRewardIds[activeIndex++] : reward.id);
+  const order = new Map(mergedIds.map((id, index) => [id, index]));
+  return {
+    ...state,
+    rewards: state.rewards.map(reward => ({
+      ...reward,
+      displayOrder: order.get(reward.id) ?? reward.displayOrder,
+    })),
+  };
+};
+
+export const setRewardCatalogView = (
+  state: RewardsLabState,
+  view: RewardCatalogView,
+): RewardsLabState => view === 'compact' || view === 'detailed'
+  ? { ...state, rewardCatalogView: view }
+  : state;
 
 export const archiveRewardDefinition = (
   state: RewardsLabState,
@@ -587,6 +630,11 @@ export interface RedemptionAvailability {
   outcome: RedemptionAvailabilityOutcome;
   nextAvailableAt?: string;
   missingAmount?: number;
+  blockers?: Array<{
+    outcome: Exclude<RedemptionAvailabilityOutcome, 'available'>;
+    nextAvailableAt?: string;
+    missingAmount?: number;
+  }>;
 }
 
 interface RedeemableTarget extends RewardLimitSettings {
@@ -596,6 +644,7 @@ interface RedeemableTarget extends RewardLimitSettings {
   repeatable: boolean;
   active: boolean;
   kind: 'reward' | 'purchase';
+  paymentMode?: RewardPaymentMode;
 }
 
 export const getRedemptionAvailability = (
@@ -607,11 +656,13 @@ export const getRedemptionAvailability = (
   const spends = getActiveSpendTransactions(state);
   const ownSpends = spends.filter(item => target.kind === 'reward' ? item.rewardId === target.id : item.purchaseId === target.id);
   if (!target.repeatable && ownSpends.length > 0) return { outcome: 'already-redeemed' };
-  if (getWalletBalance(state) < target.cost) {
-    return { outcome: 'insufficient-balance', missingAmount: target.cost - getWalletBalance(state) };
+  const paymentMode = target.kind === 'purchase' ? 'credits-and-key' : target.paymentMode ?? 'credits-and-key';
+  const blockers: NonNullable<RedemptionAvailability['blockers']> = [];
+  if (paymentMode !== 'key' && getWalletBalance(state) < target.cost) {
+    blockers.push({ outcome: 'insufficient-balance', missingAmount: target.cost - getWalletBalance(state) });
   }
-  if (!state.keys.some(key => key.grade === target.grade && key.status === 'available')) {
-    return { outcome: 'missing-key' };
+  if (paymentMode !== 'credits' && !state.keys.some(key => key.grade === target.grade && key.status === 'available')) {
+    blockers.push({ outcome: 'missing-key' });
   }
 
   const atTime = at.getTime();
@@ -619,7 +670,7 @@ export const getRedemptionAvailability = (
     const lastTime = Math.max(...ownSpends.map(item => new Date(item.occurredAt).getTime()).filter(Number.isFinite));
     const availableAt = lastTime + target.cooldownDays * 86_400_000;
     if (Number.isFinite(availableAt) && availableAt > atTime) {
-      return { outcome: 'cooldown', nextAvailableAt: new Date(availableAt).toISOString() };
+      blockers.push({ outcome: 'cooldown', nextAvailableAt: new Date(availableAt).toISOString() });
     }
   }
 
@@ -634,9 +685,10 @@ export const getRedemptionAvailability = (
       .sort((left, right) => left - right);
     if (recent.length >= target.limitCount) {
       const boundary = recent[recent.length - target.limitCount] + target.limitWindowDays * 86_400_000;
-      return { outcome: 'limit-reached', nextAvailableAt: new Date(boundary).toISOString() };
+      blockers.push({ outcome: 'limit-reached', nextAvailableAt: new Date(boundary).toISOString() });
     }
   }
+  if (blockers.length > 0) return { ...blockers[0], blockers };
   return { outcome: 'available' };
 };
 
@@ -671,19 +723,26 @@ export const redeemReward = (
   const runtime = typeof actualCostOrRuntime === 'object' ? actualCostOrRuntime : runtimeOverride;
   const reward = state.rewards.find(item => item.id === rewardId);
   if (!reward) return { state, transaction: null, outcome: 'not-found' };
-  const cost = reward.variableCost ? actualCost : reward.cost;
-  if (!Number.isInteger(cost) || Number(cost) <= 0) return { state, transaction: null, outcome: 'inactive' };
+  const usesCredits = reward.paymentMode !== 'key';
+  const usesKey = reward.paymentMode !== 'credits';
+  const cost = usesCredits ? (reward.variableCost ? actualCost : reward.cost) : 0;
+  if (!Number.isInteger(cost) || (usesCredits ? Number(cost) <= 0 : Number(cost) !== 0)) {
+    return { state, transaction: null, outcome: 'inactive' };
+  }
   const availability = getRedemptionAvailability(state, {
     ...reward, cost: Number(cost), kind: 'reward', active: reward.active,
   }, new Date(now(runtime)));
   if (availability.outcome !== 'available') return { state, transaction: null, outcome: availability.outcome };
 
   const transactionId = createId(runtime);
-  const keyResult = consumeKey(state.keys, reward.grade, transactionId);
-  if (!keyResult.key) return { state, transaction: null, outcome: 'missing-key' };
+  const keyResult = usesKey
+    ? consumeKey(state.keys, reward.grade, transactionId)
+    : { keys: state.keys, key: null };
+  if (usesKey && !keyResult.key) return { state, transaction: null, outcome: 'missing-key' };
   const spent: WalletTransaction = {
-    id: transactionId, kind: 'spend', amount: -Number(cost), occurredAt: now(runtime),
-    label: reward.title, rewardId: reward.id, keyId: keyResult.key.id,
+    id: transactionId, kind: 'spend', amount: usesCredits ? -Number(cost) : 0, occurredAt: now(runtime),
+    label: reward.title, rewardId: reward.id,
+    ...(keyResult.key ? { keyId: keyResult.key.id } : {}),
   };
   return {
     state: {
@@ -715,7 +774,7 @@ export const refundRedemption = (
     return { state, transaction: null, outcome: 'already-refunded' };
   }
   const refunded = transaction(runtime, {
-    kind: 'refund', amount: -spent.amount, label: `Refund: ${spent.label}`,
+    kind: 'refund', amount: spent.amount === 0 ? 0 : -spent.amount, label: `Refund: ${spent.label}`,
     rewardId: spent.rewardId, purchaseId: spent.purchaseId, keyId: spent.keyId,
     relatedTransactionId: spent.id,
   });

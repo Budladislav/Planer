@@ -19,7 +19,9 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
   const { t } = useI18n();
   const dialogRef = useRef<HTMLFormElement>(null);
   const destructive = confirmation.kind === 'reset' || confirmation.kind === 'erase';
-  const variableCost = confirmation.kind === 'redeem' && confirmation.reward.variableCost;
+  const variableCost = confirmation.kind === 'redeem'
+    && confirmation.reward.paymentMode !== 'key'
+    && confirmation.reward.variableCost;
   const purchaseCost = confirmation.kind === 'redeem-purchase';
   const initialCost = confirmation.kind === 'redeem'
     ? confirmation.reward.cost
@@ -32,9 +34,17 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
 
   if (confirmation.kind === 'redeem') {
     title = t('Redeem {title}?', { title: confirmation.reward.title });
-    message = confirmation.reward.variableCost
-      ? t('Enter the actual price. The same number of credits and one {grade} key will be deducted.', { grade: t(REWARD_GRADES[confirmation.reward.grade].label) })
-      : t('{amount} {currency} and one {grade} key will be deducted.', { amount: confirmation.reward.cost, currency: displayCurrency, grade: t(REWARD_GRADES[confirmation.reward.grade].label) });
+    if (confirmation.reward.paymentMode === 'key') {
+      message = t('One {grade} key will be deducted.', { grade: t(REWARD_GRADES[confirmation.reward.grade].label) });
+    } else if (confirmation.reward.paymentMode === 'credits') {
+      message = confirmation.reward.variableCost
+        ? t('Enter the actual price. The same number of credits will be deducted.')
+        : t('{amount} {currency} will be deducted.', { amount: confirmation.reward.cost, currency: displayCurrency });
+    } else {
+      message = confirmation.reward.variableCost
+        ? t('Enter the actual price. The same number of credits and one {grade} key will be deducted.', { grade: t(REWARD_GRADES[confirmation.reward.grade].label) })
+        : t('{amount} {currency} and one {grade} key will be deducted.', { amount: confirmation.reward.cost, currency: displayCurrency, grade: t(REWARD_GRADES[confirmation.reward.grade].label) });
+    }
     confirmLabel = t('Redeem');
   } else if (confirmation.kind === 'redeem-purchase') {
     title = t('Buy {title}?', { title: confirmation.purchase.title });
@@ -42,7 +52,13 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     confirmLabel = t('Buy');
   } else if (confirmation.kind === 'refund') {
     title = t('Undo this redemption?');
-    message = t('{amount} {currency} will be returned to your balance.', { amount: Math.abs(confirmation.transaction.amount), currency: displayCurrency });
+    if (confirmation.transaction.amount === 0 && confirmation.transaction.keyId) {
+      message = t('The spent key will be returned.');
+    } else if (confirmation.transaction.keyId) {
+      message = t('{amount} {currency} and the spent key will be returned.', { amount: Math.abs(confirmation.transaction.amount), currency: displayCurrency });
+    } else {
+      message = t('{amount} {currency} will be returned to your balance.', { amount: Math.abs(confirmation.transaction.amount), currency: displayCurrency });
+    }
     confirmLabel = t('Undo redemption');
   } else if (confirmation.kind === 'archive') {
     title = t('Archive {title}?', { title: confirmation.reward.title });

@@ -1,4 +1,4 @@
-import { Dice5, Gift, History, ShoppingBag, X } from 'lucide-react';
+import { BarChart3, Dice5, Gift, History, ShoppingBag, X } from 'lucide-react';
 import {
   KeyboardEvent as ReactKeyboardEvent,
   useEffect,
@@ -7,19 +7,17 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import {
-  getWalletBalance,
-} from '../domain';
 import { getRewardsLabRuntime } from '../runtime';
 import { useI18n } from '../../../i18n';
 import { Confirmation } from './RewardsLabPanel.shared';
 import { ConfirmationDialog } from './RewardsLabConfirmationDialog';
 import { HistoryTab } from './RewardsLabHistoryTab';
 import { RewardsTab } from './RewardsLabRewardsTab';
+import { RewardsLabSummary } from './RewardsLabSummary';
 import { PurchasesTab } from './RewardsLabPurchasesTab';
 import { RulesTab } from './RewardsLabRulesTab';
 
-type LabTab = 'rewards' | 'purchases' | 'history' | 'rules';
+type LabTab = 'rewards' | 'statistics' | 'history' | 'purchases' | 'rules';
 
 interface NoticeProps {
   message: string | null;
@@ -50,8 +48,9 @@ const Notice = ({ message, onDismiss }: NoticeProps) => {
 
 const tabs: Array<{ id: LabTab; label: string; icon: typeof Gift }> = [
   { id: 'rewards', label: 'Rewards', icon: Gift },
-  { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
+  { id: 'statistics', label: 'Statistics', icon: BarChart3 },
   { id: 'history', label: 'History', icon: History },
+  { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
   { id: 'rules', label: 'Rules', icon: Dice5 },
 ];
 
@@ -109,7 +108,6 @@ const RewardsLabPanel = () => {
 
   if (!snapshot.isOpen || !snapshot.state) return null;
   const state = snapshot.state;
-  const balance = getWalletBalance(state);
 
   const trapFocus = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Tab' || confirmation) return;
@@ -145,7 +143,7 @@ const RewardsLabPanel = () => {
       else setNotice(t('The purchase could not be completed.'));
     } else if (confirmation.kind === 'refund') {
       const outcome = runtime.refund(confirmation.transaction.id);
-      setNotice(outcome === 'refunded' ? t('Redemption undone and balance restored.') : t('That redemption was already handled.'));
+      setNotice(outcome === 'refunded' ? t('Redemption undone and spent resources restored.') : t('That redemption was already handled.'));
     } else if (confirmation.kind === 'archive') {
       if (runtime.archiveReward(confirmation.reward.id)) setNotice(t('{title} archived.', { title: confirmation.reward.title }));
     } else if (confirmation.kind === 'upgrade-key') {
@@ -195,9 +193,6 @@ const RewardsLabPanel = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden max-w-48 truncate rounded-full bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-700 sm:block" aria-label={t('Balance: {balance} {currency}', { balance, currency: state.currencyName === 'points' ? t('points') : state.currencyName })}>
-                {balance} {state.currencyName}
-              </div>
               <button
                 ref={closeButtonRef}
                 type="button"
@@ -210,7 +205,7 @@ const RewardsLabPanel = () => {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-1" role="tablist" aria-label={t('Rewards sections')}>
+          <div className="mt-4 flex gap-1 overflow-x-auto" role="tablist" aria-label={t('Rewards sections')}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
@@ -223,7 +218,7 @@ const RewardsLabPanel = () => {
                   aria-selected={selected}
                   aria-controls={`rewards-panel-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex min-h-11 items-center justify-center gap-2 rounded-t-xl border-b-2 px-2 text-sm font-medium transition-colors ${selected ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                  className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-t-xl border-b-2 px-3 text-sm font-medium transition-colors ${selected ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {t(tab.label)}
@@ -246,8 +241,9 @@ const RewardsLabPanel = () => {
             aria-labelledby={`rewards-tab-${activeTab}`}
           >
             {activeTab === 'rewards' && <RewardsTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
-            {activeTab === 'purchases' && <PurchasesTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
+            {activeTab === 'statistics' && <RewardsLabSummary state={state} onRefund={transaction => openConfirmation({ kind: 'refund', transaction })} onUpgrade={fromGrade => openConfirmation({ kind: 'upgrade-key', fromGrade })} onUndoUpgrade={() => openConfirmation({ kind: 'undo-key-upgrade' })} />}
             {activeTab === 'history' && <HistoryTab state={state} onConfirm={openConfirmation} />}
+            {activeTab === 'purchases' && <PurchasesTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
             {activeTab === 'rules' && <RulesTab state={state} onNotice={setNotice} onConfirm={openConfirmation} />}
           </div>
         </main>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, setTaskGrade } from '../domain';
+import { addRewardDefinition, claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, redeemReward, setTaskGrade } from '../domain';
 import {
   LEGACY_REWARDS_LAB_ARCHIVE_KEY,
   LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY,
@@ -137,7 +137,7 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       economyVersion: 3,
       currencyName: 'Креды',
       animationsEnabled: false,
@@ -182,14 +182,74 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 3, economyVersion: 3, currencyName: 'Креды',
+      schemaVersion: 4, economyVersion: 3, currencyName: 'Креды',
       fairBag: { remaining: [1, 2, 3], cycle: 4 }, keyDropState: { dryStreak: 0 },
       keys: [], purchases: [], starterCatalogInstalled: false,
     });
     expect(migrated.claims.task).toMatchObject({ economyVersion: 2, luckSlot: 4, amount: 7 });
     expect(migrated.rewards).toHaveLength(1);
-    expect(migrated.rewards[0]).toMatchObject({ grade: 'common', variableCost: false, cooldownDays: 0 });
+    expect(migrated.rewards[0]).toMatchObject({
+      grade: 'common', variableCost: false, cooldownDays: 0,
+      paymentMode: 'credits-and-key', displayOrder: 0,
+    });
+    expect(migrated.rewardCatalogView).toBe('detailed');
     expect(getWalletBalance(migrated)).toBe(7);
+  });
+
+  it('migrates the 6.1 schema without changing existing reward requirements', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
+      ...createDefaultRewardsLabState(),
+      schemaVersion: 3,
+      rewardCatalogView: undefined,
+      rewards: [
+        {
+          id: 'old-a', title: 'Cinema', cost: 15, variableCost: true, grade: 'rare',
+          note: '', active: true, repeatable: true, cooldownDays: 0,
+          limitCount: null, limitWindowDays: null, limitGroup: '',
+          createdAt: '2026-09-10T10:00:00.000Z', updatedAt: '2026-09-10T10:00:00.000Z',
+        },
+        {
+          id: 'old-b', title: 'Music', cost: 1, variableCost: false, grade: 'common',
+          note: '', active: true, repeatable: true, cooldownDays: 0,
+          limitCount: null, limitWindowDays: null, limitGroup: '',
+          createdAt: '2026-09-10T10:01:00.000Z', updatedAt: '2026-09-10T10:01:00.000Z',
+        },
+      ],
+    }));
+
+    const migrated = loadRewardsLabState(storage);
+    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.rewardCatalogView).toBe('detailed');
+    expect(migrated.rewards).toMatchObject([
+      { id: 'old-a', paymentMode: 'credits-and-key', displayOrder: 0, cost: 15, grade: 'rare' },
+      { id: 'old-b', paymentMode: 'credits-and-key', displayOrder: 1, cost: 1, grade: 'common' },
+    ]);
+  });
+
+  it('round-trips key-only redemptions and compact catalog preference', () => {
+    const storage = new MemoryStorage();
+    const state = {
+      ...createDefaultRewardsLabState(),
+      rewardCatalogView: 'compact' as const,
+      keys: [{
+        id: 'key-only', grade: 'common' as const, status: 'available' as const,
+        createdAt: '2026-09-11T10:00:00.000Z',
+      }],
+    };
+    const added = addRewardDefinition(state, {
+      title: 'Key pass', cost: 0, paymentMode: 'key',
+    }, { createId: () => 'reward-key-only', now: () => '2026-09-11T10:00:00.000Z' });
+    const redeemed = redeemReward(added.state, added.reward.id, {
+      createId: () => 'spend-key-only', now: () => '2026-09-11T10:01:00.000Z',
+    });
+
+    expect(saveRewardsLabState(storage, redeemed.state)).toBe(true);
+    const restored = loadRewardsLabState(storage);
+    expect(restored.rewardCatalogView).toBe('compact');
+    expect(restored.rewards[0]).toMatchObject({ paymentMode: 'key', cost: 0 });
+    expect(restored.ledger.at(-1)).toMatchObject({ kind: 'spend', amount: 0, keyId: 'key-only' });
+    expect(restored.keys[0].status).toBe('spent');
   });
 
   it('sanitizes invalid nested values without importing them into the wallet', () => {

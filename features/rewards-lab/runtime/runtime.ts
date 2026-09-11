@@ -4,6 +4,7 @@ import {
   PurchaseItemInput,
   RewardDefinition,
   RewardDefinitionInput,
+  RewardCatalogView,
   RewardGrade,
   RewardsLabState,
   WalletTransaction,
@@ -19,9 +20,11 @@ import {
   recordLabOpened,
   redeemPurchase,
   redeemReward,
+  reorderRewardDefinitions,
   refundRedemption,
   reverseTaskCompletion,
   setTaskGrade as setDomainTaskGrade,
+  setRewardCatalogView,
   updateRewardDefinition,
   updatePurchaseItem,
   upgradeRewardKeys,
@@ -95,6 +98,8 @@ export interface RewardsLabRuntime {
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
   archiveReward(rewardId: string): boolean;
+  reorderRewards(orderedRewardIds: string[]): boolean;
+  updateRewardCatalogView(view: RewardCatalogView): boolean;
   redeem(rewardId: string, actualCost?: number): RedeemRewardOutcome;
   upgradeKeys(fromGrade: RewardGrade): boolean;
   undoLatestKeyUpgrade(): 'reversed' | 'not-found' | 'output-used';
@@ -444,6 +449,25 @@ export const createRewardsLabRuntime = (
         if (unavailable()) return false;
         const result = archiveRewardDefinition(snapshot.state!, rewardId, economyRuntime);
         return result.reward ? persist(result.state) : false;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    reorderRewards: orderedRewardIds => {
+      try {
+        if (unavailable()) return false;
+        const nextState = reorderRewardDefinitions(snapshot.state!, orderedRewardIds);
+        return nextState === snapshot.state ? false : persist(nextState);
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    updateRewardCatalogView: view => {
+      try {
+        if (unavailable()) return false;
+        return persist(setRewardCatalogView(snapshot.state!, view));
       } catch (error) {
         return fail(errorMessage(error));
       }
