@@ -2,6 +2,20 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [5.5.1] — 11.09.2026 — “Entry Point”
+
+### Added
+
+- Main menu settings now include a start page: every new Takt session can open on any available section, even when that section is hidden from the bottom navigation.
+
+### Changed
+
+- A short mobile bottom navigation is now centered; priority alignment remains unchanged when the available width is filled and horizontal scrolling is needed.
+
+### Safety
+
+- The core schema advances to 15 only for the start-page preference. Existing installations safely default to Today without changing tasks, events, notes, or rewards.
+
 ## [5.5.0] — 10.09.2026 — “Continuous Route”
 
 ### Added
