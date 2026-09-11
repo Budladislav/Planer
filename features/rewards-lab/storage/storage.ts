@@ -23,13 +23,35 @@ import {
   WalletTransactionKind,
   createDefaultRewardsLabState,
   getV2RewardAmount,
-  installStarterCatalog,
 } from '../domain';
-import { REWARDS_LAB_EXPERIMENT_FLAGS_KEY } from '../contracts';
-import { clearRewardsLabLifecycleOutbox } from '../outbox';
+import {
+  LEGACY_REWARDS_LAB_ARCHIVE_KEY,
+  LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY,
+  LEGACY_REWARDS_LAB_OUTBOX_KEY,
+  LEGACY_REWARDS_LAB_STORAGE_KEY,
+  REWARDS_LAB_EXPERIMENT_FLAGS_KEY,
+} from '../contracts';
+import { REWARDS_LAB_LIFECYCLE_OUTBOX_KEY, clearRewardsLabLifecycleOutbox } from '../outbox';
 
 export const EXPERIMENT_FLAGS_STORAGE_KEY = REWARDS_LAB_EXPERIMENT_FLAGS_KEY;
-export const REWARDS_LAB_STORAGE_KEY = 'monofocus:rewards-lab:v1';
+export const REWARDS_LAB_STORAGE_KEY = 'takt:rewards:state:v1';
+
+export interface LegacyRewardsLabArchive {
+  schemaVersion: 1;
+  archivedAt: string;
+  payload: {
+    flags: string | null;
+    state: string | null;
+    outbox: string | null;
+  };
+}
+
+export interface RewardsBackupPayload {
+  schemaVersion: 1;
+  enabled: boolean;
+  state: RewardsLabState;
+  legacyLabArchive: LegacyRewardsLabArchive | null;
+}
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -314,19 +336,10 @@ const sanitizeMetrics = (value: unknown): RewardsLabMetrics => {
   };
 };
 
-const withStarterCatalogWhenEmpty = (state: RewardsLabState): RewardsLabState => (
-  !state.starterCatalogInstalled && state.rewards.length === 0
-    ? installStarterCatalog(state, {
-        now: () => state.economyActivatedAt,
-        createId: (() => { let index = 0; return () => `starter-${++index}`; })(),
-      }).state
-    : state
-);
-
 export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   const defaults = createDefaultRewardsLabState();
   if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3)) {
-    return withStarterCatalogWhenEmpty(defaults);
+    return defaults;
   }
   const previousSchema = Number(value.schemaVersion);
   const claims = sanitizeClaims(value.claims);
@@ -357,7 +370,7 @@ export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
     starterCatalogInstalled: previousSchema === 3 && value.starterCatalogInstalled === true,
     metrics: sanitizeMetrics(value.metrics),
   };
-  return withStarterCatalogWhenEmpty(state);
+  return state;
 };
 
 export const loadRewardsLabState = (storage: StorageLike): RewardsLabState => (
@@ -376,4 +389,90 @@ export const eraseRewardsLab = (storage: StorageLike): boolean => {
   const disabled = setRewardsLabEnabled(storage, false);
   if (!disabled) return false;
   return clearRewardsLabData(storage) && clearRewardsLabLifecycleOutbox(storage);
+};
+
+const readRaw = (storage: StorageLike, key: string): string | null => {
+  try { return storage.getItem(key); } catch { return null; }
+};
+
+const sanitizeLegacyArchive = (value: unknown): LegacyRewardsLabArchive | null => {
+  if (!isRecord(value) || value.schemaVersion !== 1 || !nonEmptyString(value.archivedAt) || !isRecord(value.payload)) return null;
+  const { flags, state, outbox } = value.payload;
+  if (!nullableString(flags) || !nullableString(state) || !nullableString(outbox)) return null;
+  return { schemaVersion: 1, archivedAt: value.archivedAt, payload: { flags, state, outbox } };
+};
+
+export const loadLegacyRewardsLabArchive = (storage: StorageLike): LegacyRewardsLabArchive | null => (
+  sanitizeLegacyArchive(safeRead(storage, LEGACY_REWARDS_LAB_ARCHIVE_KEY))
+);
+
+export const ensureLegacyRewardsLabArchive = (
+  storage: StorageLike,
+  archivedAt = new Date().toISOString(),
+): LegacyRewardsLabArchive | null => {
+  const existing = loadLegacyRewardsLabArchive(storage);
+  if (existing) return existing;
+
+  const payload = {
+    flags: readRaw(storage, LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY),
+    state: readRaw(storage, LEGACY_REWARDS_LAB_STORAGE_KEY),
+    outbox: readRaw(storage, LEGACY_REWARDS_LAB_OUTBOX_KEY),
+  };
+  if (payload.flags === null && payload.state === null && payload.outbox === null) return null;
+
+  const archive: LegacyRewardsLabArchive = { schemaVersion: 1, archivedAt, payload };
+  try {
+    storage.setItem(LEGACY_REWARDS_LAB_ARCHIVE_KEY, JSON.stringify(archive));
+    return archive;
+  } catch {
+    // The untouched legacy keys are still the primary safety copy.
+    return archive;
+  }
+};
+
+export const createRewardsBackupPayload = (storage: StorageLike): RewardsBackupPayload => ({
+  schemaVersion: 1,
+  enabled: loadExperimentFlags(storage).rewardsLab,
+  state: loadRewardsLabState(storage),
+  legacyLabArchive: ensureLegacyRewardsLabArchive(storage),
+});
+
+const restoreRaw = (storage: StorageLike, key: string, value: string | null): void => {
+  if (value === null) storage.removeItem(key);
+  else storage.setItem(key, value);
+};
+
+export const restoreRewardsBackupPayload = (storage: StorageLike, value: unknown): boolean => {
+  if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.enabled !== 'boolean'
+    || !isRecord(value.state) || (value.state.schemaVersion !== 1 && value.state.schemaVersion !== 2 && value.state.schemaVersion !== 3)
+    || (value.legacyLabArchive !== null && sanitizeLegacyArchive(value.legacyLabArchive) === null)) return false;
+
+  const previous = {
+    flags: readRaw(storage, EXPERIMENT_FLAGS_STORAGE_KEY),
+    state: readRaw(storage, REWARDS_LAB_STORAGE_KEY),
+    outbox: readRaw(storage, REWARDS_LAB_LIFECYCLE_OUTBOX_KEY),
+    archive: readRaw(storage, LEGACY_REWARDS_LAB_ARCHIVE_KEY),
+  };
+  const rollback = () => {
+    try {
+      restoreRaw(storage, EXPERIMENT_FLAGS_STORAGE_KEY, previous.flags);
+      restoreRaw(storage, REWARDS_LAB_STORAGE_KEY, previous.state);
+      restoreRaw(storage, REWARDS_LAB_LIFECYCLE_OUTBOX_KEY, previous.outbox);
+      restoreRaw(storage, LEGACY_REWARDS_LAB_ARCHIVE_KEY, previous.archive);
+    } catch {
+      // Best effort only: callers still receive a failed import result.
+    }
+  };
+
+  try {
+    storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify(sanitizeRewardsLabState(value.state)));
+    storage.removeItem(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY);
+    const archive = value.legacyLabArchive === null ? null : sanitizeLegacyArchive(value.legacyLabArchive);
+    if (archive) storage.setItem(LEGACY_REWARDS_LAB_ARCHIVE_KEY, JSON.stringify(archive));
+    if (!setRewardsLabEnabled(storage, value.enabled)) throw new Error('flag write failed');
+    return true;
+  } catch {
+    rollback();
+    return false;
+  }
 };

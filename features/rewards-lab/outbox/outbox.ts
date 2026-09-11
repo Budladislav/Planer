@@ -1,6 +1,6 @@
 import type { TaskLifecycleEvent } from '../../../task-lifecycle';
 
-export const REWARDS_LAB_LIFECYCLE_OUTBOX_KEY = 'monofocus:rewards-lab:lifecycle-outbox:v1';
+export const REWARDS_LAB_LIFECYCLE_OUTBOX_KEY = 'takt:rewards:lifecycle-outbox:v1';
 
 const OUTBOX_SCHEMA_VERSION = 1 as const;
 
@@ -175,7 +175,7 @@ export const enqueueRewardsLabLifecycleEvent = (
   return saveOutbox(storage, outbox);
 };
 
-/** Remove all pending experimental lifecycle work without touching planner data. */
+/** Remove all pending optional reward lifecycle work without touching planner data. */
 export const clearRewardsLabLifecycleOutbox = (storage: RewardsLabOutboxStorage): boolean => {
   try {
     storage.removeItem(REWARDS_LAB_LIFECYCLE_OUTBOX_KEY);

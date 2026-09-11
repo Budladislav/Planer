@@ -1,4 +1,4 @@
-import { Gift, LibraryBig, Plus } from 'lucide-react';
+import { Gift, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { RewardDefinition, RewardDefinitionInput, RewardsLabState } from '../domain';
 import { getRewardsLabRuntime } from '../runtime';
@@ -44,10 +44,7 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 className="font-semibold text-slate-900">{t('Your rewards')}</h2><p className="text-xs text-slate-500">{t('Every reward needs credits and one matching key.')}</p></div>
-          <div className="flex flex-wrap gap-2">
-            {!state.starterCatalogInstalled && <button type="button" onClick={() => { const count = runtime.installStarterCatalog(); onNotice(t('{count} starter rewards added.', { count })); }} className={secondaryButton}><LibraryBig className="h-4 w-4" />{t('Add starter catalog')}</button>}
-            <button type="button" onClick={() => { setEditing(null); setFormOpen(true); }} className={secondaryButton}><Plus className="h-4 w-4" />{t('Add reward')}</button>
-          </div>
+          <button type="button" onClick={() => { setEditing(null); setFormOpen(true); }} className={secondaryButton}><Plus className="h-4 w-4" />{t('Add reward')}</button>
         </div>
       )}
 

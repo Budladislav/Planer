@@ -60,16 +60,16 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     message = t('The upgraded key will be removed and the five source keys returned.');
     confirmLabel = t('Undo upgrade');
   } else if (confirmation.kind === 'disable') {
-    title = t('Disable Rewards Lab?');
-    message = t('The experiment will disappear from the planner, but all grades, keys, rewards, purchases, and wallet history will stay on this device.');
+    title = t('Disable Rewards?');
+    message = t('Rewards will disappear from the planner, but all grades, keys, rewards, purchases, and wallet history will stay on this device and in future backups.');
     confirmLabel = t('Disable, keep data');
   } else if (confirmation.kind === 'reset') {
-    title = t('Reset the experiment?');
-    message = t('This permanently clears task grades, wallet history, claims, keys, rewards, purchases, and settings. Rewards Lab will stay enabled. Planner tasks are not affected.');
-    confirmLabel = t('Reset Rewards Lab');
+    title = t('Reset Rewards?');
+    message = t('This permanently clears official task grades, wallet history, claims, keys, rewards, purchases, and settings. Rewards will stay enabled. Planner tasks and the previous lab archive are not affected.');
+    confirmLabel = t('Reset Rewards');
   } else {
-    title = t('Disable and erase Rewards Lab?');
-    message = t('This permanently removes all experimental data from this device and turns the feature off. Planner tasks are not affected.');
+    title = t('Disable and erase Rewards?');
+    message = t('This permanently removes all official Rewards data from this device and turns the feature off. Planner tasks and the previous lab archive are not affected.');
     confirmLabel = t('Disable & erase');
   }
 

@@ -101,9 +101,9 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         <div className="flex gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
           <div>
-            <h2 className="font-semibold text-amber-950">{t('An isolated, device-local experiment')}</h2>
+            <h2 className="font-semibold text-amber-950">{t('An isolated optional module')}</h2>
             <p className="mt-1 text-sm leading-relaxed text-amber-900/80">
-              {t('Rewards Lab is stored separately from planner tasks. It is not included in planner backups or sync, and disabling it never changes your task data.')}
+              {t('Rewards is stored separately from planner tasks, included in versioned Takt backups, and never changes task data when disabled.')}
             </p>
           </div>
         </div>
@@ -194,7 +194,7 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
         >
           <span>
             <span className="block font-semibold text-slate-900">{t('Advanced')}</span>
-            <span className="block text-xs text-slate-500">{t('Balance correction and experiment controls')}</span>
+            <span className="block text-xs text-slate-500">{t('Balance correction and Rewards controls')}</span>
           </span>
           {advancedOpen ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
         </button>
@@ -232,14 +232,14 @@ export const RulesTab = ({ state, onNotice, onConfirm }: RulesTabProps) => {
             </form>
 
             <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">{t('Experiment controls')}</h3>
+              <h3 className="text-sm font-semibold text-slate-800">{t('Rewards controls')}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onConfirm({ kind: 'disable' })} className={secondaryButton}>
                   {t('Disable, keep data')}
                 </button>
                 <button type="button" onClick={() => onConfirm({ kind: 'reset' })} className={dangerButton}>
                   <RotateCcw className="h-4 w-4" />
-                  {t('Reset experiment')}
+                  {t('Reset Rewards')}
                 </button>
                 <button type="button" onClick={() => onConfirm({ kind: 'erase' })} className={dangerButton}>
                   <Trash2 className="h-4 w-4" />

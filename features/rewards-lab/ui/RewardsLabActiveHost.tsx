@@ -84,7 +84,7 @@ const RewardsLabActiveHost: React.FC = () => {
           onClick={() => runtime.openLab()}
           className={`rewards-toast-enter rewards-reveal rewards-reveal-level-${revealIntensity} fixed bottom-20 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 overflow-hidden rounded-2xl border px-4 py-3 text-left shadow-float lg:bottom-6 ${revealIntensity === 0 ? 'border-brand-100 bg-white' : revealTheme.surface} ${animationsDisabled || toast.kind === 'restored' ? 'rewards-toast-static' : ''}`}
           style={{ '--reward-reveal-color': revealTheme.rgb } as React.CSSProperties}
-          aria-label={`${toastTitle}. ${toastDescription}. ${t('Open Rewards Lab')}.`}
+          aria-label={`${toastTitle}. ${toastDescription}. ${t('Open Rewards')}.`}
         >
           <span className="reward-reveal-content flex items-start gap-3">
             <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${revealIntensity === 0 ? 'bg-brand-100 text-brand-700' : revealTheme.icon}`}>
@@ -130,7 +130,7 @@ const RewardsLabActiveHost: React.FC = () => {
       {snapshot.isOpen && snapshot.enabled && (
         <Suspense fallback={(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="status">
-            <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-xl">{t('Opening Rewards Lab…')}</div>
+            <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-xl">{t('Opening Rewards…')}</div>
           </div>
         )}>
           <RewardsLabPanel />

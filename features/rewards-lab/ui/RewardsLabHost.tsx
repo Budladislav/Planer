@@ -61,7 +61,7 @@ export const RewardsLabHost: React.FC = () => {
   return (
     <RewardsErrorBoundary fallback={(
       <div className="fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-sm lg:bottom-4">
-        {t('Rewards Lab paused; planner continues.')}
+        {t('Rewards paused; planner continues.')}
       </div>
     )}>
       <GateAwareHost />

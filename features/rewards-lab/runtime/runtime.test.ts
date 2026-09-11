@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskLifecycleEvent } from '../../../task-lifecycle';
 import type { Task } from '../../../types';
-import { createDefaultRewardsLabState, getWalletBalance, installStarterCatalog } from '../domain';
+import { createDefaultRewardsLabState, getWalletBalance } from '../domain';
 import {
   REWARDS_LAB_LIFECYCLE_OUTBOX_KEY,
   enqueueRewardsLabLifecycleEvent,
@@ -42,10 +42,7 @@ class MemoryStorage implements StorageLike {
   }
 }
 
-const freshStoredState = () => installStarterCatalog(createDefaultRewardsLabState(), {
-  now: () => '2026-09-07T00:00:00.000Z',
-  createId: (() => { let index = 0; return () => `starter-${++index}`; })(),
-}).state;
+const freshStoredState = () => createDefaultRewardsLabState();
 
 const deterministicEconomy = () => {
   let id = 0;

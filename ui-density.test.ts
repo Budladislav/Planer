@@ -117,6 +117,9 @@ describe('compact planner hierarchy', () => {
   it('keeps data operations in their own settings module', () => {
     expect(dataSettingsSource).toContain("dispatch({ type: 'IMPORT_DATA'");
     expect(dataSettingsSource).toContain("dispatch({ type: 'RESET_DATA' })");
+    expect(dataSettingsSource).toContain('createTaktBackup');
+    expect(dataSettingsSource).toContain('createRewardsBackupPayload');
+    expect(dataSettingsSource).toContain('restoreRewardsBackupPayload');
     expect(settingsSource).not.toContain('JSON.stringify(state');
     expect(settingsSource).not.toContain('RewardsLabSettingsRow');
     expect(settingsSource).not.toContain('WorkShiftSettingsPanel');

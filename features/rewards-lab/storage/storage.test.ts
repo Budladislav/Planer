@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, installStarterCatalog, setTaskGrade } from '../domain';
+import { claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, setTaskGrade } from '../domain';
+import {
+  LEGACY_REWARDS_LAB_ARCHIVE_KEY,
+  LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY,
+  LEGACY_REWARDS_LAB_OUTBOX_KEY,
+  LEGACY_REWARDS_LAB_STORAGE_KEY,
+} from '../contracts';
 import { REWARDS_LAB_LIFECYCLE_OUTBOX_KEY } from '../outbox';
 import {
   EXPERIMENT_FLAGS_STORAGE_KEY,
   REWARDS_LAB_STORAGE_KEY,
   StorageLike,
   clearRewardsLabData,
+  createRewardsBackupPayload,
+  ensureLegacyRewardsLabArchive,
   eraseRewardsLab,
   loadExperimentFlags,
   loadRewardsLabState,
   saveRewardsLabState,
+  restoreRewardsBackupPayload,
   setRewardsLabEnabled,
 } from './storage';
 
@@ -29,10 +38,7 @@ class MemoryStorage implements StorageLike {
   }
 }
 
-const freshStoredState = () => installStarterCatalog(createDefaultRewardsLabState(), {
-  now: () => '2026-09-07T00:00:00.000Z',
-  createId: (() => { let index = 0; return () => `starter-${++index}`; })(),
-}).state;
+const freshStoredState = () => createDefaultRewardsLabState();
 
 describe('Rewards Lab experiment flag storage', () => {
   it('is disabled by default and fails closed for malformed data', () => {
@@ -206,7 +212,38 @@ describe('Rewards Lab sidecar storage', () => {
     const sanitized = loadRewardsLabState(storage);
     expect(sanitized.taskGrades).toEqual({ a: 'rare' });
     expect(getWalletBalance(sanitized)).toBe(0);
-    expect(sanitized.rewards).toHaveLength(22);
+    expect(sanitized.rewards).toEqual([]);
+  });
+
+  it('preserves the pilot in a disabled archive without deleting its legacy keys', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY, JSON.stringify({ rewardsLab: true }));
+    storage.setItem(LEGACY_REWARDS_LAB_STORAGE_KEY, JSON.stringify({ schemaVersion: 3, ledger: [{ amount: 99 }] }));
+    storage.setItem(LEGACY_REWARDS_LAB_OUTBOX_KEY, JSON.stringify({ schemaVersion: 1, events: [] }));
+
+    const archive = ensureLegacyRewardsLabArchive(storage, '2026-09-11T08:00:00.000Z');
+
+    expect(archive).toMatchObject({ schemaVersion: 1, archivedAt: '2026-09-11T08:00:00.000Z' });
+    expect(storage.values.has(LEGACY_REWARDS_LAB_ARCHIVE_KEY)).toBe(true);
+    expect(storage.values.has(LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY)).toBe(true);
+    expect(storage.values.has(LEGACY_REWARDS_LAB_STORAGE_KEY)).toBe(true);
+    expect(loadExperimentFlags(storage).rewardsLab).toBe(false);
+    expect(loadRewardsLabState(storage)).toEqual(createDefaultRewardsLabState());
+  });
+
+  it('round-trips official Rewards and the legacy archive through backup data', () => {
+    const source = new MemoryStorage();
+    source.setItem(LEGACY_REWARDS_LAB_STORAGE_KEY, '{"pilot":true}');
+    setRewardsLabEnabled(source, true);
+    const official = setTaskGrade(createDefaultRewardsLabState(), 'task-1', 'rare');
+    saveRewardsLabState(source, official);
+    const backup = createRewardsBackupPayload(source);
+
+    const restored = new MemoryStorage();
+    expect(restoreRewardsBackupPayload(restored, backup)).toBe(true);
+    expect(loadExperimentFlags(restored).rewardsLab).toBe(true);
+    expect(loadRewardsLabState(restored).taskGrades).toEqual({ 'task-1': 'rare' });
+    expect(restored.values.has(LEGACY_REWARDS_LAB_ARCHIVE_KEY)).toBe(true);
   });
 
   it('can reset data without disabling, or erase data and disable', () => {

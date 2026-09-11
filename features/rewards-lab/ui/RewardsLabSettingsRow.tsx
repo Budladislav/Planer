@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, Dice5, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Archive, ChevronDown, ExternalLink, Gift, ShieldCheck, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../../../components/Modal';
 import { rewardsLabGate } from '../gate';
 import type { RewardsLabRuntime } from '../runtime';
@@ -15,20 +15,20 @@ const confirmationCopy: Record<Exclude<Confirmation, null>, {
   danger: boolean;
 }> = {
   enable: {
-    title: 'Enable Rewards Lab?',
-    message: 'Rewards Lab is an optional experiment stored only on this device. Its grades, wallet, keys, rewards and purchases are not included in planner backups or future planner sync. You can disable it, reset it, or erase it at any time without changing planner tasks.',
-    confirmText: 'Enable experiment',
+    title: 'Enable Rewards?',
+    message: 'Rewards is an optional part of Takt. It starts with an empty balance, no task grades, no keys, and no catalog entries. Its data stays separate from planner tasks but is included in the versioned Takt backup.',
+    confirmText: 'Enable Rewards',
     danger: false,
   },
   reset: {
-    title: 'Reset Rewards Lab?',
-    message: 'This permanently clears grades, claims, wallet history, keys, rewards, purchases and experiment settings. Rewards Lab stays enabled. Planner tasks and backups are not affected.',
-    confirmText: 'Reset experiment',
+    title: 'Reset Rewards?',
+    message: 'This permanently clears official grades, claims, wallet history, keys, rewards, purchases and settings. Rewards stays enabled. Planner tasks and the previous Rewards Lab archive are not affected.',
+    confirmText: 'Reset Rewards',
     danger: true,
   },
   erase: {
-    title: 'Disable and erase Rewards Lab?',
-    message: 'This permanently removes all Rewards Lab data from this device and turns the experiment off. Planner tasks and backups are not affected.',
+    title: 'Disable and erase Rewards?',
+    message: 'This permanently removes all official Rewards data from this device and turns the feature off. Planner tasks and the previous Rewards Lab archive are not affected.',
     confirmText: 'Disable & erase',
     danger: true,
   },
@@ -41,6 +41,15 @@ export const RewardsLabSettingsRow: React.FC = () => {
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [legacyArchiveAvailable, setLegacyArchiveAvailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void import('../storage').then(({ ensureLegacyRewardsLabArchive }) => {
+      if (active) setLegacyArchiveAvailable(Boolean(ensureLegacyRewardsLabArchive(window.localStorage)));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const status = snapshot.safeMode && snapshot.flagEnabled
     ? t('Paused by safe mode')
@@ -58,10 +67,10 @@ export const RewardsLabSettingsRow: React.FC = () => {
       const succeeded = action(runtime);
       rewardsLabGate.refresh();
       if (!succeeded) {
-        setActionError(t(runtime.getSnapshot().lastError ?? 'Rewards Lab could not complete that action.'));
+        setActionError(t(runtime.getSnapshot().lastError ?? 'Rewards could not complete that action.'));
       }
     } catch {
-      setActionError(t('Rewards Lab could not be loaded. Planner data was not affected.'));
+      setActionError(t('Rewards could not be loaded. Planner data was not affected.'));
     } finally {
       setBusy(false);
     }
@@ -81,14 +90,9 @@ export const RewardsLabSettingsRow: React.FC = () => {
         onClick={() => setExpanded(value => !value)}
         className="settings-row"
       >
-        <Dice5 className="h-5 w-5 flex-shrink-0 text-brand-500" />
+        <Gift className="h-5 w-5 flex-shrink-0 text-brand-500" />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold text-slate-800">{t('Rewards Lab')}</h3>
-            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600">
-              {t('Experimental')}
-            </span>
-          </div>
+          <h3 className="font-semibold text-slate-800">{t('Rewards')}</h3>
           <p className="text-sm text-slate-500">{t('Optional task grades, reward keys and a personal reward catalog.')}</p>
         </div>
         <span className={`flex-shrink-0 text-xs font-semibold ${snapshot.enabled ? 'text-emerald-600' : snapshot.safeMode && snapshot.flagEnabled ? 'text-amber-600' : 'text-slate-400'}`}>
@@ -99,16 +103,23 @@ export const RewardsLabSettingsRow: React.FC = () => {
 
       {expanded && (
         <div className="space-y-3 border-t border-slate-100 px-4 pb-4 pt-3 sm:px-6">
-          <div className="flex items-start gap-2 rounded-lg border border-violet-100 bg-violet-50/60 p-3 text-xs leading-relaxed text-violet-900">
+          <div className="flex items-start gap-2 rounded-lg border border-brand-100 bg-brand-50/60 p-3 text-xs leading-relaxed text-brand-900">
             <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <p>
-              {t('Stored separately on this device. Rewards Lab never enters the planner JSON backup and cannot block task completion.')}
+              {t('Rewards stays isolated from task storage and cannot block task completion. It is included in the versioned Takt backup.')}
             </p>
           </div>
 
+          {legacyArchiveAvailable && (
+            <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">
+              <Archive className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <p>{t('Your previous Rewards Lab data is preserved in a disabled local archive and included in new backups. Official Rewards does not use or change it.')}</p>
+            </div>
+          )}
+
           {snapshot.safeMode && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              {t('Safe mode is active. The experiment is not loaded. Remove ?safe=1 from the address to run it again.')}
+              {t('Safe mode is active. Rewards is not loaded. Remove ?safe=1 from the address to run it again.')}
             </p>
           )}
 
@@ -128,7 +139,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                   className="button-primary min-h-8 px-2.5 py-1.5 text-xs"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  {t('Open Rewards Lab')}
+                  {t('Open Rewards')}
                 </button>
                 <button
                   type="button"
@@ -143,7 +154,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                   onClick={() => setConfirmation('reset')}
                   className="button-danger min-h-8 border border-red-200 bg-white px-2.5 py-1.5 text-xs"
                 >
-                  {t('Reset experiment')}
+                  {t('Reset Rewards')}
                 </button>
               </>
             ) : snapshot.flagEnabled && snapshot.safeMode ? (
@@ -162,7 +173,7 @@ export const RewardsLabSettingsRow: React.FC = () => {
                 onClick={() => setConfirmation('enable')}
                 className="button-primary min-h-8 px-2.5 py-1.5 text-xs"
               >
-                {t('Enable Rewards Lab')}
+                {t('Enable Rewards')}
               </button>
             )}
 

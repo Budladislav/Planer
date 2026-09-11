@@ -25,7 +25,6 @@ import {
   updatePurchaseItem,
   upgradeRewardKeys,
   undoLatestKeyUpgrade,
-  installStarterCatalog,
 } from '../domain';
 import type {
   EconomyRuntime,
@@ -63,7 +62,7 @@ export interface RewardsLabToast {
 }
 
 export interface RewardsLabRuntimeSnapshot {
-  /** Persisted experiment preference, even when safe mode suppresses it. */
+  /** Persisted feature preference, even when safe mode suppresses it. */
   flagEnabled: boolean;
   /** Whether the sidecar is active for this page load. */
   enabled: boolean;
@@ -95,7 +94,6 @@ export interface RewardsLabRuntime {
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
   archiveReward(rewardId: string): boolean;
   redeem(rewardId: string, actualCost?: number): RedeemRewardOutcome;
-  installStarterCatalog(): number;
   upgradeKeys(fromGrade: RewardGrade): boolean;
   undoLatestKeyUpgrade(): 'reversed' | 'not-found' | 'output-used';
   addPurchase(input: PurchaseItemInput): PurchaseItem | null;
@@ -105,13 +103,14 @@ export interface RewardsLabRuntime {
   adjustBalance(amount: number, label: string): boolean;
   updateCurrency(currencyName: string): boolean;
   updateAnimations(enabled: boolean): boolean;
+  refreshFromStorage(): boolean;
 }
 
 const errorMessage = (error: unknown): string => (
-  error instanceof Error && error.message ? error.message : 'Rewards Lab operation failed.'
+  error instanceof Error && error.message ? error.message : 'Rewards operation failed.'
 );
 
-/** `?safe=1` is an emergency, read-only kill switch for experimental features. */
+/** `?safe=1` is an emergency, read-only kill switch for the optional rewards module. */
 export const isRewardsLabSafeMode = (search: string): boolean => {
   try {
     const normalized = search.startsWith('?') ? search : `?${search}`;
@@ -171,7 +170,7 @@ export const createRewardsLabRuntime = (
 
   const persist = (state: RewardsLabState, patch: Partial<RewardsLabRuntimeSnapshot> = {}): boolean => {
     if (!saveRewardsLabState(storage, state)) {
-      return fail('Rewards Lab data could not be saved on this device.');
+      return fail('Rewards data could not be saved on this device.');
     }
     patchSnapshot({ ...patch, state, lastError: null });
     return true;
@@ -185,6 +184,24 @@ export const createRewardsLabRuntime = (
       return () => listeners.delete(listener);
     },
 
+    refreshFromStorage: () => {
+      try {
+        const refreshedFlag = loadExperimentFlags(storage).rewardsLab;
+        const refreshedEnabled = refreshedFlag && !safeMode;
+        patchSnapshot({
+          flagEnabled: refreshedFlag,
+          enabled: refreshedEnabled,
+          state: refreshedEnabled ? loadRewardsLabState(storage) : null,
+          isOpen: false,
+          toast: null,
+          lastError: null,
+        });
+        return true;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
     enable: () => {
       try {
         if (safeMode) return false;
@@ -194,10 +211,10 @@ export const createRewardsLabRuntime = (
         // Write a validated state before making the feature visible. This avoids
         // an enabled flag pointing at storage that cannot persist the pilot.
         if (!saveRewardsLabState(storage, state)) {
-          return fail('Rewards Lab data could not be initialized on this device.');
+          return fail('Rewards data could not be initialized on this device.');
         }
         if (!setRewardsLabEnabled(storage, true)) {
-          return fail('Rewards Lab could not be enabled on this device.');
+          return fail('Rewards could not be enabled on this device.');
         }
         patchSnapshot({
           flagEnabled: true,
@@ -219,7 +236,7 @@ export const createRewardsLabRuntime = (
     disableKeepData: () => {
       try {
         if (!setRewardsLabEnabled(storage, false)) {
-          return fail('Rewards Lab could not be disabled on this device.');
+          return fail('Rewards could not be disabled on this device.');
         }
         patchSnapshot({
           flagEnabled: false,
@@ -238,14 +255,14 @@ export const createRewardsLabRuntime = (
     resetDataKeepingEnabled: () => {
       try {
         if (safeMode || !snapshot.flagEnabled) return false;
-        const state = installStarterCatalog(createDefaultRewardsLabState(), economyRuntime).state;
+        const state = createDefaultRewardsLabState();
         // Reset is explicitly destructive for this sidecar. Clear pending work
         // first so an old completion cannot repopulate the freshly reset lab.
         if (!clearRewardsLabLifecycleOutbox(storage)) {
-          return fail('Rewards Lab pending events could not be cleared on this device.');
+          return fail('Rewards pending events could not be cleared on this device.');
         }
         if (!saveRewardsLabState(storage, state)) {
-          return fail('Rewards Lab data could not be reset on this device.');
+          return fail('Rewards data could not be reset on this device.');
         }
         patchSnapshot({
           flagEnabled: true,
@@ -267,7 +284,7 @@ export const createRewardsLabRuntime = (
         // switch is guaranteed, and the in-memory runtime is deactivated before
         // state/outbox cleanup is attempted.
         if (!setRewardsLabEnabled(storage, false)) {
-          return fail('Rewards Lab could not be disabled, so no data was erased.');
+          return fail('Rewards could not be disabled, so no data was erased.');
         }
         patchSnapshot({
           flagEnabled: false,
@@ -282,7 +299,7 @@ export const createRewardsLabRuntime = (
         const outboxCleared = clearRewardsLabLifecycleOutbox(storage);
         if (!dataCleared || !outboxCleared) {
           patchSnapshot({
-            lastError: 'Rewards Lab is disabled, but some experimental data could not be erased.',
+            lastError: 'Rewards is disabled, but some data could not be erased.',
           });
           return false;
         }
@@ -300,7 +317,7 @@ export const createRewardsLabRuntime = (
         if (!saveRewardsLabState(storage, state)) {
           patchSnapshot({
             isOpen: true,
-            lastError: 'Rewards Lab opened, but its usage metric could not be saved.',
+            lastError: 'Rewards opened, but its usage metric could not be saved.',
           });
           return true;
         }
@@ -436,17 +453,6 @@ export const createRewardsLabRuntime = (
       } catch (error) {
         fail(errorMessage(error));
         return 'inactive';
-      }
-    },
-
-    installStarterCatalog: () => {
-      try {
-        if (unavailable()) return 0;
-        const result = installStarterCatalog(snapshot.state!, economyRuntime);
-        return persist(result.state) ? result.added.length : 0;
-      } catch (error) {
-        fail(errorMessage(error));
-        return 0;
       }
     },
 

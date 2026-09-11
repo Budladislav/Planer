@@ -159,7 +159,7 @@ const RewardsLabPanel = () => {
     } else if (confirmation.kind === 'reset') {
       if (runtime.resetDataKeepingEnabled()) {
         setActiveTab('rewards');
-        setNotice(t('Rewards Lab reset. Planner tasks were not changed.'));
+        setNotice(t('Rewards reset. Planner tasks were not changed.'));
       }
     } else {
       runtime.disableAndErase();
@@ -189,8 +189,8 @@ const RewardsLabPanel = () => {
                   <Dice5 className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <h1 id="rewards-lab-title" className="truncate text-lg font-bold text-slate-900">{t('Rewards Lab')}</h1>
-                  <p className="text-xs text-slate-500">{t('Optional gamification experiment')}</p>
+                  <h1 id="rewards-lab-title" className="truncate text-lg font-bold text-slate-900">{t('Rewards')}</h1>
+                  <p className="text-xs text-slate-500">{t('Task grades, credits, keys and personal rewards')}</p>
                 </div>
               </div>
             </div>
@@ -203,14 +203,14 @@ const RewardsLabPanel = () => {
                 type="button"
                 onClick={() => runtime.closeLab()}
                 className="icon-button"
-                aria-label={t('Close Rewards Lab')}
+                aria-label={t('Close Rewards')}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-1" role="tablist" aria-label={t('Rewards Lab sections')}>
+          <div className="mt-4 grid grid-cols-4 gap-1" role="tablist" aria-label={t('Rewards sections')}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
@@ -236,7 +236,7 @@ const RewardsLabPanel = () => {
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           {snapshot.lastError && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
-              {t('Rewards Lab recovered from a local storage problem. Your planner continued normally.')}
+              {t('Rewards recovered from a local storage problem. Your planner continued normally.')}
             </div>
           )}
           <Notice message={notice} onDismiss={() => setNotice(null)} />

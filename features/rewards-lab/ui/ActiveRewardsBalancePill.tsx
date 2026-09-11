@@ -15,8 +15,8 @@ export const ActiveRewardsBalancePill: React.FC = () => {
       type="button"
       onClick={() => runtime.openLab()}
       className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50 px-2 py-1 text-[11px] font-semibold text-brand-700 transition-colors hover:bg-brand-100"
-      title={t('Open Rewards Lab')}
-      aria-label={t('Open Rewards Lab. Balance: {balance} {currency}', { balance, currency: snapshot.state.currencyName })}
+      title={t('Open Rewards')}
+      aria-label={t('Open Rewards. Balance: {balance} {currency}', { balance, currency: snapshot.state.currencyName })}
     >
       <Coins className="h-3.5 w-3.5" />
       <span>{balance}</span>
