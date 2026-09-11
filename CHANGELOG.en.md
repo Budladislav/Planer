@@ -2,6 +2,29 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.1.0] — 11.09.2026 — “Planning Weight”
+
+### Added
+
+- A task deliberately placed in an undated week pool receives an Uncommon automatic floor; month- and year-pool tasks receive a Rare floor.
+- Task cards now show concise markers for a linked long-term goal and the strongest planning-importance source: week, month, or year.
+- The expanded task card can dismiss and later restore planning importance without affecting independent goal or calendar-event floors.
+
+### Changed
+
+- Manual grade and automatic floor are now stored separately. The effective task grade is whichever is higher, so automatic rules never overwrite the user's choice.
+- A task created in Month directly for a specific week receives the weekly floor; weekly-template tasks and tasks created directly in a day remain neutral.
+- Reward claims record the manual grade, active automatic floor, and its reasons for later balance analysis.
+
+### Fixed
+
+- After Undo, changing the grade or dismissing planning importance recalculates the amount from the original luck value without rerolling or replacing an already dropped key.
+
+### Safety
+
+- The core schema advances from 16 to 17 only to store explicit planning-importance provenance. Existing tasks are not assigned guessed origins retroactively.
+- Existing completed tasks, claims, and balance are not recalculated; the new rules apply only to subsequent user actions.
+
 ## [6.0.1] — 11.09.2026 — “Connected Menu”
 
 ### Changed
