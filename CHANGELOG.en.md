@@ -2,6 +2,32 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.2.0] — 11.09.2026 — “Reward Showcase”
+
+### Added
+
+- A reward can now cost credits only, a key only, or both credits and a matching key.
+- The catalog has a persistent compact mode with responsive tiles, prices, and explicit availability blockers.
+- Rewards can be manually reordered in both detailed and compact views using a dedicated drag handle.
+- Wallet history shows the colored grade of each completed task, including existing entries.
+
+### Changed
+
+- Rewards sections now follow “Rewards · Statistics · History · Purchases · Rules”; the tab strip scrolls horizontally on narrow screens.
+- Balance totals, key inventory and upgrades, and current week/month results moved to a dedicated Statistics tab.
+- The catalog keeps only a compact header with available credits and five colored key counters.
+- Compact tiles are redemption-only; editing and archiving remain in the detailed view.
+
+### Fixed
+
+- An unavailable reward now exposes all current blockers: credits, key, cooldown, rolling limit, or a completed one-time redemption.
+- Undo restores only the resources that were actually spent, including a key-only redemption with no credit charge.
+
+### Safety
+
+- Rewards schema advances from 3 to 4. Existing rewards migrate to their previous credits-and-key behavior without recalculating balance, history, keys, or claims.
+- Reward earning formulas and Economy v3 remain unchanged; the new schema affects only catalog presentation and redemption payment modes.
+
 ## [6.1.0] — 11.09.2026 — “Planning Weight”
 
 ### Added
