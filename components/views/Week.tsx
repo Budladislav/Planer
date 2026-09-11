@@ -11,7 +11,7 @@ import { WeekMetaBadges, WeekNotesEditor } from '../WeekNotes';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
-import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface, RewardImportanceMarkers } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { GradedTaskRow } from '../ui/Primitives';
 import { getCompletedTasksForLocalPeriod, getWeekPoolTasks } from '../../planning-visibility';
@@ -37,6 +37,8 @@ import {
 } from '../week/WeekTaskItems';
 import { weekBucketContainer, weekDayContainer } from '../week/weekTaskContainers';
 import { WeekTaskMoveSheet, type WeekTaskMoveTarget } from '../week/WeekTaskMoveControl';
+import { applyPlanningImportance } from '../../planning-importance';
+import { isTaskCreatedFromWeeklyTemplate } from '../../weekly-template';
 
 export const WeekView: React.FC = () => {
   const { state, dispatch } = useAppStore();
@@ -286,16 +288,29 @@ export const WeekView: React.FC = () => {
     const planningMonth = getTaskPlanningMonth(task) ?? getMonthForWeek(currentWeek);
     if (targetContainer.startsWith('week-day:')) {
       const day = targetContainer.slice('week-day:'.length);
+      const shouldCaptureWeekSource = task.plan.day === null
+        && task.planningImportance === null
+        && !isTaskCreatedFromWeeklyTemplate(state.weeklyTemplate, task.id);
       dispatch({
         type: 'UPDATE_TASK',
-        payload: { id: activeId, plan: { day, week: currentWeek, month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) } },
+        payload: {
+          id: activeId,
+          plan: { day, week: currentWeek, month: planningMonth ?? day.slice(0, 7), year: (planningMonth ?? day.slice(0, 7)).slice(0, 4) },
+          ...(shouldCaptureWeekSource
+            ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') }
+            : {}),
+        },
       });
       const targetOrder = (dayTasks[day] ?? []).map(item => item.id).filter(id => id !== activeId);
       dispatch({ type: 'UPDATE_TASK_ORDER', payload: { day, order: [...targetOrder, activeId] } });
     } else {
       dispatch({
         type: 'UPDATE_TASK',
-        payload: { id: activeId, plan: { day: null, week: currentWeek, month: planningMonth, year: planningMonth?.slice(0, 4) ?? null } },
+        payload: {
+          id: activeId,
+          plan: { day: null, week: currentWeek, month: planningMonth, year: planningMonth?.slice(0, 4) ?? null },
+          ...(task.plan.day ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') } : {}),
+        },
       });
       const targetOrder = weekTasks.map(item => item.id).filter(id => id !== activeId);
       dispatch({ type: 'UPDATE_TASK_ORDER_WEEK_BUCKET', payload: { week: currentWeek, order: [...targetOrder, activeId] } });
@@ -313,12 +328,23 @@ export const WeekView: React.FC = () => {
     if (!task) return;
     const targetWeek = target.type === 'day' ? getWeekString(target.day) : target.week;
     const day = target.type === 'day' ? target.day : null;
+    const shouldCaptureWeekSource = day !== null
+      && task.plan.day === null
+      && task.planningImportance === null
+      && !isTaskCreatedFromWeeklyTemplate(state.weeklyTemplate, task.id);
     const plan = day
       ? { day, week: targetWeek, month: day.slice(0, 7), year: day.slice(0, 4) }
       : planTaskForWeekBucket(task, targetWeek);
     dispatch({
       type: 'UPDATE_TASK',
-      payload: { id, plan },
+      payload: {
+        id,
+        plan,
+        ...(shouldCaptureWeekSource
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') }
+          : {}),
+        ...(!day && task.plan.day ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') } : {}),
+      },
     });
     // If moving to a day, update the order (add to end)
     if (day) {
@@ -367,6 +393,7 @@ export const WeekView: React.FC = () => {
           projectId: null,
           eventId: null,
           goalId: null,
+          planningImportance: { source: 'week', dismissed: false },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           completedAt: null,
@@ -399,6 +426,7 @@ export const WeekView: React.FC = () => {
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,
@@ -478,9 +506,10 @@ export const WeekView: React.FC = () => {
             : null;
           return (
             <GradedTaskRow key={task.id} className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-sm">
-              <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+              <RewardGradeSurface task={task} />
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-              <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+              <RewardGradeMarker task={task} />
+              <RewardImportanceMarkers task={task} />
               <span className="min-w-0 flex-1 truncate text-slate-950 line-through" title={task.title}>{task.title}</span>
               {completedTime && <span className="flex-shrink-0 text-xs text-slate-400">{completedTime}</span>}
               <RewardCompletionMeta taskId={task.id} />

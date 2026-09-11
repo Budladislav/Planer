@@ -11,6 +11,7 @@ export const REWARD_GRADES = {
 } as const;
 
 export type RewardGrade = keyof typeof REWARD_GRADES;
+export type RewardImportanceReason = 'week' | 'month' | 'year' | 'goal' | 'event';
 export type RewardRoll = 2 | 3 | 4;
 export type RewardLuckSlot = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type RewardsEconomyVersion = 1 | 2 | typeof REWARDS_ECONOMY_VERSION;
@@ -32,6 +33,9 @@ interface RewardClaimBase {
   grade: RewardGrade;
   amount: number;
   createdAt: string;
+  manualGrade?: RewardGrade;
+  minimumGrade?: RewardGrade;
+  importanceReasons?: RewardImportanceReason[];
 }
 
 export interface LegacyRewardClaim extends RewardClaimBase {

@@ -36,6 +36,7 @@ const task = (overrides: Partial<Task> = {}): Task => ({
   projectId: null,
   eventId: null,
   goalId: null,
+  planningImportance: null,
   createdAt: '2026-08-29T08:00:00.000Z',
   updatedAt: '2026-08-29T10:00:00.000Z',
   completedAt: '2026-08-29T10:00:00.000Z',
@@ -81,6 +82,22 @@ describe('Rewards Lab lifecycle outbox', () => {
     });
 
     expect(converted).toMatchObject({ type: 'task.completed', minimumUncommon: true });
+  });
+
+  it.each([
+    ['week', 'uncommon'],
+    ['month', 'rare'],
+    ['year', 'rare'],
+  ] as const)('serializes the %s planning floor and reason', (source, minimumGrade) => {
+    const event = completedEvent();
+    const converted = toRewardsLabLifecycleEvent({
+      ...event,
+      task: { ...event.task, planningImportance: { source, dismissed: false } },
+    });
+
+    expect(converted).toMatchObject({
+      type: 'task.completed', minimumGrade, importanceReasons: [source],
+    });
   });
 
   it('survives a reload boundary and drains strictly in insertion order', () => {

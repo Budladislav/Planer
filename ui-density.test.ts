@@ -109,8 +109,8 @@ describe('compact planner hierarchy', () => {
 
   it('renders grade color beneath task content', () => {
     expect(gradeControlsSource).toContain('reward-grade-surface');
-    expect(gradeControlsSource).toContain("runtime.ensureTaskMinimumGrade(taskId, 'uncommon')");
-    expect(gradeControlsSource).toContain("GRADES.filter(option => !minimumUncommon || option !== 'common')");
+    expect(gradeControlsSource).toContain('getTaskAutomaticGradeRule(task)');
+    expect(gradeControlsSource).toContain('gradeRank(option) >= gradeRank(minimumGrade)');
   });
 
   it('splits Settings into seven focused responsive sections', () => {

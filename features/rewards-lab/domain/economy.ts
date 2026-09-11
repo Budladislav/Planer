@@ -202,6 +202,10 @@ export interface CompleteTaskRewardInput {
   taskId: string;
   taskTitle: string;
   completedAt: string;
+  grade?: RewardGrade;
+  manualGrade?: RewardGrade;
+  minimumGrade?: RewardGrade;
+  importanceReasons?: RewardClaim['importanceReasons'];
 }
 
 export interface CompletionRewardResult {
@@ -227,13 +231,37 @@ export const claimTaskCompletion = (
       return { state, claim: existingClaim, transaction: null, key, keyDropWasProtected: false, outcome: 'already-posted' };
     }
 
-    const restoredClaim: RewardClaim = { ...existingClaim, taskTitle: input.taskTitle, completedAt: input.completedAt };
+    const restoredGrade = input.grade ?? existingClaim.grade;
+    const restoredAmount = getClaimAmountForGrade(existingClaim, restoredGrade);
+    const restoredClaim: RewardClaim = {
+      ...existingClaim,
+      taskTitle: input.taskTitle,
+      completedAt: input.completedAt,
+      grade: restoredGrade,
+      amount: restoredAmount,
+      ...(existingClaim.economyVersion === 1 ? { multiplier: REWARD_GRADES[restoredGrade].legacyMultiplier } : {}),
+      manualGrade: input.manualGrade,
+      minimumGrade: input.minimumGrade,
+      importanceReasons: input.importanceReasons,
+    };
     const restored = transaction(runtime, {
       kind: 'restore', amount: restoredClaim.amount,
       label: `Restored reward for ${restoredClaim.taskTitle}`,
       taskId: restoredClaim.taskId, claimId: restoredClaim.id,
       economyVersion: restoredClaim.economyVersion,
+      occurredAt: input.completedAt,
     });
+    const correction: RewardGradeCorrection | null = restoredGrade !== existingClaim.grade ? {
+      id: createId(runtime),
+      claimId: existingClaim.id,
+      taskId: existingClaim.taskId,
+      fromGrade: existingClaim.grade,
+      toGrade: restoredGrade,
+      previousAmount: existingClaim.amount,
+      amount: restoredAmount,
+      economyVersion: existingClaim.economyVersion,
+      occurredAt: input.completedAt,
+    } : null;
     let keys = state.keys;
     let key: RewardKey | null = null;
     if (restoredClaim.economyVersion === 3 && restoredClaim.keyId) {
@@ -248,6 +276,9 @@ export const claimTaskCompletion = (
         ...state,
         claims: { ...state.claims, [input.taskId]: restoredClaim },
         ledger: [...state.ledger, restored],
+        gradeCorrections: correction
+          ? [...state.gradeCorrections, correction]
+          : state.gradeCorrections,
         keys,
       },
       claim: restoredClaim,
@@ -260,7 +291,7 @@ export const claimTaskCompletion = (
 
   const random = runtime.random ?? Math.random;
   const pointDraw = drawFromFairBag(state.fairBag, random);
-  const grade = getTaskGrade(state, input.taskId);
+  const grade = input.grade ?? getTaskGrade(state, input.taskId);
   const timestamp = now(runtime);
   const claimId = createId(runtime);
   const keyDraw = drawRewardKey(grade, state.keyDropState, random);
@@ -283,6 +314,9 @@ export const claimTaskCompletion = (
     economyVersion: REWARDS_ECONOMY_VERSION,
     createdAt: timestamp,
     keyId: key?.id ?? null,
+    manualGrade: input.manualGrade,
+    minimumGrade: input.minimumGrade,
+    importanceReasons: input.importanceReasons,
   };
   const earned = transaction(runtime, {
     kind: 'earn', amount: claim.amount, label: `Reward for ${claim.taskTitle}`,

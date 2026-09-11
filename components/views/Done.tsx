@@ -7,7 +7,7 @@ import { ConfirmModal } from '../Modal';
 import { deleteTask, reopenTask } from '../../task-lifecycle';
 import { useI18n } from '../../i18n';
 import { EmptyState, TaskCard, TaskIconButton } from '../ui/Primitives';
-import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardCompletionMeta, RewardGradeMarker, RewardGradeSurface, RewardImportanceMarkers } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 
 export const DoneView: React.FC = () => {
@@ -54,6 +54,7 @@ export const DoneView: React.FC = () => {
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
@@ -159,9 +160,10 @@ export const DoneView: React.FC = () => {
 
     return (
       <TaskCard>
-        <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+        <RewardGradeSurface task={task} />
         <div className="flex min-w-0 items-start gap-2">
-          <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+          <RewardGradeMarker task={task} />
+          <RewardImportanceMarkers task={task} />
           <span className="min-w-0 flex-1 break-words text-sm leading-relaxed text-slate-950 line-through">
             {task.title}
           </span>

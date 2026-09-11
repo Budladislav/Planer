@@ -132,6 +132,13 @@ export const getActiveWeeklyTemplate = (state: WeeklyTemplateState): WeeklyTempl
   state.templates.find(template => template.id === state.activeTemplateId) ?? state.templates[0]
 );
 
+export const isTaskCreatedFromWeeklyTemplate = (
+  state: WeeklyTemplateState,
+  taskId: string,
+): boolean => state.templates.some(template => (
+  Object.values(template.applications).some(application => Object.values(application).includes(taskId))
+));
+
 export const isWeeklyTemplateNameAvailable = (
   state: WeeklyTemplateState,
   name: string,
@@ -264,6 +271,7 @@ export const buildWeeklyTemplateApplication = ({
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: null,
         createdAt: now,
         updatedAt: now,
         completedAt: null,

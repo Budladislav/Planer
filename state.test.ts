@@ -10,6 +10,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   projectId: null,
   eventId: null,
   goalId: null,
+  planningImportance: null,
   createdAt: '2026-08-16T08:00:00.000Z',
   updatedAt: '2026-08-16T08:00:00.000Z',
   completedAt: null,
@@ -205,6 +206,19 @@ describe('migrateAppState', () => {
       startupView: 'today',
       mainMenuExpanded: true,
     });
+  });
+
+  it('preserves valid planning importance and rejects malformed provenance', () => {
+    const migrated = migrateAppState({
+      tasks: [
+        makeTask({ id: 'valid', planningImportance: { source: 'month', dismissed: true } }),
+        { ...makeTask({ id: 'invalid' }), planningImportance: { source: 'quarter', dismissed: false } },
+      ],
+    });
+
+    expect(migrated.tasks.find(task => task.id === 'valid')?.planningImportance)
+      .toEqual({ source: 'month', dismissed: true });
+    expect(migrated.tasks.find(task => task.id === 'invalid')?.planningImportance).toBeNull();
   });
 
   it('preserves a valid start page and safely rejects unsupported views', () => {

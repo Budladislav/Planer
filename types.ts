@@ -81,6 +81,13 @@ export interface Capture {
   completedAt: string | null;
 }
 
+export type PlanningImportanceSource = 'week' | 'month' | 'year';
+
+export interface PlanningImportance {
+  source: PlanningImportanceSource;
+  dismissed: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -94,6 +101,7 @@ export interface Task {
   projectId: string | null;
   eventId: string | null; // Link to CalendarEvent if task was created from event
   goalId: string | null; // Optional link to a long-term goal
+  planningImportance: PlanningImportance | null; // Strongest deliberate planning pool used by the task
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -162,7 +170,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 16,
+  schemaVersion: 17,
   captures: [],
   tasks: [],
   events: [],

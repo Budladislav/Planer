@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowRightLeft, Check, Pencil, X } from 'lucide-react';
-import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardAutomaticMinimumControl, RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface, RewardImportanceMarkers } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
 import { Task } from '../../types';
 import { formatDateShort } from '../../utils';
@@ -35,7 +35,7 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
       className="px-2"
       onClick={() => setShowActions(value => !value)}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+      <RewardGradeSurface task={task} />
       <div className="flex min-w-0 items-center gap-2">
         <div
           {...attributes}
@@ -43,6 +43,7 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
           className="flex min-w-0 flex-1 cursor-grab touch-none items-center gap-2 active:cursor-grabbing"
           title={t('Drag task')}
         >
+          <RewardImportanceMarkers task={task} />
           <span className={`min-w-0 flex-1 text-slate-950 ${showActions ? 'sr-only' : 'truncate'}`}>{task.title}</span>
           {task.plan.day && (
             <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
@@ -51,7 +52,7 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+          <RewardGradeIncrementButton task={task} />
           <TaskIconButton label={t('Move')} tone="primary" onClick={event => { event.stopPropagation(); onMove(task.id); }}>
             <ArrowRightLeft className="h-3.5 w-3.5" />
           </TaskIconButton>
@@ -67,7 +68,8 @@ export const PeriodTaskCard: React.FC<PeriodTaskCardProps> = ({ task, containerI
         {showActions && (
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
-            <div className="mx-auto w-full max-w-sm"><RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} /></div>
+            <div className="mx-auto w-full max-w-sm"><RewardGradeSelector task={task} compact /></div>
+            <RewardAutomaticMinimumControl task={task} />
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDelete(task.id)}>

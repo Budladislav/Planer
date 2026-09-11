@@ -12,12 +12,13 @@ import { Task } from '../../types';
 import { getWeekString, isValidWeekString } from '../../utils';
 import { planTaskForWeek } from '../../task-planning';
 import { completeTask } from '../../task-lifecycle';
-import { RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardAutomaticMinimumControl, RewardGradeIncrementButton, RewardGradeSelector, RewardGradeSurface, RewardImportanceMarkers } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { useI18n } from '../../i18n';
 import { TaskCard, TaskIconButton } from '../ui/Primitives';
 import { weekBucketContainer, weekDayContainer } from './weekTaskContainers';
 import { WeekTaskMoveButton } from './WeekTaskMoveControl';
 import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
+import { applyPlanningImportance } from '../../planning-importance';
 
 type DayTaskItemProps = {
   task: Task;
@@ -59,6 +60,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         id: task.id,
         title: editTitle.trim(),
         plan: planTaskForWeek(task, editWeek),
+        ...(editWeek !== task.plan.week
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') }
+          : {}),
       },
     });
     setIsEditing(false);
@@ -173,7 +177,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+      <RewardGradeSurface task={task} />
       <div className="flex items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -196,6 +200,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
             WebkitTouchCallout: 'none'
           }}
         >
+          <RewardImportanceMarkers task={task} />
           <span
             className={`min-w-0 flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
             title={task.title}
@@ -204,7 +209,7 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+          <RewardGradeIncrementButton task={task} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
           <TaskIconButton
             label={t('Mark as done')}
@@ -229,8 +234,9 @@ const DayTaskItem: React.FC<DayTaskItemProps> = ({ task, todayStr, dispatch, onM
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+              <RewardGradeSelector task={task} compact />
             </div>
+            <RewardAutomaticMinimumControl task={task} />
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>
@@ -315,6 +321,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         id: task.id,
         title: editTitle.trim(),
         plan: planTaskForWeek(task, editWeek),
+        ...(editWeek !== task.plan.week
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') }
+          : {}),
       },
     });
     setIsEditing(false);
@@ -429,7 +438,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
         }
       }}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+      <RewardGradeSurface task={task} />
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div 
           className="flex flex-1 min-w-0 items-center gap-2"
@@ -453,6 +462,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
             minWidth: 0,
           }}
         >
+          <RewardImportanceMarkers task={task} />
           <span
             className={`min-w-0 max-w-full flex-1 text-sm text-slate-950 ${showActions ? 'sr-only' : 'block truncate whitespace-nowrap'} ${task.status === 'done' ? 'line-through' : ''}`}
           >
@@ -460,7 +470,7 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+          <RewardGradeIncrementButton task={task} />
           <WeekTaskMoveButton onClick={() => onMove(task.id)} />
           <TaskIconButton
             label={t('Mark as done')}
@@ -485,8 +495,9 @@ const BucketTaskItem: React.FC<BucketTaskItemProps> = ({ task, currentWeek, disp
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+              <RewardGradeSelector task={task} compact />
             </div>
+            <RewardAutomaticMinimumControl task={task} />
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <TaskIconButton label={t('Delete')} tone="danger" onClick={() => onDeleteConfirm(task.id)}>

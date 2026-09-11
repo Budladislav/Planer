@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TaskLifecycleEvent } from '../../../task-lifecycle';
+import type { TaskCompletedEvent, TaskLifecycleEvent } from '../../../task-lifecycle';
 import type { Task } from '../../../types';
 import { createDefaultRewardsLabState, getWalletBalance } from '../domain';
 import {
@@ -61,13 +61,14 @@ const task = (overrides: Partial<Task> = {}): Task => ({
   projectId: null,
   eventId: null,
   goalId: null,
+  planningImportance: null,
   createdAt: '2026-08-28T08:00:00.000Z',
   updatedAt: '2026-08-28T10:00:00.000Z',
   completedAt: '2026-08-28T10:00:00.000Z',
   ...overrides,
 });
 
-const completedEvent = (overrides: Partial<Task> = {}): TaskLifecycleEvent => {
+const completedEvent = (overrides: Partial<Task> = {}): TaskCompletedEvent => {
   const completedTask = task(overrides);
   return {
     type: 'task.completed',
@@ -220,6 +221,53 @@ describe('Rewards Lab task lifecycle', () => {
 
     expect(runtime.getSnapshot().state!.claims['task-1']).toMatchObject({ grade: 'uncommon', amount: 3 });
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(3);
+  });
+
+  it('applies a Rare month-planning floor without overwriting the manual grade', () => {
+    const storage = new MemoryStorage();
+    storage.values.set(EXPERIMENT_FLAGS_STORAGE_KEY, JSON.stringify({ rewardsLab: true }));
+    enqueueRewardsLabLifecycleEvent(storage, completedEvent({
+      planningImportance: { source: 'month', dismissed: false },
+    }));
+
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    const state = runtime.getSnapshot().state!;
+
+    expect(state.taskGrades['task-1']).toBeUndefined();
+    expect(state.claims['task-1']).toMatchObject({
+      grade: 'rare', manualGrade: 'common', minimumGrade: 'rare', importanceReasons: ['month'],
+    });
+  });
+
+  it('restores the same luck slot at a lower effective grade after planning importance is removed', () => {
+    const storage = new MemoryStorage();
+    const runtime = createRewardsLabRuntime(storage, '', deterministicEconomy());
+    runtime.enable();
+    runtime.handleTaskLifecycle({
+      ...completedEvent({ planningImportance: { source: 'month', dismissed: false } }),
+      minimumGrade: 'rare',
+      importanceReasons: ['month'],
+    });
+    const earned = runtime.getSnapshot().state!.claims['task-1'];
+    const bagAfterEarn = runtime.getSnapshot().state!.fairBag;
+    const keyId = earned.economyVersion === 3 ? earned.keyId : null;
+
+    runtime.handleTaskLifecycle(reopenedEvent());
+    runtime.handleTaskLifecycle({
+      ...completedEvent({ planningImportance: { source: 'month', dismissed: true } }),
+      minimumGrade: 'common',
+      importanceReasons: [],
+    });
+    const restoredState = runtime.getSnapshot().state!;
+
+    expect(restoredState.claims['task-1']).toMatchObject({
+      id: earned.id, luckSlot: 0, grade: 'common', amount: 1, keyId,
+      manualGrade: 'common', minimumGrade: 'common', importanceReasons: [],
+    });
+    expect(restoredState.gradeCorrections.at(-1)).toMatchObject({
+      fromGrade: 'rare', toGrade: 'common', previousAmount: 5, amount: 1,
+    });
+    expect(restoredState.fairBag).toEqual(bagAfterEarn);
   });
 
   it('drains a completion captured before runtime import when a page reload creates the runtime', () => {

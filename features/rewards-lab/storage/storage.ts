@@ -118,6 +118,13 @@ const sanitizeClaim = (value: unknown): RewardClaim | null => {
   const base = {
     id: value.id, taskId: value.taskId, taskTitle: value.taskTitle,
     completedAt: value.completedAt, grade: value.grade, createdAt: value.createdAt,
+    ...(isRewardGrade(value.manualGrade) ? { manualGrade: value.manualGrade } : {}),
+    ...(isRewardGrade(value.minimumGrade) ? { minimumGrade: value.minimumGrade } : {}),
+    ...(Array.isArray(value.importanceReasons) ? {
+      importanceReasons: value.importanceReasons.filter((reason): reason is 'week' | 'month' | 'year' | 'goal' | 'event' => (
+        reason === 'week' || reason === 'month' || reason === 'year' || reason === 'goal' || reason === 'event'
+      )),
+    } : {}),
   };
   if (value.economyVersion === 1) {
     if (!isRewardRoll(value.roll)) return null;

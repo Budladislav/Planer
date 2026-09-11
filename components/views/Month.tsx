@@ -32,6 +32,7 @@ import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalance
 import { PeriodTaskCard, PeriodTaskContainer } from '../planning/PeriodTaskCard';
 import { PlanningEventList } from '../planning/PlanningEventList';
 import { getCompletedTasksForLocalPeriod, getEventsForWeek, getMonthPoolTasks, getWeekPoolTasks } from '../../planning-visibility';
+import { applyPlanningImportance } from '../../planning-importance';
 
 type MonthMoveTarget = { type: 'month'; month: string } | { type: 'week'; week: string };
 
@@ -129,6 +130,7 @@ export const MonthView: React.FC = () => {
     if (!task) return;
     const targetWeek = target.type === 'week' ? target.week : null;
     const targetMonth = target.type === 'month' ? target.month : currentMonth;
+    const sourceIsMonthPool = task.plan.month === currentMonth && task.plan.week === null && task.plan.day === null;
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
@@ -136,6 +138,11 @@ export const MonthView: React.FC = () => {
         plan: targetWeek
           ? { year: currentMonth.slice(0, 4), month: currentMonth, week: targetWeek, day: null }
           : planTaskForMonthBucket(task, targetMonth),
+        ...(targetWeek && sourceIsMonthPool
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'month') }
+          : !targetWeek
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'month') }
+          : {}),
       },
     });
 
@@ -208,6 +215,9 @@ export const MonthView: React.FC = () => {
         id: editingTask.id,
         title: editTitle.trim(),
         plan: planTaskForMonth(editingTask, editMonth),
+        ...(editMonth !== getTaskPlanningMonth(editingTask)
+          ? { planningImportance: applyPlanningImportance(editingTask.planningImportance, 'month') }
+          : {}),
       },
     });
     setEditingTask(null);
@@ -228,6 +238,7 @@ export const MonthView: React.FC = () => {
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: { source: targetWeek ? 'week' : 'month', dismissed: false },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

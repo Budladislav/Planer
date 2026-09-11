@@ -1,8 +1,12 @@
-import React, { useEffect } from 'react';
-import { ChevronUp, KeyRound } from 'lucide-react';
+import React from 'react';
+import { CalendarDays, CalendarRange, CalendarClock, ChevronUp, KeyRound, RotateCcw, ShieldOff, Target } from 'lucide-react';
 import { getTaskGrade, isRewardClaimActive, REWARD_GRADES, RewardGrade } from '../domain';
 import { useRewardsLab } from './useRewardsLab';
 import { useI18n } from '../../../i18n';
+import { dismissPlanningImportance, getActivePlanningImportance, restorePlanningImportance } from '../../../planning-importance';
+import { useAppStore } from '../../../store';
+import type { PlanningImportanceSource, Task } from '../../../types';
+import { getEffectiveTaskGrade, getTaskAutomaticGradeRule } from '../task-grade';
 
 const GRADE_STYLES: Record<RewardGrade, { dot: string; selected: string }> = {
   common: { dot: 'bg-[#94A3B8]', selected: 'ring-[#94A3B8]' },
@@ -36,25 +40,25 @@ const GRADE_META_STYLES: Record<RewardGrade, string> = {
 };
 
 const GRADES = Object.keys(REWARD_GRADES) as RewardGrade[];
+const gradeRank = (grade: RewardGrade): number => GRADES.indexOf(grade);
 
-const useTaskRewardGrade = (taskId: string, minimumUncommon: boolean) => {
+const useTaskRewardGrade = (taskId: string, minimumGrade: RewardGrade = 'common') => {
   const { runtime, snapshot } = useRewardsLab();
   const claim = snapshot.state?.claims[taskId];
-  const storedGrade = snapshot.state ? (claim?.grade ?? getTaskGrade(snapshot.state, taskId)) : 'common';
-  const grade: RewardGrade = minimumUncommon && storedGrade === 'common' ? 'uncommon' : storedGrade;
-
-  useEffect(() => {
-    if (snapshot.enabled && snapshot.state && minimumUncommon && storedGrade === 'common') {
-      runtime.ensureTaskMinimumGrade(taskId, 'uncommon');
-    }
-  }, [minimumUncommon, runtime, snapshot.enabled, snapshot.state, storedGrade, taskId]);
-
-  return { runtime, snapshot, claim, grade, minimumUncommon };
+  const manualGrade = snapshot.state ? getTaskGrade(snapshot.state, taskId) : 'common';
+  const claimIsActive = Boolean(snapshot.state && claim && isRewardClaimActive(snapshot.state, taskId));
+  const grade: RewardGrade = claimIsActive && claim
+    ? claim.grade
+    : getEffectiveTaskGrade(manualGrade, minimumGrade);
+  return { runtime, snapshot, claim, grade, manualGrade, minimumGrade };
 };
 
-export const ActiveRewardGradeMarker: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
+type TaskGradeProps = { task: Task };
+
+export const ActiveRewardGradeMarker: React.FC<TaskGradeProps> = ({ task }) => {
   const { t } = useI18n();
-  const { snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
+  const minimumGrade = getTaskAutomaticGradeRule(task).minimumGrade;
+  const { snapshot, claim, grade } = useTaskRewardGrade(task.id, minimumGrade);
   if (!snapshot.enabled || !snapshot.state) return null;
   if (grade === 'common') return null;
   const meta = REWARD_GRADES[grade];
@@ -72,8 +76,9 @@ export const ActiveRewardGradeMarker: React.FC<{ taskId: string; minimumUncommon
   );
 };
 
-export const ActiveRewardGradeSurface: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
-  const { snapshot, grade } = useTaskRewardGrade(taskId, minimumUncommon);
+export const ActiveRewardGradeSurface: React.FC<TaskGradeProps> = ({ task }) => {
+  const minimumGrade = getTaskAutomaticGradeRule(task).minimumGrade;
+  const { snapshot, grade } = useTaskRewardGrade(task.id, minimumGrade);
   if (!snapshot.enabled || !snapshot.state) return null;
   if (grade === 'common') return null;
   return (
@@ -84,13 +89,14 @@ export const ActiveRewardGradeSurface: React.FC<{ taskId: string; minimumUncommo
   );
 };
 
-export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; minimumUncommon?: boolean }> = ({ taskId, minimumUncommon = false }) => {
+export const ActiveRewardGradeIncrementButton: React.FC<TaskGradeProps> = ({ task }) => {
   const { t } = useI18n();
-  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
+  const minimumGrade = getTaskAutomaticGradeRule(task).minimumGrade;
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(task.id, minimumGrade);
   if (!snapshot.enabled || !snapshot.state) return null;
 
   const nextGrade = GRADES[GRADES.indexOf(grade) + 1] ?? null;
-  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
+  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, task.id));
   if (!nextGrade) return null;
 
   const label = t('Increase task grade: {from} to {to}', {
@@ -104,7 +110,7 @@ export const ActiveRewardGradeIncrementButton: React.FC<{ taskId: string; minimu
       disabled={locked}
       onClick={event => {
         event.stopPropagation();
-        if (nextGrade) runtime.setTaskGrade(taskId, nextGrade);
+        if (nextGrade) runtime.setTaskGrade(task.id, nextGrade);
       }}
       onPointerDown={event => event.stopPropagation()}
       onMouseDown={event => event.stopPropagation()}
@@ -146,13 +152,14 @@ export const ActiveRewardCompletionMeta: React.FC<{ taskId: string }> = ({ taskI
   );
 };
 
-export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boolean; minimumUncommon?: boolean }> = ({ taskId, compact = false, minimumUncommon = false }) => {
+export const ActiveRewardGradeSelector: React.FC<TaskGradeProps & { compact?: boolean }> = ({ task, compact = false }) => {
   const { t } = useI18n();
-  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(taskId, minimumUncommon);
+  const minimumGrade = getTaskAutomaticGradeRule(task).minimumGrade;
+  const { runtime, snapshot, claim, grade } = useTaskRewardGrade(task.id, minimumGrade);
   if (!snapshot.enabled || !snapshot.state) return null;
 
   const selectedMeta = REWARD_GRADES[grade];
-  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, taskId));
+  const locked = Boolean(claim && isRewardClaimActive(snapshot.state, task.id));
   const selectedRule = claim?.economyVersion === 1
     ? `×${selectedMeta.legacyMultiplier}`
     : `${selectedMeta.min}–${selectedMeta.max}`;
@@ -165,7 +172,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
     >
       <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('Grade')}</span>
       <div className="flex items-center gap-1" role="group" aria-label={t('Task reward grade')}>
-        {GRADES.filter(option => !minimumUncommon || option !== 'common').map(option => {
+        {GRADES.filter(option => gradeRank(option) >= gradeRank(minimumGrade)).map(option => {
           const meta = REWARD_GRADES[option];
           const selected = option === grade;
           return (
@@ -175,7 +182,7 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
               disabled={locked}
               onClick={event => {
                 event.stopPropagation();
-                runtime.setTaskGrade(taskId, option);
+                runtime.setTaskGrade(task.id, option);
               }}
               className={`flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70 ${
                 selected ? `ring-2 ring-offset-1 ${GRADE_STYLES[option].selected}` : ''
@@ -192,7 +199,91 @@ export const ActiveRewardGradeSelector: React.FC<{ taskId: string; compact?: boo
       <span className="min-w-0 flex-1 truncate text-right text-[11px] font-medium text-slate-600">
         {t(selectedMeta.label)} {selectedRule}{locked ? ` · ${t('locked')}` : claim ? ` · ${t('editable after Undo')}` : ''}
       </span>
-      {minimumUncommon && <span className="sr-only">{t('Linked tasks start at Uncommon grade.')}</span>}
+      {minimumGrade !== 'common' && <span className="sr-only">{t('This task has an automatic minimum grade.')}</span>}
+    </div>
+  );
+};
+
+const PLANNING_ICONS = {
+  week: CalendarRange,
+  month: CalendarDays,
+  year: CalendarClock,
+} as const;
+
+const planningLabel = (source: PlanningImportanceSource, t: ReturnType<typeof useI18n>['t']): string => ({
+  week: t('Weekly planning'),
+  month: t('Monthly planning'),
+  year: t('Yearly planning'),
+})[source];
+
+export const ActiveRewardImportanceMarkers: React.FC<{ task: Task }> = ({ task }) => {
+  const { snapshot } = useRewardsLab();
+  const { t } = useI18n();
+  if (!snapshot.enabled || !snapshot.state) return null;
+  const planningSource = getActivePlanningImportance(task);
+  const PlanningIcon = planningSource ? PLANNING_ICONS[planningSource] : null;
+
+  return (
+    <span className="relative z-[1] inline-flex flex-shrink-0 items-center gap-1">
+      {PlanningIcon && planningSource && (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500" title={planningLabel(planningSource, t)} aria-label={planningLabel(planningSource, t)}>
+          <PlanningIcon className="h-3 w-3" aria-hidden="true" />
+        </span>
+      )}
+      {task.goalId && (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500" title={t('Linked to a long-term goal')} aria-label={t('Linked to a long-term goal')}>
+          <Target className="h-3 w-3" aria-hidden="true" />
+        </span>
+      )}
+    </span>
+  );
+};
+
+export const ActiveRewardAutomaticMinimumControl: React.FC<{ task: Task }> = ({ task }) => {
+  const { snapshot } = useRewardsLab();
+  const { dispatch } = useAppStore();
+  const { t } = useI18n();
+  if (!snapshot.enabled || !snapshot.state) return null;
+
+  const rule = getTaskAutomaticGradeRule(task);
+  const planning = task.planningImportance;
+  const reasonLabels = rule.reasons.map(reason => ({
+    week: t('Weekly planning'),
+    month: t('Monthly planning'),
+    year: t('Yearly planning'),
+    goal: t('Long-term goal'),
+    event: t('Calendar event'),
+  })[reason]);
+
+  if (!planning && rule.minimumGrade === 'common') return null;
+
+  const updatePlanningImportance = (next: Task['planningImportance']) => dispatch({
+    type: 'UPDATE_TASK', payload: { id: task.id, planningImportance: next },
+  });
+
+  if (planning?.dismissed) {
+    return (
+      <div className="mx-auto flex w-full max-w-sm items-center gap-2 px-2 text-xs text-slate-500">
+        <ShieldOff className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1">{t('{source} importance removed', { source: planningLabel(planning.source, t) })}</span>
+        <button type="button" className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-2 py-1 font-medium text-brand-700 hover:bg-brand-50" onClick={() => updatePlanningImportance(restorePlanningImportance(planning))}>
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />{t('Restore')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-sm items-center gap-2 px-2 text-xs text-slate-500">
+      <span className="min-w-0 flex-1">{t('Automatic minimum: {grade} · {reasons}', {
+        grade: t(REWARD_GRADES[rule.minimumGrade].label),
+        reasons: reasonLabels.join(', '),
+      })}</span>
+      {planning && (
+        <button type="button" className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-2 py-1 font-medium text-slate-600 hover:bg-slate-100" onClick={() => updatePlanningImportance(dismissPlanningImportance(planning))}>
+          <ShieldOff className="h-3.5 w-3.5" aria-hidden="true" />{t('Remove')}
+        </button>
+      )}
     </div>
   );
 };

@@ -17,12 +17,12 @@ describe('Today task card presentation', () => {
   });
 
   it('keeps one-step grade promotion available on collapsed planning cards', () => {
-    const incrementControl = '<RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />';
+    const incrementControl = '<RewardGradeIncrementButton task={task} />';
     expect(todayViewSource).toContain(incrementControl);
     expect(periodTaskCardSource).toContain(incrementControl);
     expect(monthViewSource).toContain('<PeriodTaskCard');
     expect(yearViewSource).toContain('<PeriodTaskCard');
-    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton taskId=\{task\.id\} goalLinked=\{task\.goalId !== null\} eventLinked=\{task\.eventId !== null\} \/>/g)).toHaveLength(2);
+    expect(weekTaskItemsSource.match(/<RewardGradeIncrementButton task=\{task\} \/>/g)).toHaveLength(2);
   });
 
   it('keeps secondary controls inside the expanded card', () => {
@@ -42,7 +42,7 @@ describe('Today task card presentation', () => {
     expectPeriodControls(weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const DayTaskItem'), weekTaskItemsSource.indexOf('// Sortable wrapper for DayTaskItem')));
     expectPeriodControls(weekTaskItemsSource.slice(weekTaskItemsSource.indexOf('const BucketTaskItem')));
 
-    const gradeSelector = '<RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />';
+    const gradeSelector = '<RewardGradeSelector task={task} compact />';
     expect(todayViewSource).toContain(gradeSelector);
     expect(periodTaskCardSource).toContain(gradeSelector);
     expect(weekTaskItemsSource.split(gradeSelector)).toHaveLength(3);

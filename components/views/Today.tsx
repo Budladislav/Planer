@@ -28,7 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../types';
 import { completeTask, deleteTask, reopenTask } from '../../task-lifecycle';
-import { RewardCompletionMeta, RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface } from '../../features/rewards-lab/ui/RewardGradeControls';
+import { RewardAutomaticMinimumControl, RewardCompletionMeta, RewardGradeIncrementButton, RewardGradeMarker, RewardGradeSelector, RewardGradeSurface, RewardImportanceMarkers } from '../../features/rewards-lab/ui/RewardGradeControls';
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { DayMetaBadges, DayNotesEditor } from '../DayNotes';
 import { useI18n } from '../../i18n';
@@ -37,6 +37,7 @@ import { WeekTaskMoveButton, WeekTaskMoveSheet, type WeekTaskMoveTarget } from '
 import { TaskGoalLinkControl } from '../tasks/TaskGoalLinkControl';
 import { planTaskForWeekBucket } from '../../task-planning';
 import { getWeekPoolTasks } from '../../planning-visibility';
+import { applyPlanningImportance } from '../../planning-importance';
 
 const AddToStartIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -152,7 +153,7 @@ const SortableTaskItem: React.FC<{
       style={style}
       onClick={() => setShowActions((prev) => !prev)}
     >
-      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+      <RewardGradeSurface task={task} />
       <div
         {...attributes}
         {...listeners}
@@ -169,12 +170,13 @@ const SortableTaskItem: React.FC<{
           >
             <X className="h-3.5 w-3.5" />
           </TaskIconButton>
+          <RewardImportanceMarkers task={task} />
           <span className={`${showActions ? 'sr-only' : 'truncate'} text-sm font-medium text-slate-950 ${task.status === 'done' ? 'line-through' : ''}`}>
             {task.title}
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
-          <RewardGradeIncrementButton taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+          <RewardGradeIncrementButton task={task} />
           <TaskIconButton
             label={t('Edit task')}
             onClick={(e) => {
@@ -207,8 +209,9 @@ const SortableTaskItem: React.FC<{
           <div className="space-y-2">
             <p className="break-words px-2 text-sm font-medium leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={task.id} compact goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+              <RewardGradeSelector task={task} compact />
             </div>
+            <RewardAutomaticMinimumControl task={task} />
             <TaskGoalLinkControl task={task} />
             <div className="flex justify-center gap-1">
               <WeekTaskMoveButton onClick={() => onMove(task.id)} />
@@ -324,6 +327,7 @@ const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, na
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,
@@ -376,6 +380,7 @@ const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, na
         plan: day
           ? { day, week: getWeekString(day), month: day.slice(0, 7), year: day.slice(0, 4) }
           : planTaskForWeekBucket(task, targetWeek),
+        ...(!day ? { planningImportance: applyPlanningImportance(task.planningImportance, 'week') } : {}),
       },
     });
 
@@ -539,8 +544,9 @@ const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, na
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{isToday ? t('No tasks completed today yet.') : t('No tasks completed on this day.')}</p>
                   ) : completedTodayTasks.map(task => (
                     <GradedTaskRow key={task.id} className="flex items-center gap-2 overflow-hidden px-3 py-2.5">
-                      <RewardGradeSurface taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
-                      <RewardGradeMarker taskId={task.id} goalLinked={task.goalId !== null} eventLinked={task.eventId !== null} />
+                      <RewardGradeSurface task={task} />
+                      <RewardGradeMarker task={task} />
+                      <RewardImportanceMarkers task={task} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-slate-950 line-through">{task.title}</div>
                         <div className="mt-0.5 text-xs text-slate-400">

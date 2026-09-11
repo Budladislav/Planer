@@ -7,6 +7,7 @@ import {
   getActiveWeeklyTemplate,
   getOrderedWeeklyTemplateTasks,
   getWeeklyTemplateRewardTaskId,
+  isTaskCreatedFromWeeklyTemplate,
   migrateWeeklyTemplateState,
   WEEKLY_TEMPLATE_POOL_SLOT,
   weeklyTemplateDaySlot,
@@ -31,6 +32,18 @@ const template: WeeklyTemplate = {
 };
 
 describe('weekly template', () => {
+  it('recognizes planner tasks created by any saved template application', () => {
+    const state = {
+      templates: [
+        { ...template, applications: { '2026-W40': { pool: 'task-from-template' } } },
+      ],
+      activeTemplateId: template.id,
+    };
+
+    expect(isTaskCreatedFromWeeklyTemplate(state, 'task-from-template')).toBe(true);
+    expect(isTaskCreatedFromWeeklyTemplate(state, 'manual-task')).toBe(false);
+  });
+
   it('migrates valid tasks, normalizes slot order and discards malformed links', () => {
     const migrated = migrateWeeklyTemplateState({
       tasks: [

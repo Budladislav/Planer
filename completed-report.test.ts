@@ -15,6 +15,7 @@ const task = (id: string, completedAt: string | null): Task => ({
   projectId: null,
   eventId: null,
   goalId: null,
+  planningImportance: null,
   createdAt: '2026-08-01T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,

@@ -1,4 +1,6 @@
 import type { TaskLifecycleEvent } from '../../../task-lifecycle';
+import type { RewardGrade, RewardImportanceReason } from '../domain';
+import { getTaskAutomaticGradeRule } from '../task-grade';
 
 export const REWARDS_LAB_LIFECYCLE_OUTBOX_KEY = 'takt:rewards:lifecycle-outbox:v1';
 
@@ -10,6 +12,9 @@ export interface RewardsLabLifecycleCompletedEvent {
   title: string;
   occurredAt: string;
   completedAt: string;
+  minimumGrade?: RewardGrade;
+  importanceReasons?: RewardImportanceReason[];
+  /** Legacy floor retained so pending pre-6.1 events remain readable. */
   minimumUncommon?: boolean;
   /** Legacy field retained so pending pre-5.5.0 events can still be read. */
   goalLinked?: boolean;
@@ -57,6 +62,14 @@ const isNonEmptyString = (value: unknown): value is string => (
   typeof value === 'string' && value.trim().length > 0
 );
 
+const isRewardGrade = (value: unknown): value is RewardGrade => (
+  value === 'common' || value === 'uncommon' || value === 'rare' || value === 'legendary' || value === 'mythic'
+);
+
+const isImportanceReason = (value: unknown): value is RewardImportanceReason => (
+  value === 'week' || value === 'month' || value === 'year' || value === 'goal' || value === 'event'
+);
+
 const sanitizeEvent = (value: unknown): RewardsLabLifecycleEvent | null => {
   if (!isRecord(value)
     || !isNonEmptyString(value.taskId)
@@ -64,13 +77,16 @@ const sanitizeEvent = (value: unknown): RewardsLabLifecycleEvent | null => {
     || !isNonEmptyString(value.occurredAt)) return null;
 
   if (value.type === 'task.completed' && isNonEmptyString(value.completedAt)) {
+    const legacyMinimum = value.minimumUncommon === true || value.goalLinked === true;
     return {
       type: 'task.completed',
       taskId: value.taskId,
       title: value.title,
       occurredAt: value.occurredAt,
       completedAt: value.completedAt,
-      minimumUncommon: value.minimumUncommon === true || value.goalLinked === true,
+      minimumGrade: isRewardGrade(value.minimumGrade) ? value.minimumGrade : legacyMinimum ? 'uncommon' : 'common',
+      importanceReasons: Array.isArray(value.importanceReasons) ? value.importanceReasons.filter(isImportanceReason) : [],
+      minimumUncommon: legacyMinimum,
       goalLinked: value.goalLinked === true,
     };
   }
@@ -147,15 +163,20 @@ const createOutboxId = (): string => {
 
 export const toRewardsLabLifecycleEvent = (event: TaskLifecycleEvent): RewardsLabLifecycleEvent => (
   event.type === 'task.completed'
-    ? {
+    ? (() => {
+        const automatic = getTaskAutomaticGradeRule(event.task);
+        return {
         type: event.type,
         taskId: event.taskId,
         title: event.title,
         occurredAt: event.occurredAt,
         completedAt: event.completedAt,
-        minimumUncommon: Boolean(event.task.goalId || event.task.eventId),
+        minimumGrade: automatic.minimumGrade,
+        importanceReasons: automatic.reasons,
+        minimumUncommon: automatic.minimumGrade !== 'common',
         goalLinked: Boolean(event.task.goalId),
-      }
+        };
+      })()
     : {
         type: event.type,
         taskId: event.taskId,

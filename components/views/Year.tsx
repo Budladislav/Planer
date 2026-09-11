@@ -31,6 +31,7 @@ import { PeriodTaskCard, PeriodTaskContainer } from '../planning/PeriodTaskCard'
 import { RewardsBalancePill } from '../../features/rewards-lab/ui/RewardsBalancePill';
 import { PlanningEventList } from '../planning/PlanningEventList';
 import { getCompletedTasksForLocalPeriod, getEventsForMonth, getMonthPoolTasks, getYearPoolTasks } from '../../planning-visibility';
+import { applyPlanningImportance } from '../../planning-importance';
 
 const poolContainer = (year: string): string => `year-pool:${year}`;
 const monthContainer = (month: string): string => `year-month:${month}`;
@@ -120,6 +121,7 @@ export const YearView: React.FC = () => {
   const moveTaskTo = (taskId: string, targetMonth: string | null) => {
     const task = state.tasks.find(item => item.id === taskId);
     if (!task) return;
+    const sourceIsYearPool = task.plan.year === currentYear && task.plan.month === null;
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
@@ -127,6 +129,11 @@ export const YearView: React.FC = () => {
         plan: targetMonth
           ? { year: currentYear, month: targetMonth, week: null, day: null }
           : { year: currentYear, month: null, week: null, day: null },
+        ...(targetMonth && sourceIsYearPool
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'year') }
+          : !targetMonth
+          ? { planningImportance: applyPlanningImportance(task.planningImportance, 'year') }
+          : {}),
       },
     });
     if (targetMonth) {
@@ -172,7 +179,14 @@ export const YearView: React.FC = () => {
     if (!editingTask || !editTitle.trim() || !isValidYearString(editYear)) return;
     dispatch({
       type: 'UPDATE_TASK',
-      payload: { id: editingTask.id, title: editTitle.trim(), plan: planTaskForYear(editingTask, editYear) },
+      payload: {
+        id: editingTask.id,
+        title: editTitle.trim(),
+        plan: planTaskForYear(editingTask, editYear),
+        ...(editYear !== getTaskPlanningYear(editingTask)
+          ? { planningImportance: applyPlanningImportance(editingTask.planningImportance, 'year') }
+          : {}),
+      },
     });
     setEditingTask(null);
   };
@@ -192,6 +206,7 @@ export const YearView: React.FC = () => {
         projectId: null,
         eventId: null,
         goalId: null,
+        planningImportance: { source: targetMonth ? 'month' : 'year', dismissed: false },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

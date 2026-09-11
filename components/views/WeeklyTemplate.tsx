@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { CalendarPlus2, Check, Copy, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store';
-import type { WeeklyTemplate, WeeklyTemplateDayIndex, WeeklyTemplateTask } from '../../types';
+import type { Task, WeeklyTemplate, WeeklyTemplateDayIndex, WeeklyTemplateTask } from '../../types';
 import { generateId, getTodayString, getWeekDateRange, getWeekString, isValidWeekString } from '../../utils';
 import {
   buildWeeklyTemplateApplication,
@@ -55,6 +55,17 @@ const TemplateTaskCard: React.FC<{
   const [title, setTitle] = useState(task.title);
   const slot = getWeeklyTemplateTaskSlot(task);
   const rewardTaskId = getWeeklyTemplateRewardTaskId(task.id);
+  const rewardTask: Task = {
+    ...task,
+    id: rewardTaskId,
+    status: 'todo',
+    plan: { day: null, week: null, month: null, year: null },
+    projectId: null,
+    eventId: null,
+    goalId: null,
+    planningImportance: null,
+    completedAt: null,
+  };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { slot },
@@ -92,7 +103,7 @@ const TemplateTaskCard: React.FC<{
       onClick={() => setExpanded(value => !value)}
       data-template-task-id={task.id}
     >
-      <RewardGradeSurface taskId={rewardTaskId} />
+      <RewardGradeSurface task={rewardTask} />
       <div className="flex min-w-0 items-center gap-1.5">
         <button
           type="button"
@@ -114,7 +125,7 @@ const TemplateTaskCard: React.FC<{
         <span className={`${expanded ? 'sr-only' : 'truncate'} min-w-0 flex-1 text-sm font-medium text-slate-950`} title={task.title}>
           {task.title}
         </span>
-        <RewardGradeIncrementButton taskId={rewardTaskId} />
+        <RewardGradeIncrementButton task={rewardTask} />
         <TaskIconButton
           label={t('Edit template task')}
           onClick={event => { event.stopPropagation(); setEditing(true); }}
@@ -127,7 +138,7 @@ const TemplateTaskCard: React.FC<{
           <div className="space-y-2">
             <p className="break-words text-sm leading-relaxed text-slate-950">{task.title}</p>
             <div className="mx-auto w-full max-w-sm">
-              <RewardGradeSelector taskId={rewardTaskId} compact />
+              <RewardGradeSelector task={rewardTask} compact />
             </div>
           </div>
         )}

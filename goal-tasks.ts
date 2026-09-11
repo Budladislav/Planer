@@ -58,6 +58,9 @@ export const buildGoalTask = ({
     projectId: null,
     eventId: null,
     goalId,
+    planningImportance: horizon === 'today'
+      ? null
+      : { source: horizon, dismissed: false },
     createdAt: now,
     updatedAt: now,
     completedAt: null,

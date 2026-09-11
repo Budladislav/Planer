@@ -8,6 +8,7 @@ import {
   INITIAL_STATE,
   LongTermGoal,
   MonthNote,
+  PlanningImportance,
   ShiftTransitionHighlight,
   Task,
   ViewState,
@@ -27,7 +28,7 @@ import {
 } from './weekly-template';
 import { normalizeNavigationItems, normalizeStartupView } from './navigation';
 
-export const CURRENT_SCHEMA_VERSION = 16;
+export const CURRENT_SCHEMA_VERSION = 17;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -41,6 +42,11 @@ const asString = (value: unknown, fallback: string): string => {
 
 const asNullableString = (value: unknown): string | null => {
   return typeof value === 'string' ? value : null;
+};
+
+const migratePlanningImportance = (value: unknown): PlanningImportance | null => {
+  if (!isRecord(value) || (value.source !== 'week' && value.source !== 'month' && value.source !== 'year')) return null;
+  return { source: value.source, dismissed: value.dismissed === true };
 };
 
 const migrateOrderMap = (value: unknown): Record<string, string[]> => {
@@ -187,6 +193,7 @@ export const migrateAppState = (value: unknown): AppState => {
           projectId: asNullableString(value.projectId),
           eventId: asNullableString(value.eventId),
           goalId: goalIds.has(asNullableString(value.goalId) ?? '') ? asNullableString(value.goalId) : null,
+          planningImportance: migratePlanningImportance(value.planningImportance),
           createdAt,
           updatedAt,
           completedAt: status === 'done'

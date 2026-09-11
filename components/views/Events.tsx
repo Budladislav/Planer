@@ -146,6 +146,7 @@ export const EventsView: React.FC = () => {
         projectId: null,
         eventId,
         goalId: null,
+        planningImportance: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completedAt: null,

@@ -14,6 +14,7 @@ import {
   claimTaskCompletion,
   createDefaultRewardsLabState,
   ensureTaskMinimumGrade,
+  getTaskGrade,
   regradeReversedTaskClaim,
   recordLabOpened,
   redeemPurchase,
@@ -26,6 +27,7 @@ import {
   upgradeRewardKeys,
   undoLatestKeyUpgrade,
 } from '../domain';
+import { getEffectiveTaskGrade } from '../task-grade';
 import type {
   EconomyRuntime,
   RedeemPurchaseOutcome,
@@ -371,13 +373,16 @@ export const createRewardsLabRuntime = (
         if (unavailable()) return false;
 
         if (event.type === 'task.completed') {
-          const preparedState = event.minimumUncommon || event.goalLinked
-            ? ensureTaskMinimumGrade(snapshot.state!, event.taskId, 'uncommon', economyRuntime).state
-            : snapshot.state!;
-          const result = claimTaskCompletion(preparedState, {
+          const manualGrade = getTaskGrade(snapshot.state!, event.taskId);
+          const minimumGrade = event.minimumGrade ?? (event.minimumUncommon || event.goalLinked ? 'uncommon' : 'common');
+          const result = claimTaskCompletion(snapshot.state!, {
             taskId: event.taskId,
             taskTitle: event.title,
             completedAt: event.completedAt,
+            grade: getEffectiveTaskGrade(manualGrade, minimumGrade),
+            manualGrade,
+            minimumGrade,
+            importanceReasons: event.importanceReasons ?? [],
           }, economyRuntime);
           if (result.outcome === 'already-posted') return true;
 

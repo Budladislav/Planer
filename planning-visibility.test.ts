@@ -10,7 +10,7 @@ import {
 } from './planning-visibility';
 
 const task = (id: string, plan: Task['plan'], status: Task['status'] = 'todo', completedAt: string | null = null): Task => ({
-  id, title: id, status, plan, projectId: null, eventId: null, goalId: null,
+  id, title: id, status, plan, projectId: null, eventId: null, goalId: null, planningImportance: null,
   createdAt: '2026-09-10T08:00:00.000Z', updatedAt: completedAt ?? '2026-09-10T08:00:00.000Z', completedAt,
 });
 

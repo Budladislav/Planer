@@ -18,6 +18,7 @@ const linkedTask = (eventId: string, status: Task['status'], completedAt: string
   projectId: null,
   eventId,
   goalId: null,
+  planningImportance: null,
   createdAt: '2026-08-16T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-16T08:00:00.000Z',
   completedAt,
