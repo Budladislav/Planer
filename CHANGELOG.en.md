@@ -2,6 +2,26 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.0.0] — 11.09.2026 — “Rewards”
+
+### Added
+
+- Rewards is now an official optional part of Takt, retaining isolated task grades, credits, five key grades, a personal catalog, and a wishlist.
+- Export now creates a versioned whole-Takt backup containing planner data, official Rewards data, and a disabled archive of the previous lab; legacy planner-only backups remain supported.
+- `REWARDS_CATALOG.md` records the reward catalog, recommended prices, pilot statistics, and four-week balance review guidance.
+
+### Changed
+
+- The official module uses fresh storage and starts disabled for new users, with no balance, keys, grades, history, rewards, or purchases.
+- Experimental wording has been removed from the interface, and a starter catalog is no longer installed automatically.
+- Rewards without real-world spending are priced symbolically in the reference catalog; monetary rewards retain the `1 credit ≈ €1` guideline, with keys, cooldowns, and limits as the primary constraints.
+
+### Safety
+
+- Previous Rewards Lab keys are never overwritten or removed. Their original data is preserved as a disabled archive that does not participate in the official economy.
+- Rewards remains an independently lazy-loaded module: its failures cannot block task completion, and `?safe=1` still opens the planner without loading Rewards.
+- Import validates the container version and restores Rewards before applying planner data, leaving planner state unchanged if Rewards restoration fails.
+
 ## [5.5.1] — 11.09.2026 — “Entry Point”
 
 ### Added
