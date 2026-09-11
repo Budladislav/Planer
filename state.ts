@@ -27,7 +27,7 @@ import {
 } from './weekly-template';
 import { normalizeNavigationItems, normalizeStartupView } from './navigation';
 
-export const CURRENT_SCHEMA_VERSION = 15;
+export const CURRENT_SCHEMA_VERSION = 16;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -289,6 +289,7 @@ export const migrateAppState = (value: unknown): AppState => {
       calendarNoteHighlight: rawUiPreferences.calendarNoteHighlight !== false,
       navigationItems: normalizeNavigationItems(rawUiPreferences.navigationItems),
       startupView: normalizeStartupView(rawUiPreferences.startupView),
+      mainMenuExpanded: rawUiPreferences.mainMenuExpanded !== false,
     },
   };
 };

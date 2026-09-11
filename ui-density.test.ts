@@ -52,8 +52,17 @@ describe('compact planner hierarchy', () => {
   it('offers every configurable section as a persisted start page', () => {
     expect(interfaceSettingsSource).toContain('state.uiPreferences.startupView');
     expect(interfaceSettingsSource).toContain('PRIMARY_NAVIGATION_VIEWS.map');
+    expect(interfaceSettingsSource.indexOf("t('Start page')")).toBeLessThan(interfaceSettingsSource.indexOf("t('Main menu')"));
+    expect(interfaceSettingsSource).toContain('state.uiPreferences.mainMenuExpanded');
+    expect(interfaceSettingsSource).toContain('aria-expanded={state.uiPreferences.mainMenuExpanded}');
     expect(storeSource).toContain('prepareAppStateForSession(migrated)');
     expect(storeSource).not.toContain("lastActiveView: 'today'");
+  });
+
+  it('keeps the completed-day disclosure header free of a task-completion checkmark', () => {
+    const disclosureStart = todaySource.indexOf('onClick={toggleCompletedToday}');
+    const disclosureEnd = todaySource.indexOf('</button>', disclosureStart);
+    expect(todaySource.slice(disclosureStart, disclosureEnd)).not.toContain('<Check');
   });
 
   it('uses the full planning context width after Settings moves into navigation', () => {

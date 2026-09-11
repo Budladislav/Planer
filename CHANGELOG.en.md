@@ -2,6 +2,20 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.0.1] — 11.09.2026 — “Connected Menu”
+
+### Changed
+
+- Start page now appears above Main menu. The menu heading and controls form one collapsible block whose expanded state is remembered.
+
+### Fixed
+
+- Removed the redundant green checkmark from the completed-day disclosure heading because it looked like a task completion action.
+
+### Safety
+
+- The core schema advances from 15 to 16 only to remember the Main menu disclosure state; tasks, events, and Rewards data remain unchanged.
+
 ## [6.0.0] — 11.09.2026 — “Rewards”
 
 ### Added

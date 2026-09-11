@@ -69,6 +69,7 @@ export interface UiPreferences {
   calendarNoteHighlight: boolean;
   navigationItems: PrimaryNavigationView[];
   startupView: PrimaryNavigationView;
+  mainMenuExpanded: boolean;
 }
 
 export interface Capture {
@@ -161,7 +162,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 15,
+  schemaVersion: 16,
   captures: [],
   tasks: [],
   events: [],
@@ -200,5 +201,6 @@ export const INITIAL_STATE: AppState = {
     calendarNoteHighlight: true,
     navigationItems: ['events', 'week', 'today'],
     startupView: 'today',
+    mainMenuExpanded: true,
   },
 };

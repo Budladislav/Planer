@@ -163,6 +163,7 @@ describe('migrateAppState', () => {
       calendarNoteHighlight: true,
       navigationItems: ['events', 'week', 'today'],
       startupView: 'today',
+      mainMenuExpanded: true,
     });
   });
 
@@ -202,6 +203,7 @@ describe('migrateAppState', () => {
       calendarNoteHighlight: true,
       navigationItems: ['year', 'today'],
       startupView: 'today',
+      mainMenuExpanded: true,
     });
   });
 
@@ -524,6 +526,7 @@ describe('appReducer period notes and UI preferences', () => {
       calendarNoteHighlight: true,
       navigationItems: ['events', 'week', 'today'],
       startupView: 'today',
+      mainMenuExpanded: true,
     });
   });
 });

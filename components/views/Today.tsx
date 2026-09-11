@@ -524,9 +524,6 @@ const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, na
                 aria-expanded={state.uiPreferences.todayCompletedExpanded}
               >
                 <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-700">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
                   {isToday
                     ? t('Completed today ({count})', { count: completedTodayTasks.length })
                     : t('Completed on this day ({count})', { count: completedTodayTasks.length })}
