@@ -14,6 +14,8 @@ const RU: Record<string, string> = {
   'Main navigation': 'Основная навигация',
   'Main menu': 'Главное меню',
   'Choose sections and arrange them by priority.': 'Выберите разделы и расположите их по приоритету.',
+  'Start page': 'Стартовая страница',
+  'This section opens whenever Takt starts, even if it is hidden from the main menu.': 'Этот раздел открывается при каждом запуске Takt, даже если он скрыт из главного меню.',
   'Hide {section}': 'Скрыть раздел «{section}»',
   'Show {section}': 'Показать раздел «{section}»',
   'Hide from main menu': 'Убрать из главного меню',

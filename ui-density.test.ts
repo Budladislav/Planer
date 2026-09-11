@@ -19,6 +19,8 @@ import taskGoalLinkSource from './components/tasks/TaskGoalLinkControl.tsx?raw';
 import periodTaskCardSource from './components/planning/PeriodTaskCard.tsx?raw';
 import weekTaskItemsSource from './components/week/WeekTaskItems.tsx?raw';
 import doneSource from './components/views/Done.tsx?raw';
+import interfaceSettingsSource from './components/settings/InterfaceSettings.tsx?raw';
+import storeSource from './store.tsx?raw';
 
 const viewSources = import.meta.glob('./components/views/*.tsx', {
   query: '?raw',
@@ -43,6 +45,15 @@ describe('compact planner hierarchy', () => {
     expect(layoutSource).toContain('getMobileNavigationCapacity(navWidth)');
     expect(layoutSource).not.toContain('fixed right-3 top-3');
     expect(layoutSource).toContain('fixed bottom-0 left-0 right-0');
+    expect(layoutSource).toContain('shouldCenterMobileNavigation');
+    expect(layoutSource).toContain("centerMobileNavigation ? 'justify-center'");
+  });
+
+  it('offers every configurable section as a persisted start page', () => {
+    expect(interfaceSettingsSource).toContain('state.uiPreferences.startupView');
+    expect(interfaceSettingsSource).toContain('PRIMARY_NAVIGATION_VIEWS.map');
+    expect(storeSource).toContain('prepareAppStateForSession(migrated)');
+    expect(storeSource).not.toContain("lastActiveView: 'today'");
   });
 
   it('uses the full planning context width after Settings moves into navigation', () => {

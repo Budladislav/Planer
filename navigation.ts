@@ -12,6 +12,13 @@ export const PRIMARY_NAVIGATION_VIEWS: readonly PrimaryNavigationView[] = [
 ] as const;
 
 export const DEFAULT_NAVIGATION_ITEMS: PrimaryNavigationView[] = ['events', 'week', 'today'];
+export const DEFAULT_STARTUP_VIEW: PrimaryNavigationView = 'today';
+
+export const normalizeStartupView = (value: unknown): PrimaryNavigationView => (
+  typeof value === 'string' && PRIMARY_NAVIGATION_VIEWS.includes(value as PrimaryNavigationView)
+    ? value as PrimaryNavigationView
+    : DEFAULT_STARTUP_VIEW
+);
 
 export const normalizeNavigationItems = (value: unknown): PrimaryNavigationView[] => {
   if (!Array.isArray(value)) return [...DEFAULT_NAVIGATION_ITEMS];
@@ -41,3 +48,8 @@ export const getImmediatelyVisibleNavigationItems = (
   items: readonly PrimaryNavigationView[],
   width: number,
 ): PrimaryNavigationView[] => items.slice(0, Math.max(0, getMobileNavigationCapacity(width) - 1));
+
+export const shouldCenterMobileNavigation = (
+  items: readonly PrimaryNavigationView[],
+  width: number,
+): boolean => items.length + 1 < getMobileNavigationCapacity(width);

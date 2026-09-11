@@ -6,7 +6,7 @@ import {
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
 import { useAppStore } from '../store';
-import { getMobileNavigationCapacity } from '../navigation';
+import { getMobileNavigationCapacity, shouldCenterMobileNavigation } from '../navigation';
 import type { PrimaryNavigationView } from '../types';
 
 interface LayoutProps {
@@ -89,6 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   }, [navWidth, primaryNavItems.length, updateScrollEdges]);
 
   const capacity = getMobileNavigationCapacity(navWidth);
+  const centerMobileNavigation = shouldCenterMobileNavigation(state.uiPreferences.navigationItems, navWidth);
   const itemWidth = Math.max(68, Math.floor((navWidth - 8 - (capacity - 1) * 2) / capacity));
 
   const DesktopNavItem = ({ view, icon: Icon, label }: NavigationItem) => {
@@ -168,13 +169,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           {children}
         </main>
 
-        <nav ref={navRef} className="mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden" aria-label={t('Main navigation')}>
+        <nav ref={navRef} className={`mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden ${centerMobileNavigation ? 'justify-center' : ''}`} aria-label={t('Main navigation')}>
           <MobileNavItem view="settings" icon={Settings} label={t('Settings')} />
-          <div className="relative min-w-0 flex-1">
+          <div className={`relative ${centerMobileNavigation ? 'flex-none' : 'min-w-0 flex-1'}`}>
             <div
               ref={scrollRef}
               onScroll={updateScrollEdges}
-              className="mobile-nav-scroll flex snap-x snap-mandatory items-center gap-0.5 overflow-x-auto overscroll-x-contain"
+              className={`mobile-nav-scroll flex snap-x snap-mandatory items-center gap-0.5 overflow-x-auto overscroll-x-contain ${centerMobileNavigation ? 'w-max' : 'w-full'}`}
             >
               {primaryNavItems.map(item => (
                 <span key={item.view} className="flex-none snap-start"><MobileNavItem {...item} /></span>

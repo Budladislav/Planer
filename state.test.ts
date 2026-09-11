@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { appReducer, CURRENT_SCHEMA_VERSION, migrateAppState } from './state';
+import { appReducer, CURRENT_SCHEMA_VERSION, migrateAppState, prepareAppStateForSession } from './state';
 import { AppState, INITIAL_STATE, Task } from './types';
 
 const makeTask = (overrides: Partial<Task> = {}): Task => ({
@@ -162,6 +162,7 @@ describe('migrateAppState', () => {
       language: 'ru',
       calendarNoteHighlight: true,
       navigationItems: ['events', 'week', 'today'],
+      startupView: 'today',
     });
   });
 
@@ -200,7 +201,32 @@ describe('migrateAppState', () => {
       language: 'ru',
       calendarNoteHighlight: true,
       navigationItems: ['year', 'today'],
+      startupView: 'today',
     });
+  });
+
+  it('preserves a valid start page and safely rejects unsupported views', () => {
+    expect(migrateAppState({
+      uiPreferences: { startupView: 'goals' },
+    }).uiPreferences.startupView).toBe('goals');
+
+    expect(migrateAppState({
+      uiPreferences: { startupView: 'settings' },
+    }).uiPreferences.startupView).toBe('today');
+  });
+
+  it('opens a fresh session on the configured start page', () => {
+    const started = prepareAppStateForSession({
+      ...INITIAL_STATE,
+      lastActiveView: 'month',
+      goalNavigationTargetId: 'goal-1',
+      dayNavigationTarget: '2026-09-11',
+      uiPreferences: { ...INITIAL_STATE.uiPreferences, startupView: 'events' },
+    });
+
+    expect(started.lastActiveView).toBe('events');
+    expect(started.goalNavigationTargetId).toBeNull();
+    expect(started.dayNavigationTarget).toBeNull();
   });
 });
 
@@ -497,6 +523,7 @@ describe('appReducer period notes and UI preferences', () => {
       language: INITIAL_STATE.uiPreferences.language,
       calendarNoteHighlight: true,
       navigationItems: ['events', 'week', 'today'],
+      startupView: 'today',
     });
   });
 });

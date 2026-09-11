@@ -68,6 +68,7 @@ export interface UiPreferences {
   language: AppLanguage;
   calendarNoteHighlight: boolean;
   navigationItems: PrimaryNavigationView[];
+  startupView: PrimaryNavigationView;
 }
 
 export interface Capture {
@@ -160,7 +161,7 @@ const getDeviceLanguage = (): AppLanguage => {
 };
 
 export const INITIAL_STATE: AppState = {
-  schemaVersion: 14,
+  schemaVersion: 15,
   captures: [],
   tasks: [],
   events: [],
@@ -198,5 +199,6 @@ export const INITIAL_STATE: AppState = {
     language: getDeviceLanguage(),
     calendarNoteHighlight: true,
     navigationItems: ['events', 'week', 'today'],
+    startupView: 'today',
   },
 };

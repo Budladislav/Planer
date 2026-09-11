@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, ArrowUp, Eye, EyeOff, Languages, Menu, Settings, Smartphone } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, EyeOff, Languages, Menu, PanelTopOpen, Settings, Smartphone } from 'lucide-react';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store';
 import { SettingsCard } from './SettingsRows';
@@ -84,6 +84,25 @@ export const InterfaceSettings: React.FC = () => {
             <p className="text-sm text-slate-500">{t('Choose sections and arrange them by priority.')}</p>
           </div>
         </div>
+
+        <label className="settings-row cursor-pointer">
+          <PanelTopOpen className="h-5 w-5 flex-shrink-0 text-brand-500" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-slate-800">{t('Start page')}</h3>
+            <p className="text-sm text-slate-500">{t('This section opens whenever Takt starts, even if it is hidden from the main menu.')}</p>
+          </div>
+          <select
+            value={state.uiPreferences.startupView}
+            onChange={event => dispatch({
+              type: 'UPDATE_UI_PREFERENCES',
+              payload: { startupView: event.target.value as PrimaryNavigationView },
+            })}
+            className="field-compact"
+            aria-label={t('Start page')}
+          >
+            {PRIMARY_NAVIGATION_VIEWS.map(view => <option key={view} value={view}>{labels[view]}</option>)}
+          </select>
+        </label>
 
         {[...selected, ...disabled].map(view => {
           const enabled = selected.includes(view);

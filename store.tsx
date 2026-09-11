@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, useState } from 'react';
 import { AppState, INITIAL_STATE } from './types';
-import { Action, appReducer, migrateAppState } from './state';
+import { Action, appReducer, migrateAppState, prepareAppStateForSession } from './state';
 
 // Context
 const AppContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | null>(null);
@@ -18,9 +18,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Validate that parsed data is an object before migration
         if (parsed && typeof parsed === 'object') {
           const migrated = migrateAppState(parsed);
-          // A fresh app session always starts with the day's tasks. Navigation
-          // during the session still updates lastActiveView normally.
-          dispatch({ type: 'INIT_STATE', payload: { ...migrated, lastActiveView: 'today', dayNavigationTarget: null } });
+          dispatch({ type: 'INIT_STATE', payload: prepareAppStateForSession(migrated) });
         } else {
           console.warn("Invalid data format in localStorage, starting with empty state");
         }

@@ -25,9 +25,9 @@ import {
   migrateWeeklyTemplateState,
   type WeeklyTemplateTaskApplication,
 } from './weekly-template';
-import { normalizeNavigationItems } from './navigation';
+import { normalizeNavigationItems, normalizeStartupView } from './navigation';
 
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 15;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -288,9 +288,17 @@ export const migrateAppState = (value: unknown): AppState => {
       language: requestedLanguage,
       calendarNoteHighlight: rawUiPreferences.calendarNoteHighlight !== false,
       navigationItems: normalizeNavigationItems(rawUiPreferences.navigationItems),
+      startupView: normalizeStartupView(rawUiPreferences.startupView),
     },
   };
 };
+
+export const prepareAppStateForSession = (state: AppState): AppState => ({
+  ...state,
+  lastActiveView: state.uiPreferences.startupView,
+  goalNavigationTargetId: null,
+  dayNavigationTarget: null,
+});
 
 export type Action =
   | { type: 'INIT_STATE'; payload: AppState }
