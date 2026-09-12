@@ -9,6 +9,7 @@ export const PRIMARY_NAVIGATION_VIEWS: readonly PrimaryNavigationView[] = [
   'weekly-template',
   'goals',
   'events',
+  'rewards',
 ] as const;
 
 export const DEFAULT_NAVIGATION_ITEMS: PrimaryNavigationView[] = ['events', 'week', 'today'];

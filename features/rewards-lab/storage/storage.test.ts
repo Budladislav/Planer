@@ -137,7 +137,7 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       economyVersion: 3,
       currencyName: 'Креды',
       animationsEnabled: false,
@@ -182,7 +182,7 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 4, economyVersion: 3, currencyName: 'Креды',
+      schemaVersion: 5, economyVersion: 3, currencyName: 'Креды',
       fairBag: { remaining: [1, 2, 3], cycle: 4 }, keyDropState: { dryStreak: 0 },
       keys: [], purchases: [], starterCatalogInstalled: false,
     });
@@ -219,7 +219,7 @@ describe('Rewards Lab sidecar storage', () => {
     }));
 
     const migrated = loadRewardsLabState(storage);
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(5);
     expect(migrated.rewardCatalogView).toBe('detailed');
     expect(migrated.rewards).toMatchObject([
       { id: 'old-a', paymentMode: 'credits-and-key', displayOrder: 0, cost: 15, grade: 'rare' },
@@ -250,6 +250,28 @@ describe('Rewards Lab sidecar storage', () => {
     expect(restored.rewards[0]).toMatchObject({ paymentMode: 'key', cost: 0 });
     expect(restored.ledger.at(-1)).toMatchObject({ kind: 'spend', amount: 0, keyId: 'key-only' });
     expect(restored.keys[0].status).toBe('spent');
+  });
+
+  it('migrates schema 4 by snapshotting limit groups into existing redemptions', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
+      ...createDefaultRewardsLabState(),
+      schemaVersion: 4,
+      rewards: [{
+        id: 'reward-old', title: 'Game', cost: 2, variableCost: false, grade: 'common',
+        paymentMode: 'credits', displayOrder: 0, note: '', active: true, repeatable: true,
+        cooldownDays: 0, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+        createdAt: '2026-09-10T10:00:00.000Z', updatedAt: '2026-09-10T10:00:00.000Z',
+      }],
+      ledger: [{
+        id: 'spend-old', kind: 'spend', amount: -2, occurredAt: '2026-09-10T11:00:00.000Z',
+        label: 'Game', rewardId: 'reward-old',
+      }],
+    }));
+
+    const migrated = loadRewardsLabState(storage);
+    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.ledger[0]).toMatchObject({ id: 'spend-old', limitGroup: 'games' });
   });
 
   it('sanitizes invalid nested values without importing them into the wallet', () => {

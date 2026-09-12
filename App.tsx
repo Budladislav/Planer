@@ -17,6 +17,7 @@ const WeeklyTemplateView = lazy(() => import('./components/views/WeeklyTemplate'
 const SettingsView = lazy(() => import('./components/views/Settings').then(module => ({ default: module.SettingsView })));
 const ReportsView = lazy(() => import('./components/views/Reports').then(module => ({ default: module.ReportsView })));
 const GoalsView = lazy(() => import('./components/views/Goals').then(module => ({ default: module.GoalsView })));
+const RewardsView = lazy(() => import('./components/views/Rewards').then(module => ({ default: module.RewardsView })));
 
 const ViewLoading: React.FC = () => {
   const { t } = useI18n();
@@ -48,6 +49,7 @@ const Main: React.FC = () => {
       case 'done': return <DoneView />;
       case 'reports': return <ReportsView />;
       case 'goals': return <GoalsView />;
+      case 'rewards': return <RewardsView />;
       case 'settings': return <SettingsView />;
       default: return <TodayView />;
     }

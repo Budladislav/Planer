@@ -227,6 +227,14 @@ describe('migrateAppState', () => {
     }).uiPreferences.startupView).toBe('goals');
 
     expect(migrateAppState({
+      lastActiveView: 'rewards',
+      uiPreferences: { startupView: 'rewards' },
+    })).toMatchObject({
+      lastActiveView: 'rewards',
+      uiPreferences: { startupView: 'rewards' },
+    });
+
+    expect(migrateAppState({
       uiPreferences: { startupView: 'settings' },
     }).uiPreferences.startupView).toBe('today');
   });

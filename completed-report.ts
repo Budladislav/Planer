@@ -7,6 +7,34 @@ export interface DateRange {
   end: string;
 }
 
+export type ReportRewardGrade = 'common' | 'uncommon' | 'rare' | 'legendary' | 'mythic';
+
+export interface TaskRewardReportEntry {
+  taskId: string;
+  amount: number;
+  grade: ReportRewardGrade;
+  keyGrade: ReportRewardGrade | null;
+}
+
+export interface RewardRedemptionReportEntry {
+  id: string;
+  kind: 'reward' | 'purchase';
+  title: string;
+  occurredAt: string;
+  creditsSpent: number;
+  keyGrade: ReportRewardGrade | null;
+}
+
+export interface RewardsReportData {
+  currencyName: string;
+  taskRewards: Record<string, TaskRewardReportEntry>;
+  redemptions: RewardRedemptionReportEntry[];
+  creditsEarned: number;
+  creditsSpent: number;
+  keysFound: number;
+  keysSpent: number;
+}
+
 export type ReportPeriod =
   | { type: 'week'; value: string }
   | { type: 'month'; value: string }
@@ -93,6 +121,14 @@ const elapsedDays = (createdAt: string, completedAt: string): number => {
   return Number.isFinite(elapsed) ? Math.max(0, Math.floor(elapsed / 86_400_000)) : 0;
 };
 
+const rewardGradeLabel = (grade: ReportRewardGrade, ru: boolean): string => ({
+  common: ru ? 'обычный' : 'common',
+  uncommon: ru ? 'необычный' : 'uncommon',
+  rare: ru ? 'редкий' : 'rare',
+  legendary: ru ? 'легендарный' : 'legendary',
+  mythic: ru ? 'мифический' : 'mythic',
+}[grade]);
+
 export const buildProgressReport = (
   tasks: Task[],
   captures: Capture[],
@@ -100,6 +136,7 @@ export const buildProgressReport = (
   range: DateRange,
   language: AppLanguage = 'en',
   generatedAt = new Date(),
+  rewards: RewardsReportData | null = null,
 ): string => {
   const completedTasks = getCompletedTasksForRange(tasks, range);
   const realizedCaptures = getRealizedCapturesForRange(captures, range);
@@ -134,14 +171,21 @@ export const buildProgressReport = (
   } else {
     completedTasks.forEach((task, index) => {
       const linkedGoal = task.goalId ? goalById.get(task.goalId) : null;
+      const taskReward = rewards?.taskRewards[task.id];
       lines.push(...(ru ? [
         `${index + 1}. выполнено: ${formatTimestamp(task.completedAt as string)}`,
         `   название: ${singleLine(task.title)}`,
         ...(linkedGoal ? [`   цель: ${singleLine(linkedGoal.title)}`] : []),
+        ...(rewards ? [taskReward
+          ? `   награда: +${taskReward.amount} ${rewards.currencyName}; грейд: ${rewardGradeLabel(taskReward.grade, true)}${taskReward.keyGrade ? `; ключ: ${rewardGradeLabel(taskReward.keyGrade, true)}` : ''}`
+          : '   награда: не начислялась'] : []),
       ] : [
         `${index + 1}. completed_at: ${formatTimestamp(task.completedAt as string)}`,
         `   title: ${singleLine(task.title)}`,
         ...(linkedGoal ? [`   goal: ${singleLine(linkedGoal.title)}`] : []),
+        ...(rewards ? [taskReward
+          ? `   reward: +${taskReward.amount} ${rewards.currencyName}; grade: ${rewardGradeLabel(taskReward.grade, false)}${taskReward.keyGrade ? `; key: ${rewardGradeLabel(taskReward.keyGrade, false)}` : ''}`
+          : '   reward: not accrued'] : []),
       ]));
     });
   }
@@ -206,6 +250,46 @@ export const buildProgressReport = (
       `   linked_tasks: active ${counts.active}, completed ${counts.completed}`,
     ]));
   });
+
+  if (rewards) {
+    lines.push('', ru ? '=== НАГРАДЫ ===' : '=== REWARDS ===');
+    lines.push(...(ru ? [
+      `заработано_кредов: ${rewards.creditsEarned} ${rewards.currencyName}`,
+      `потрачено_кредов: ${rewards.creditsSpent} ${rewards.currencyName}`,
+      `получено_ключей: ${rewards.keysFound}`,
+      `потрачено_ключей: ${rewards.keysSpent}`,
+      `получено_наград_и_покупок: ${rewards.redemptions.length}`,
+      '',
+      '--- Полученные награды и покупки ---',
+    ] : [
+      `credits_earned: ${rewards.creditsEarned} ${rewards.currencyName}`,
+      `credits_spent: ${rewards.creditsSpent} ${rewards.currencyName}`,
+      `keys_found: ${rewards.keysFound}`,
+      `keys_spent: ${rewards.keysSpent}`,
+      `rewards_and_purchases_redeemed: ${rewards.redemptions.length}`,
+      '',
+      '--- Redeemed rewards and purchases ---',
+    ]));
+    if (rewards.redemptions.length === 0) {
+      lines.push(ru ? '(нет полученных наград и покупок)' : '(no redeemed rewards or purchases)');
+    } else {
+      rewards.redemptions.forEach((redemption, index) => {
+        lines.push(...(ru ? [
+          `${index + 1}. получено: ${formatTimestamp(redemption.occurredAt)}`,
+          `   название: ${singleLine(redemption.title)}`,
+          `   тип: ${redemption.kind === 'reward' ? 'награда' : 'покупка'}`,
+          `   потрачено_кредов: ${redemption.creditsSpent}`,
+          ...(redemption.keyGrade ? [`   потрачен_ключ: ${rewardGradeLabel(redemption.keyGrade, true)}`] : []),
+        ] : [
+          `${index + 1}. redeemed_at: ${formatTimestamp(redemption.occurredAt)}`,
+          `   title: ${singleLine(redemption.title)}`,
+          `   type: ${redemption.kind}`,
+          `   credits_spent: ${redemption.creditsSpent}`,
+          ...(redemption.keyGrade ? [`   key_spent: ${rewardGradeLabel(redemption.keyGrade, false)}`] : []),
+        ]));
+      });
+    }
+  }
 
   return `${lines.join('\n')}\n`;
 };

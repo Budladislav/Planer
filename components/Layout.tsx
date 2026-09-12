@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewState } from '../types';
 import {
-  Target, Calendar, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CopyPlus, Flag, Heart, List, Settings, type LucideIcon,
+  Target, Calendar, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CopyPlus, Flag, Gift, Heart, List, Settings, type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
@@ -43,6 +43,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     'weekly-template': { icon: CopyPlus, label: t('Plans') },
     goals: { icon: Flag, label: t('Long-term goals') },
     events: { icon: Calendar, label: t('Calendar') },
+    rewards: { icon: Gift, label: t('Rewards') },
   };
   const primaryNavItems: NavigationItem[] = state.uiPreferences.navigationItems.map(view => ({
     view,
@@ -50,7 +51,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
   }));
   const selectedViews = new Set(state.uiPreferences.navigationItems);
   const settingsChildViews: ViewState[] = [
-    'inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals', 'events', 'week', 'today',
+    'inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals', 'events', 'week', 'today', 'rewards',
   ];
   const settingsViews: ViewState[] = [
     'settings', 'done', 'reports',

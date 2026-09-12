@@ -1,4 +1,4 @@
-export const REWARDS_LAB_SCHEMA_VERSION = 4 as const;
+export const REWARDS_LAB_SCHEMA_VERSION = 5 as const;
 export const REWARDS_ECONOMY_VERSION = 3 as const;
 export const REWARDS_ECONOMY_V3_RELEASED_AT = '2026-09-07T00:00:00.000Z';
 
@@ -114,6 +114,8 @@ export interface WalletTransaction {
   rewardId?: string;
   purchaseId?: string;
   keyId?: string;
+  /** Snapshot used by rolling limits after a catalog item is deleted. */
+  limitGroup?: string;
   relatedTransactionId?: string;
   economyVersion?: RewardsEconomyVersion;
 }

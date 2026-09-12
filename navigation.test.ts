@@ -17,7 +17,7 @@ describe('adaptive navigation', () => {
   it('fits more fixed-width tabs as the viewport grows', () => {
     expect(getMobileNavigationCapacity(320)).toBe(4);
     expect(getMobileNavigationCapacity(360)).toBe(5);
-    expect(getMobileNavigationCapacity(768)).toBe(9);
+    expect(getMobileNavigationCapacity(768)).toBe(10);
   });
 
   it('uses the configured order for the immediately visible segment', () => {
@@ -34,6 +34,7 @@ describe('adaptive navigation', () => {
   it('accepts every configurable section as a start page and falls back to Today', () => {
     expect(normalizeStartupView('goals')).toBe('goals');
     expect(normalizeStartupView('weekly-template')).toBe('weekly-template');
+    expect(normalizeStartupView('rewards')).toBe('rewards');
     expect(normalizeStartupView('settings')).toBe('today');
     expect(normalizeStartupView(null)).toBe('today');
   });

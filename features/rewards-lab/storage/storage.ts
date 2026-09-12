@@ -195,7 +195,8 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     || !nonEmptyString(value.occurredAt) || typeof value.label !== 'string'
     || !optionalString(value.taskId) || !optionalString(value.claimId)
     || !optionalString(value.rewardId) || !optionalString(value.purchaseId)
-    || !optionalString(value.keyId) || !optionalString(value.relatedTransactionId)
+    || !optionalString(value.keyId) || !optionalString(value.limitGroup)
+    || !optionalString(value.relatedTransactionId)
     || (Number(value.amount) === 0 && value.kind === 'spend'
       && (!nonEmptyString(value.rewardId) || !nonEmptyString(value.keyId)))
     || (Number(value.amount) === 0 && value.kind === 'refund'
@@ -209,6 +210,7 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     ...(value.rewardId === undefined ? {} : { rewardId: value.rewardId }),
     ...(value.purchaseId === undefined ? {} : { purchaseId: value.purchaseId }),
     ...(value.keyId === undefined ? {} : { keyId: value.keyId }),
+    ...(value.limitGroup === undefined ? {} : { limitGroup: value.limitGroup.trim().slice(0, 60) }),
     ...(value.relatedTransactionId === undefined ? {} : { relatedTransactionId: value.relatedTransactionId }),
     ...(value.economyVersion === undefined ? {} : { economyVersion: value.economyVersion }),
   };
@@ -361,20 +363,30 @@ const sanitizeMetrics = (value: unknown): RewardsLabMetrics => {
 export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   const defaults = createDefaultRewardsLabState();
   if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2
-    && value.schemaVersion !== 3 && value.schemaVersion !== 4)) {
+    && value.schemaVersion !== 3 && value.schemaVersion !== 4 && value.schemaVersion !== 5)) {
     return defaults;
   }
   const previousSchema = Number(value.schemaVersion);
   const claims = sanitizeClaims(value.claims);
   const keys = previousSchema >= 3 ? sanitizeKeys(value.keys) : [];
   const sanitizedRewards = sanitizeRewards(value.rewards);
-  const rewards = (previousSchema === 4
+  const rewards = (previousSchema >= 4
     ? sanitizedRewards.sort((left, right) => left.displayOrder - right.displayOrder || left.createdAt.localeCompare(right.createdAt))
     : sanitizedRewards).map((reward, index) => ({
     ...reward,
     displayOrder: index,
   }));
   const storedCurrency = nonEmptyString(value.currencyName) ? value.currencyName.trim().slice(0, 40) : defaults.currencyName;
+  const purchases = previousSchema >= 3 ? sanitizePurchases(value.purchases) : [];
+  const ledger = sanitizeLedger(value.ledger).map(item => {
+    if (item.limitGroup !== undefined || (item.kind !== 'spend' && item.kind !== 'refund')) return item;
+    const targetLimitGroup = item.rewardId
+      ? rewards.find(reward => reward.id === item.rewardId)?.limitGroup
+      : item.purchaseId
+        ? purchases.find(purchase => purchase.id === item.purchaseId)?.limitGroup
+        : undefined;
+    return targetLimitGroup === undefined ? item : { ...item, limitGroup: targetLimitGroup };
+  });
   const state: RewardsLabState = {
     schemaVersion: REWARDS_LAB_SCHEMA_VERSION,
     economyVersion: REWARDS_ECONOMY_VERSION,
@@ -391,12 +403,12 @@ export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
       : defaults.keyDropState,
     claims,
     gradeCorrections: previousSchema === 1 ? [] : sanitizeGradeCorrections(value.gradeCorrections, claims),
-    ledger: sanitizeLedger(value.ledger),
+    ledger,
     keys,
     keyUpgrades: previousSchema >= 3 ? sanitizeKeyUpgrades(value.keyUpgrades, keys) : [],
     rewards,
-    rewardCatalogView: previousSchema === 4 && value.rewardCatalogView === 'compact' ? 'compact' : 'detailed',
-    purchases: previousSchema >= 3 ? sanitizePurchases(value.purchases) : [],
+    rewardCatalogView: previousSchema >= 4 && value.rewardCatalogView === 'compact' ? 'compact' : 'detailed',
+    purchases,
     starterCatalogInstalled: previousSchema >= 3 && value.starterCatalogInstalled === true,
     metrics: sanitizeMetrics(value.metrics),
   };
@@ -475,7 +487,7 @@ const restoreRaw = (storage: StorageLike, key: string, value: string | null): vo
 export const restoreRewardsBackupPayload = (storage: StorageLike, value: unknown): boolean => {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.enabled !== 'boolean'
     || !isRecord(value.state) || (value.state.schemaVersion !== 1 && value.state.schemaVersion !== 2
-      && value.state.schemaVersion !== 3 && value.state.schemaVersion !== 4)
+      && value.state.schemaVersion !== 3 && value.state.schemaVersion !== 4 && value.state.schemaVersion !== 5)
     || (value.legacyLabArchive !== null && sanitizeLegacyArchive(value.legacyLabArchive) === null)) return false;
 
   const previous = {

@@ -601,6 +601,27 @@ export const archiveRewardDefinition = (
   return updateRewardDefinition(state, rewardId, { ...existing, active: false }, runtime);
 };
 
+export const deleteRewardDefinition = (
+  state: RewardsLabState,
+  rewardId: string,
+): { state: RewardsLabState; reward: RewardDefinition | null } => {
+  const existing = state.rewards.find(reward => reward.id === rewardId);
+  if (!existing) return { state, reward: null };
+  const ledger = state.ledger.map(item => (
+    item.rewardId === rewardId && item.limitGroup === undefined
+      ? { ...item, limitGroup: existing.limitGroup }
+      : item
+  ));
+  return {
+    state: {
+      ...state,
+      ledger,
+      rewards: state.rewards.filter(reward => reward.id !== rewardId),
+    },
+    reward: existing,
+  };
+};
+
 const refundedSpendIds = (state: RewardsLabState): Set<string> => new Set(
   state.ledger.filter(item => item.kind === 'refund' && item.relatedTransactionId)
     .map(item => item.relatedTransactionId as string),
@@ -612,6 +633,7 @@ export const getActiveSpendTransactions = (state: RewardsLabState): WalletTransa
 };
 
 const targetLimitGroup = (state: RewardsLabState, item: WalletTransaction): string => {
+  if (item.limitGroup !== undefined) return item.limitGroup;
   if (item.rewardId) return state.rewards.find(reward => reward.id === item.rewardId)?.limitGroup ?? '';
   if (item.purchaseId) return state.purchases.find(purchase => purchase.id === item.purchaseId)?.limitGroup ?? '';
   return '';
@@ -741,7 +763,7 @@ export const redeemReward = (
   if (usesKey && !keyResult.key) return { state, transaction: null, outcome: 'missing-key' };
   const spent: WalletTransaction = {
     id: transactionId, kind: 'spend', amount: usesCredits ? -Number(cost) : 0, occurredAt: now(runtime),
-    label: reward.title, rewardId: reward.id,
+    label: reward.title, rewardId: reward.id, limitGroup: reward.limitGroup,
     ...(keyResult.key ? { keyId: keyResult.key.id } : {}),
   };
   return {
@@ -776,6 +798,7 @@ export const refundRedemption = (
   const refunded = transaction(runtime, {
     kind: 'refund', amount: spent.amount === 0 ? 0 : -spent.amount, label: `Refund: ${spent.label}`,
     rewardId: spent.rewardId, purchaseId: spent.purchaseId, keyId: spent.keyId,
+    limitGroup: spent.limitGroup,
     relatedTransactionId: spent.id,
   });
   let keys = state.keys;
@@ -959,6 +982,7 @@ export const redeemPurchase = (
   const spent: WalletTransaction = {
     id: transactionId, kind: 'spend', amount: -actualCost, occurredAt: timestamp,
     label: purchase.title, purchaseId: purchase.id, keyId: keyResult.key.id,
+    limitGroup: purchase.limitGroup,
   };
   const updatedPurchase: PurchaseItem = {
     ...purchase,

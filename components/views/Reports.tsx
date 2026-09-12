@@ -8,19 +8,22 @@ import {
 import { useAppStore } from '../../store';
 import { getTodayString, getWeekString } from '../../utils';
 import { useI18n } from '../../i18n';
+import { useRewardsLabGate } from '../../features/rewards-lab/ui/useRewardsLabGate';
 
 export const ReportsView: React.FC = () => {
   const { state } = useAppStore();
   const { t } = useI18n();
+  const rewardsGate = useRewardsLabGate();
   const today = getTodayString();
   const [reportType, setReportType] = useState<ReportPeriod['type']>('week');
   const [reportWeek, setReportWeek] = useState(getWeekString());
   const [reportMonth, setReportMonth] = useState(today.slice(0, 7));
   const [customStart, setCustomStart] = useState(today);
   const [customEnd, setCustomEnd] = useState(today);
-  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'preparing' | 'started'>('idle');
+  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'preparing' | 'started' | 'failed'>('idle');
+  const [includeRewards, setIncludeRewards] = useState(false);
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     const period: ReportPeriod = reportType === 'week'
       ? { type: 'week', value: reportWeek }
       : reportType === 'month'
@@ -30,25 +33,40 @@ export const ReportsView: React.FC = () => {
     if (!range) return;
 
     setDownloadStatus('preparing');
-    window.setTimeout(() => {
-      const report = buildProgressReport(
-        state.tasks,
-        state.captures,
-        state.goals,
-        range,
-        state.uiPreferences.language,
-      );
-      const blob = new Blob(['\uFEFF', report], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `takt_progress_${range.start}_${range.end}.txt`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setDownloadStatus('started');
-      window.setTimeout(() => URL.revokeObjectURL(url), 100);
-    }, 0);
+    let rewards = null;
+    if (includeRewards && rewardsGate.enabled) {
+      try {
+        const [{ getRewardsLabRuntime }, { buildRewardsReportData }] = await Promise.all([
+          import('../../features/rewards-lab/runtime'),
+          import('../../features/rewards-lab/report'),
+        ]);
+        const rewardsState = getRewardsLabRuntime().getSnapshot().state;
+        if (!rewardsState) throw new Error('Rewards state is unavailable.');
+        rewards = buildRewardsReportData(rewardsState, range);
+      } catch {
+        setDownloadStatus('failed');
+        return;
+      }
+    }
+    const report = buildProgressReport(
+      state.tasks,
+      state.captures,
+      state.goals,
+      range,
+      state.uiPreferences.language,
+      new Date(),
+      rewards,
+    );
+    const blob = new Blob(['\uFEFF', report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `takt_progress_${range.start}_${range.end}.txt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setDownloadStatus('started');
+    window.setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   return (
@@ -74,6 +92,24 @@ export const ReportsView: React.FC = () => {
             </button>
           ))}
         </div>
+
+        <label className={`mt-4 flex items-start gap-3 rounded-xl border px-3 py-2.5 ${rewardsGate.enabled ? 'cursor-pointer border-brand-100 bg-brand-50/50' : 'border-slate-200 bg-slate-50 opacity-65'}`}>
+          <input
+            type="checkbox"
+            checked={includeRewards}
+            onChange={event => setIncludeRewards(event.target.checked)}
+            disabled={!rewardsGate.enabled}
+            className="mt-0.5 h-4 w-4 rounded"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-slate-700">{t('Include Rewards data')}</span>
+            <span className="block text-xs leading-relaxed text-slate-500">
+              {rewardsGate.enabled
+                ? t('Add task credits, found keys, redeemed rewards and purchases for the selected period.')
+                : t('Enable Rewards to include its data in the report.')}
+            </span>
+          </span>
+        </label>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
           {reportType === 'week' && (
@@ -122,7 +158,7 @@ export const ReportsView: React.FC = () => {
           )}
           <button
             type="button"
-            onClick={handleDownloadReport}
+            onClick={() => void handleDownloadReport()}
             disabled={downloadStatus === 'preparing'}
             className="button-primary ml-auto"
           >
@@ -133,6 +169,7 @@ export const ReportsView: React.FC = () => {
         <p className="mt-2 min-h-5 text-right text-xs font-medium text-brand-600" aria-live="polite">
           {downloadStatus === 'preparing' && t('Preparing the report…')}
           {downloadStatus === 'started' && t('Download started. Check your browser downloads.')}
+          {downloadStatus === 'failed' && t('Rewards data is unavailable. The report was not downloaded.')}
         </p>
 
         <p className="mt-4 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-500">

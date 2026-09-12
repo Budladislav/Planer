@@ -443,6 +443,9 @@ describe('Rewards Lab wallet, catalog and controls', () => {
     expect(getWalletBalance(runtime.getSnapshot().state!)).toBe(10);
     expect(runtime.archiveReward(reward!.id)).toBe(true);
     expect(runtime.getSnapshot().state!.rewards.find(item => item.id === reward!.id)?.active).toBe(false);
+    expect(runtime.deleteReward(reward!.id)).toBe(true);
+    expect(runtime.getSnapshot().state!.rewards.find(item => item.id === reward!.id)).toBeUndefined();
+    expect(runtime.getSnapshot().state!.ledger.some(item => item.label === 'Fruit')).toBe(true);
 
     expect(runtime.updateCurrency('  Sparks  ')).toBe(true);
     expect(runtime.updateAnimations(false)).toBe(true);

@@ -26,6 +26,7 @@ export const InterfaceSettings: React.FC = () => {
     'weekly-template': t('Plans'),
     goals: t('Long-term goals'),
     events: t('Calendar'),
+    rewards: t('Rewards'),
   };
   const selected = state.uiPreferences.navigationItems;
   const disabled = PRIMARY_NAVIGATION_VIEWS.filter(view => !selected.includes(view));

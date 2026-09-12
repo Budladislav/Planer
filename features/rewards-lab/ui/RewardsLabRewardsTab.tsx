@@ -93,7 +93,7 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
     <SortableReward key={reward.id} id={reward.id}>
       {dragHandle => state.rewardCatalogView === 'compact'
         ? <CompactRewardCard reward={reward} state={state} dragHandle={dragHandle} onRedeem={item => onConfirm({ kind: 'redeem', reward: item })} />
-        : <RewardCard reward={reward} state={state} dragHandle={dragHandle} onEdit={item => { setEditing(item); setFormOpen(true); }} onArchive={item => onConfirm({ kind: 'archive', reward: item })} onRedeem={item => onConfirm({ kind: 'redeem', reward: item })} />}
+        : <RewardCard reward={reward} state={state} dragHandle={dragHandle} onEdit={item => { setEditing(item); setFormOpen(true); }} onArchive={item => onConfirm({ kind: 'archive', reward: item })} onDelete={item => onConfirm({ kind: 'delete-reward', reward: item })} onRedeem={item => onConfirm({ kind: 'redeem', reward: item })} />}
     </SortableReward>
   );
 
@@ -132,7 +132,7 @@ export const RewardsTab = ({ state, onNotice, onConfirm }: RewardsTabProps) => {
         </DndContext>
       )}
 
-      <ArchivedRewards rewards={archivedRewards} state={state} onRestore={reward => {
+      <ArchivedRewards rewards={archivedRewards} state={state} onDelete={reward => onConfirm({ kind: 'delete-reward', reward })} onRestore={reward => {
         const restored = runtime.updateReward(reward.id, { ...reward, active: true });
         if (restored) onNotice(t('{title} restored.', { title: reward.title }));
       }} />

@@ -15,6 +15,7 @@ export type Confirmation =
   | { kind: 'redeem-purchase'; purchase: PurchaseItem }
   | { kind: 'refund'; transaction: WalletTransaction }
   | { kind: 'archive'; reward: RewardDefinition }
+  | { kind: 'delete-reward'; reward: RewardDefinition }
   | { kind: 'upgrade-key'; fromGrade: RewardGrade }
   | { kind: 'undo-key-upgrade' }
   | { kind: 'disable' }

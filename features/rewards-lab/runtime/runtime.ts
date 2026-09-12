@@ -12,6 +12,7 @@ import {
   addPurchaseItem,
   adjustWalletBalance,
   archiveRewardDefinition,
+  deleteRewardDefinition,
   claimTaskCompletion,
   createDefaultRewardsLabState,
   ensureTaskMinimumGrade,
@@ -98,6 +99,7 @@ export interface RewardsLabRuntime {
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
   archiveReward(rewardId: string): boolean;
+  deleteReward(rewardId: string): boolean;
   reorderRewards(orderedRewardIds: string[]): boolean;
   updateRewardCatalogView(view: RewardCatalogView): boolean;
   redeem(rewardId: string, actualCost?: number): RedeemRewardOutcome;
@@ -448,6 +450,16 @@ export const createRewardsLabRuntime = (
       try {
         if (unavailable()) return false;
         const result = archiveRewardDefinition(snapshot.state!, rewardId, economyRuntime);
+        return result.reward ? persist(result.state) : false;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    deleteReward: rewardId => {
+      try {
+        if (unavailable()) return false;
+        const result = deleteRewardDefinition(snapshot.state!, rewardId);
         return result.reward ? persist(result.state) : false;
       } catch (error) {
         return fail(errorMessage(error));

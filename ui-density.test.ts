@@ -21,6 +21,8 @@ import weekTaskItemsSource from './components/week/WeekTaskItems.tsx?raw';
 import doneSource from './components/views/Done.tsx?raw';
 import interfaceSettingsSource from './components/settings/InterfaceSettings.tsx?raw';
 import storeSource from './store.tsx?raw';
+import rewardsCatalogSource from './features/rewards-lab/ui/RewardsCatalog.tsx?raw';
+import rewardsPageSource from './features/rewards-lab/ui/RewardsCatalogPage.tsx?raw';
 
 const viewSources = import.meta.glob('./components/views/*.tsx', {
   query: '?raw',
@@ -57,6 +59,21 @@ describe('compact planner hierarchy', () => {
     expect(interfaceSettingsSource).toContain('aria-expanded={state.uiPreferences.mainMenuExpanded}');
     expect(storeSource).toContain('prepareAppStateForSession(migrated)');
     expect(storeSource).not.toContain("lastActiveView: 'today'");
+  });
+
+  it('offers Rewards as a lazy full-page catalog without duplicating the modal shell', () => {
+    expect(appSource).toContain('const RewardsView = lazy(');
+    expect(appSource).toContain("case 'rewards': return <RewardsView />");
+    expect(interfaceSettingsSource).toContain("rewards: t('Rewards')");
+    expect(rewardsPageSource).toContain('<RewardsTab');
+    expect(rewardsPageSource).not.toContain('Rewards sections');
+    expect(rewardsPageSource).not.toContain('Task grades, credits, keys and personal rewards');
+  });
+
+  it('keeps compact reward cards content-driven instead of reserving empty height', () => {
+    expect(rewardsCatalogSource).not.toContain('min-h-32');
+    expect(rewardsCatalogSource).not.toContain('mt-auto pt-3');
+    expect(rewardsCatalogSource).toContain('gap-1.5 p-2.5 pr-9');
   });
 
   it('keeps the completed-day disclosure header free of a task-completion checkmark', () => {

@@ -146,6 +146,8 @@ const RewardsLabPanel = () => {
       setNotice(outcome === 'refunded' ? t('Redemption undone and spent resources restored.') : t('That redemption was already handled.'));
     } else if (confirmation.kind === 'archive') {
       if (runtime.archiveReward(confirmation.reward.id)) setNotice(t('{title} archived.', { title: confirmation.reward.title }));
+    } else if (confirmation.kind === 'delete-reward') {
+      if (runtime.deleteReward(confirmation.reward.id)) setNotice(t('{title} deleted.', { title: confirmation.reward.title }));
     } else if (confirmation.kind === 'upgrade-key') {
       if (runtime.upgradeKeys(confirmation.fromGrade)) setNotice(t('Five keys were upgraded.'));
       else setNotice(t('The keys could not be upgraded.'));

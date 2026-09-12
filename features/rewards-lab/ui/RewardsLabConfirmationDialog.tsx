@@ -18,7 +18,7 @@ interface ConfirmationDialogProps {
 export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onConfirm }: ConfirmationDialogProps) => {
   const { t } = useI18n();
   const dialogRef = useRef<HTMLFormElement>(null);
-  const destructive = confirmation.kind === 'reset' || confirmation.kind === 'erase';
+  const destructive = confirmation.kind === 'reset' || confirmation.kind === 'erase' || confirmation.kind === 'delete-reward';
   const variableCost = confirmation.kind === 'redeem'
     && confirmation.reward.paymentMode !== 'key'
     && confirmation.reward.variableCost;
@@ -64,6 +64,10 @@ export const ConfirmationDialog = ({ confirmation, currencyName, onCancel, onCon
     title = t('Archive {title}?', { title: confirmation.reward.title });
     message = t('It will leave the active catalog, but its wallet history will remain. You can restore it later.');
     confirmLabel = t('Archive');
+  } else if (confirmation.kind === 'delete-reward') {
+    title = t('Delete {title}?', { title: confirmation.reward.title });
+    message = t('The reward will be permanently removed from the catalog. Existing wallet history, balance, rolling limits and undo remain unchanged.');
+    confirmLabel = t('Delete reward');
   } else if (confirmation.kind === 'upgrade-key') {
     const from = REWARD_GRADES[confirmation.fromGrade];
     const grades = Object.keys(REWARD_GRADES) as Array<keyof typeof REWARD_GRADES>;

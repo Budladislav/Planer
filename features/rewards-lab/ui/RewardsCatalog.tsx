@@ -6,6 +6,7 @@ import {
   Pencil,
   RotateCcw,
   Save,
+  Trash2,
   X,
 } from 'lucide-react';
 import { FormEvent, ReactNode, useState } from 'react';
@@ -159,7 +160,7 @@ const Blockers = ({ availability, compact = false }: { availability: RedemptionA
   const blockers = availability.blockers ?? (availability.outcome === 'available' ? [] : [availability]);
   if (blockers.length === 0) return null;
   return (
-    <div className={`flex flex-wrap gap-1 ${compact ? 'mt-2' : 'mt-1'}`}>
+    <div className={`flex flex-wrap gap-1 ${compact ? 'mt-1' : 'mt-1'}`}>
       {blockers.map((blocker, index) => (
         <span key={`${blocker.outcome}-${index}`} className="rounded-md bg-slate-200/75 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-slate-700">
           {availabilityLabel(blocker, t, locale)}
@@ -169,11 +170,12 @@ const Blockers = ({ availability, compact = false }: { availability: RedemptionA
   );
 };
 
-export const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem, dragHandle }: {
+export const RewardCard = ({ reward, state, onEdit, onArchive, onDelete, onRedeem, dragHandle }: {
   reward: RewardDefinition;
   state: RewardsLabState;
   onEdit: (reward: RewardDefinition) => void;
   onArchive: (reward: RewardDefinition) => void;
+  onDelete: (reward: RewardDefinition) => void;
   onRedeem: (reward: RewardDefinition) => void;
   dragHandle?: ReactNode;
 }) => {
@@ -196,7 +198,7 @@ export const RewardCard = ({ reward, state, onEdit, onArchive, onRedeem, dragHan
         <div className="shrink-0"><RewardPrice reward={reward} state={state} /></div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-        <div className="flex items-center gap-1">{dragHandle}<button type="button" onClick={() => onEdit(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Edit {title}', { title: reward.title })}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onArchive(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Archive {title}', { title: reward.title })}><Archive className="h-4 w-4" /></button></div>
+        <div className="flex items-center gap-1">{dragHandle}<button type="button" onClick={() => onEdit(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Edit {title}', { title: reward.title })}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onArchive(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Archive {title}', { title: reward.title })}><Archive className="h-4 w-4" /></button><button type="button" onClick={() => onDelete(reward)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label={t('Delete {title}', { title: reward.title })}><Trash2 className="h-4 w-4" /></button></div>
         <button type="button" onClick={() => onRedeem(reward)} className={primaryButton} disabled={!available}><Gift className="h-4 w-4" />{availabilityLabel(availability, t, locale)}</button>
       </div>
     </article>
@@ -213,35 +215,35 @@ export const CompactRewardCard = ({ reward, state, onRedeem, dragHandle }: {
   const availability = rewardAvailability(reward, state);
   const available = availability.outcome === 'available';
   return (
-    <article className={`relative min-h-32 overflow-hidden rounded-2xl border bg-white shadow-quiet transition ${reward.paymentMode === 'credits' ? 'border-line' : gradeStyles[reward.grade].border} ${available ? 'hover:-translate-y-0.5 hover:shadow-card' : 'bg-slate-100/80 opacity-70'}`}>
+    <article className={`relative overflow-hidden rounded-xl border bg-white shadow-quiet transition ${reward.paymentMode === 'credits' ? 'border-line' : gradeStyles[reward.grade].border} ${available ? 'hover:-translate-y-0.5 hover:shadow-card' : 'bg-slate-100/80 opacity-70'}`}>
       <button
         type="button"
-        className="flex h-full min-h-32 w-full flex-col items-start p-3 pr-10 text-left disabled:cursor-not-allowed"
+        className="flex h-full w-full flex-col items-start gap-1.5 p-2.5 pr-9 text-left disabled:cursor-not-allowed"
         onClick={() => onRedeem(reward)}
         disabled={!available}
         aria-label={available ? t('Redeem {title}', { title: reward.title }) : t('{title} is unavailable', { title: reward.title })}
       >
         <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug text-slate-900">{reward.title}</h3>
-        <div className="mt-auto pt-3">
+        <div>
           <RewardPrice reward={reward} state={state} compact />
           {available
-            ? <span className="mt-2 inline-flex rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">{t('Available')}</span>
+            ? <span className="mt-1 inline-flex rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">{t('Available')}</span>
             : <Blockers availability={availability} compact />}
         </div>
       </button>
-      <div className="absolute right-1.5 top-1.5">{dragHandle}</div>
+      <div className="absolute right-1 top-1">{dragHandle}</div>
     </article>
   );
 };
 
-export const ArchivedRewards = ({ rewards, state, onRestore }: { rewards: RewardDefinition[]; state: RewardsLabState; onRestore: (reward: RewardDefinition) => void }) => {
+export const ArchivedRewards = ({ rewards, state, onRestore, onDelete }: { rewards: RewardDefinition[]; state: RewardsLabState; onRestore: (reward: RewardDefinition) => void; onDelete: (reward: RewardDefinition) => void }) => {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   if (rewards.length === 0) return null;
   return (
     <section className="border-t border-slate-200 pt-4">
       <button type="button" onClick={() => setOpen(value => !value)} className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100" aria-expanded={open}>{t('Archived rewards ({count})', { count: rewards.length })}<span>{open ? '−' : '+'}</span></button>
-      {open && <div className="mt-2 space-y-2">{rewards.map(reward => <div key={reward.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-slate-50 px-3 py-3"><div><p className="text-sm font-medium text-slate-700">{reward.title}</p><RewardPrice reward={reward} state={state} compact /></div><button type="button" onClick={() => onRestore(reward)} className={secondaryButton}><RotateCcw className="h-4 w-4" />{t('Restore')}</button></div>)}</div>}
+      {open && <div className="mt-2 space-y-2">{rewards.map(reward => <div key={reward.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-slate-50 px-3 py-3"><div><p className="text-sm font-medium text-slate-700">{reward.title}</p><RewardPrice reward={reward} state={state} compact /></div><div className="flex items-center gap-1"><button type="button" onClick={() => onRestore(reward)} className={secondaryButton}><RotateCcw className="h-4 w-4" />{t('Restore')}</button><button type="button" onClick={() => onDelete(reward)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label={t('Delete {title}', { title: reward.title })}><Trash2 className="h-4 w-4" /></button></div></div>)}</div>}
     </section>
   );
 };

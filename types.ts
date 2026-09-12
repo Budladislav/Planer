@@ -1,4 +1,4 @@
-export type PrimaryNavigationView = 'today' | 'week' | 'month' | 'year' | 'inbox' | 'weekly-template' | 'goals' | 'events';
+export type PrimaryNavigationView = 'today' | 'week' | 'month' | 'year' | 'inbox' | 'weekly-template' | 'goals' | 'events' | 'rewards';
 export type ViewState = PrimaryNavigationView | 'day' | 'settings' | 'done' | 'reports';
 
 export type AppLanguage = 'ru' | 'en';

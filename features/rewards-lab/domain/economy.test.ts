@@ -8,6 +8,7 @@ import {
   claimTaskCompletion,
   drawFromFairBag,
   drawRewardKey,
+  deleteRewardDefinition,
   ensureTaskMinimumGrade,
   getAvailableKeyCounts,
   getRedemptionAvailability,
@@ -445,6 +446,37 @@ describe('reward catalog and wallet', () => {
       ...second.reward, kind: 'reward', active: true,
     }, new Date('2026-08-29T12:00:00.000Z'));
     expect(availability.outcome).toBe('limit-reached');
+  });
+
+  it('deletes a reward without losing wallet history, undo or shared rolling limits', () => {
+    const runtime = makeRuntime();
+    const keys = Array.from({ length: 2 }, (_, index) => ({
+      id: `delete-key-${index}`, grade: 'common' as const, status: 'available' as const,
+      createdAt: '2026-08-28T00:00:00.000Z',
+    }));
+    const funded = adjustWalletBalance({ ...createDefaultRewardsLabState(), keys }, 10, 'Seed', runtime).state;
+    const first = addRewardDefinition(funded, {
+      title: 'Game 30', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+    }, runtime);
+    const second = addRewardDefinition(first.state, {
+      title: 'Game 60', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+    }, runtime);
+    const redeemed = redeemReward(second.state, first.reward.id, runtime);
+    const deleted = deleteRewardDefinition(redeemed.state, first.reward.id);
+
+    expect(deleted.reward?.title).toBe('Game 30');
+    expect(deleted.state.rewards.some(reward => reward.id === first.reward.id)).toBe(false);
+    expect(deleted.state.ledger.find(item => item.id === redeemed.transaction!.id)).toMatchObject({
+      label: 'Game 30', limitGroup: 'games',
+    });
+    expect(getRedemptionAvailability(deleted.state, {
+      ...second.reward, kind: 'reward', active: true,
+    }, new Date('2026-08-29T12:00:00.000Z')).outcome).toBe('limit-reached');
+
+    const refunded = refundRedemption(deleted.state, redeemed.transaction!.id, runtime);
+    expect(refunded.outcome).toBe('refunded');
+    expect(getWalletBalance(refunded.state)).toBe(10);
+    expect(getAvailableKeyCounts(refunded.state).common).toBe(2);
   });
 
   it('purchases a wishlist item at its actual price and restores it on refund', () => {

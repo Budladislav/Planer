@@ -136,4 +136,32 @@ describe('completed task report', () => {
     expect(report).toContain('completed_at: 2026-08-14');
     expect(report).not.toContain('elapsed_days:');
   });
+
+  it('adds task earnings and redeemed catalog activity only when Rewards data is supplied', () => {
+    const completed = task('rewarded', '2026-08-16T12:00:00.000Z');
+    const range = { start: '2026-08-10', end: '2026-08-16' };
+    const generatedAt = new Date('2026-08-16T14:00:00.000Z');
+    const basic = buildProgressReport([completed], [], [], range, 'ru', generatedAt);
+    const extended = buildProgressReport([completed], [], [], range, 'ru', generatedAt, {
+      currencyName: 'Креды',
+      taskRewards: {
+        rewarded: { taskId: 'rewarded', amount: 8, grade: 'rare', keyGrade: 'uncommon' },
+      },
+      redemptions: [{
+        id: 'spend-1', kind: 'reward', title: 'Кинотеатр',
+        occurredAt: '2026-08-15T18:00:00.000Z', creditsSpent: 5, keyGrade: 'rare',
+      }],
+      creditsEarned: 8,
+      creditsSpent: 5,
+      keysFound: 1,
+      keysSpent: 1,
+    });
+
+    expect(basic).not.toContain('=== НАГРАДЫ ===');
+    expect(extended).toContain('награда: +8 Креды; грейд: редкий; ключ: необычный');
+    expect(extended).toContain('=== НАГРАДЫ ===');
+    expect(extended).toContain('заработано_кредов: 8 Креды');
+    expect(extended).toContain('название: Кинотеатр');
+    expect(extended).toContain('потрачен_ключ: редкий');
+  });
 });
