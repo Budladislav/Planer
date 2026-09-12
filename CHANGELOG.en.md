@@ -2,6 +2,30 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.2.1] — 12.09.2026 — “Rewards at Hand”
+
+### Added
+
+- TXT reports can optionally include Rewards data: each completed task's grade, credits and dropped key, plus rewards and wishlist purchases redeemed during the selected period.
+- Rewards can be added to the main menu, placed in a custom order, and selected as the startup page.
+- A dedicated Rewards page shows the balance, keys and catalog without the modal shell or unrelated tabs.
+- Rewards can be permanently deleted from the detailed or archived list after confirmation.
+
+### Changed
+
+- Compact reward cards are shorter and content-driven, keeping the title, price and availability close together.
+- The complete Statistics, History, Purchases and Rules workspace remains available from Settings.
+
+### Fixed
+
+- Deleting a reward can no longer distort shared rolling limits, wallet history, or a later redemption undo.
+- Extended reports include only active task earnings and unrefunded redemptions inside the selected period.
+
+### Safety
+
+- Rewards schema advances from 4 to 5 by snapshotting the limit group on each redemption, allowing a catalog entry to be removed without losing historical context.
+- Reward formulas and Economy v3 remain unchanged; existing credits, keys, rewards, purchases and history migrate without recalculation.
+
 ## [6.2.0] — 11.09.2026 — “Reward Showcase”
 
 ### Added
