@@ -221,12 +221,14 @@ export const buildProgressReport = (
       `${index + 1}. начало: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'не указано'}`,
       `   название: ${singleLine(goal.title)}`,
       `   текущая_ситуация: ${singleLine(goal.currentState) || '—'}`,
+      `   зачем: ${singleLine(goal.why) || '—'}`,
       `   следующий_шаг: ${singleLine(goal.nextStep) || '—'}`,
       `   связанные_задачи: активных ${counts.active}, выполнено ${counts.completed}`,
     ] : [
       `${index + 1}. started_at: ${goal.startedAt ? formatTimestamp(goal.startedAt) : 'not specified'}`,
       `   title: ${singleLine(goal.title)}`,
       `   current_situation: ${singleLine(goal.currentState) || '—'}`,
+      `   why: ${singleLine(goal.why) || '—'}`,
       `   next_step: ${singleLine(goal.nextStep) || '—'}`,
       `   linked_tasks: active ${counts.active}, completed ${counts.completed}`,
     ]));

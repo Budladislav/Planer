@@ -232,10 +232,81 @@ const SortableTaskItem: React.FC<{
   );
 };
 
+const CompletedTaskItem: React.FC<{
+  task: Task;
+  onUndo: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Task>) => void;
+}> = ({ task, onUndo, onUpdate }) => {
+  const { locale, t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const [title, setTitle] = useState(task.title);
+
+  React.useEffect(() => setTitle(task.title), [task.title]);
+
+  const save = () => {
+    const nextTitle = title.trim();
+    if (!nextTitle) return;
+    onUpdate(task.id, { title: nextTitle });
+    setExpanded(false);
+  };
+
+  const cancel = () => {
+    setTitle(task.title);
+    setExpanded(false);
+  };
+
+  return (
+    <GradedTaskRow className="overflow-hidden">
+      <RewardGradeSurface task={task} />
+      <div className={`flex gap-2 px-3 py-2.5 ${expanded ? 'flex-wrap items-center' : 'items-center'}`}>
+        <RewardGradeMarker task={task} />
+        <RewardImportanceMarkers task={task} />
+        {expanded ? (
+          <>
+          <span className="min-w-0 flex-1" aria-hidden="true" />
+          <div className="order-last mt-1 w-full basis-full space-y-2">
+            <textarea
+              autoFocus
+              value={title}
+              onChange={event => setTitle(event.target.value)}
+              rows={3}
+              maxLength={500}
+              className="field w-full resize-y text-sm text-slate-950"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={cancel} className="button-secondary py-1.5">{t('Cancel')}</button>
+              <button type="button" onClick={save} disabled={!title.trim()} className="button-primary py-1.5 disabled:opacity-40">{t('Save')}</button>
+            </div>
+          </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            aria-expanded={false}
+            title={t('Show full completed task text')}
+          >
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-950 line-through">{task.title}</span>
+            <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-400" />
+          </button>
+        )}
+        <RewardCompletionMeta taskId={task.id} />
+        <TaskIconButton label={t("Return task to today's list")} tone="primary" onClick={() => onUndo(task.id)}>
+          <RotateCcw className="h-3.5 w-3.5" />
+        </TaskIconButton>
+      </div>
+      <div className="px-3 pb-2 text-xs text-slate-400">
+        {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+      </div>
+    </GradedTaskRow>
+  );
+};
+
 
 const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, navigable = false }) => {
   const { state, dispatch } = useAppStore();
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const [quickAdd, setQuickAdd] = useState('');
   const [notesEditorDate, setNotesEditorDate] = useState<string | null>(null);
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
@@ -543,25 +614,7 @@ const DayOverview: React.FC<{ date: string; navigable?: boolean }> = ({ date, na
                   {completedTodayTasks.length === 0 ? (
                     <p className="px-3 py-4 text-center text-sm italic text-slate-400">{isToday ? t('No tasks completed today yet.') : t('No tasks completed on this day.')}</p>
                   ) : completedTodayTasks.map(task => (
-                    <GradedTaskRow key={task.id} className="flex items-center gap-2 overflow-hidden px-3 py-2.5">
-                      <RewardGradeSurface task={task} />
-                      <RewardGradeMarker task={task} />
-                      <RewardImportanceMarkers task={task} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-slate-950 line-through">{task.title}</div>
-                        <div className="mt-0.5 text-xs text-slate-400">
-                          {new Date(getTaskCompletionTimestamp(task)).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                      <RewardCompletionMeta taskId={task.id} />
-                      <TaskIconButton
-                        label={t("Return task to today's list")}
-                        tone="primary"
-                        onClick={() => handleUndoComplete(task.id)}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      </TaskIconButton>
-                    </GradedTaskRow>
+                    <CompletedTaskItem key={task.id} task={task} onUndo={handleUndoComplete} onUpdate={handleUpdate} />
                   ))}
                 </div>
               )}

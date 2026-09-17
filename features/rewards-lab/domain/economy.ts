@@ -9,7 +9,9 @@ import {
   RewardClaim,
   RewardCatalogView,
   RewardDefinition,
+  RewardDurationUnit,
   RewardGrade,
+  RewardGroup,
   RewardGradeCorrection,
   RewardKey,
   RewardKeyUpgrade,
@@ -487,21 +489,26 @@ export interface RewardDefinitionInput extends Partial<RewardLimitSettings> {
   note?: string;
   active?: boolean;
   repeatable?: boolean;
+  groupId?: string | null;
   starterTemplateId?: string;
 }
 
+const validDurationUnit = (value: unknown): value is RewardDurationUnit => value === 'hours' || value === 'days';
+
 const normalizeLimitSettings = (input: Partial<RewardLimitSettings>): RewardLimitSettings => {
-  const cooldownDays = Number.isInteger(input.cooldownDays) && Number(input.cooldownDays) >= 0
-    ? Number(input.cooldownDays)
+  const cooldownValue = Number.isInteger(input.cooldownValue) && Number(input.cooldownValue) >= 0
+    ? Number(input.cooldownValue)
     : 0;
+  const cooldownUnit = validDurationUnit(input.cooldownUnit) ? input.cooldownUnit : 'days';
   const limitCount = Number.isInteger(input.limitCount) && Number(input.limitCount) > 0
     ? Number(input.limitCount)
     : null;
-  const limitWindowDays = limitCount !== null
-    && Number.isInteger(input.limitWindowDays) && Number(input.limitWindowDays) > 0
-    ? Number(input.limitWindowDays)
+  const limitWindowValue = limitCount !== null
+    && Number.isInteger(input.limitWindowValue) && Number(input.limitWindowValue) > 0
+    ? Number(input.limitWindowValue)
     : null;
-  return { cooldownDays, limitCount, limitWindowDays, limitGroup: input.limitGroup?.trim().slice(0, 60) ?? '' };
+  const limitWindowUnit = validDurationUnit(input.limitWindowUnit) ? input.limitWindowUnit : 'days';
+  return { cooldownValue, cooldownUnit, limitCount, limitWindowValue, limitWindowUnit };
 };
 
 const normalizeDefinitionInput = (
@@ -526,6 +533,7 @@ const normalizeDefinitionInput = (
     note: input.note?.trim() ?? '',
     active: input.active ?? true,
     repeatable: input.repeatable ?? true,
+    groupId: input.groupId ?? null,
     ...normalizeLimitSettings(input),
     ...(input.starterTemplateId ? { starterTemplateId: input.starterTemplateId } : {}),
   };
@@ -539,6 +547,7 @@ export const addRewardDefinition = (
   const timestamp = now(runtime);
   const reward: RewardDefinition = {
     id: createId(runtime), ...normalizeDefinitionInput(input),
+    groupId: input.groupId && state.rewardGroups.some(group => group.id === input.groupId) ? input.groupId : null,
     displayOrder: state.rewards.reduce((maximum, item) => Math.max(maximum, item.displayOrder), -1) + 1,
     createdAt: timestamp, updatedAt: timestamp,
   };
@@ -555,6 +564,9 @@ export const updateRewardDefinition = (
   if (!existing) return { state, reward: null };
   const reward: RewardDefinition = {
     ...existing, ...normalizeDefinitionInput(input),
+    groupId: input.groupId === undefined
+      ? existing.groupId
+      : input.groupId && state.rewardGroups.some(group => group.id === input.groupId) ? input.groupId : null,
     displayOrder: existing.displayOrder,
     starterTemplateId: existing.starterTemplateId ?? input.starterTemplateId,
     updatedAt: now(runtime),
@@ -584,6 +596,78 @@ export const reorderRewardDefinitions = (
   };
 };
 
+const normalizeRewardGroupTitle = (title: string): string => {
+  const normalized = title.trim().slice(0, 60);
+  if (!normalized) throw new Error('Reward group title is required.');
+  return normalized;
+};
+
+export const addRewardGroup = (
+  state: RewardsLabState,
+  title: string,
+  runtime: EconomyRuntime = {},
+): { state: RewardsLabState; group: RewardGroup } => {
+  const normalizedTitle = normalizeRewardGroupTitle(title);
+  if (state.rewardGroups.some(group => group.title.toLocaleLowerCase() === normalizedTitle.toLocaleLowerCase())) {
+    throw new Error('Reward group title must be unique.');
+  }
+  const timestamp = now(runtime);
+  const group: RewardGroup = {
+    id: createId(runtime),
+    title: normalizedTitle,
+    displayOrder: state.rewardGroups.reduce((maximum, item) => Math.max(maximum, item.displayOrder), -1) + 1,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  return { state: { ...state, rewardGroups: [...state.rewardGroups, group] }, group };
+};
+
+export const updateRewardGroup = (
+  state: RewardsLabState,
+  groupId: string,
+  title: string,
+  runtime: EconomyRuntime = {},
+): { state: RewardsLabState; group: RewardGroup | null } => {
+  const existing = state.rewardGroups.find(group => group.id === groupId);
+  if (!existing) return { state, group: null };
+  const normalizedTitle = normalizeRewardGroupTitle(title);
+  if (state.rewardGroups.some(group => group.id !== groupId && group.title.toLocaleLowerCase() === normalizedTitle.toLocaleLowerCase())) {
+    throw new Error('Reward group title must be unique.');
+  }
+  const group = { ...existing, title: normalizedTitle, updatedAt: now(runtime) };
+  return {
+    state: { ...state, rewardGroups: state.rewardGroups.map(item => item.id === groupId ? group : item) },
+    group,
+  };
+};
+
+export const deleteRewardGroup = (
+  state: RewardsLabState,
+  groupId: string,
+): { state: RewardsLabState; group: RewardGroup | null } => {
+  const existing = state.rewardGroups.find(group => group.id === groupId);
+  if (!existing) return { state, group: null };
+  return {
+    state: {
+      ...state,
+      rewardGroups: state.rewardGroups.filter(group => group.id !== groupId),
+      rewards: state.rewards.map(reward => reward.groupId === groupId ? { ...reward, groupId: null } : reward),
+    },
+    group: existing,
+  };
+};
+
+export const reorderRewardGroups = (state: RewardsLabState, orderedGroupIds: string[]): RewardsLabState => {
+  if (orderedGroupIds.length !== state.rewardGroups.length
+    || new Set(orderedGroupIds).size !== state.rewardGroups.length
+    || state.rewardGroups.some(group => !orderedGroupIds.includes(group.id))) return state;
+  const order = new Map(orderedGroupIds.map((id, index) => [id, index]));
+  return {
+    ...state,
+    rewardGroups: state.rewardGroups.map(group => ({ ...group, displayOrder: order.get(group.id) ?? group.displayOrder })),
+  };
+};
+
 export const setRewardCatalogView = (
   state: RewardsLabState,
   view: RewardCatalogView,
@@ -607,15 +691,9 @@ export const deleteRewardDefinition = (
 ): { state: RewardsLabState; reward: RewardDefinition | null } => {
   const existing = state.rewards.find(reward => reward.id === rewardId);
   if (!existing) return { state, reward: null };
-  const ledger = state.ledger.map(item => (
-    item.rewardId === rewardId && item.limitGroup === undefined
-      ? { ...item, limitGroup: existing.limitGroup }
-      : item
-  ));
   return {
     state: {
       ...state,
-      ledger,
       rewards: state.rewards.filter(reward => reward.id !== rewardId),
     },
     reward: existing,
@@ -632,13 +710,6 @@ export const getActiveSpendTransactions = (state: RewardsLabState): WalletTransa
   return state.ledger.filter(item => item.kind === 'spend' && !refunded.has(item.id));
 };
 
-const targetLimitGroup = (state: RewardsLabState, item: WalletTransaction): string => {
-  if (item.limitGroup !== undefined) return item.limitGroup;
-  if (item.rewardId) return state.rewards.find(reward => reward.id === item.rewardId)?.limitGroup ?? '';
-  if (item.purchaseId) return state.purchases.find(purchase => purchase.id === item.purchaseId)?.limitGroup ?? '';
-  return '';
-};
-
 export type RedemptionAvailabilityOutcome =
   | 'available'
   | 'inactive'
@@ -652,12 +723,18 @@ export interface RedemptionAvailability {
   outcome: RedemptionAvailabilityOutcome;
   nextAvailableAt?: string;
   missingAmount?: number;
+  limitRemaining?: number;
+  limitCount?: number;
   blockers?: Array<{
     outcome: Exclude<RedemptionAvailabilityOutcome, 'available'>;
     nextAvailableAt?: string;
     missingAmount?: number;
   }>;
 }
+
+const durationMilliseconds = (value: number, unit: RewardDurationUnit): number => (
+  value * (unit === 'hours' ? 3_600_000 : 86_400_000)
+);
 
 interface RedeemableTarget extends RewardLimitSettings {
   id: string;
@@ -688,30 +765,31 @@ export const getRedemptionAvailability = (
   }
 
   const atTime = at.getTime();
-  if (target.cooldownDays > 0 && ownSpends.length > 0) {
+  if (target.cooldownValue > 0 && ownSpends.length > 0) {
     const lastTime = Math.max(...ownSpends.map(item => new Date(item.occurredAt).getTime()).filter(Number.isFinite));
-    const availableAt = lastTime + target.cooldownDays * 86_400_000;
+    const availableAt = lastTime + durationMilliseconds(target.cooldownValue, target.cooldownUnit);
     if (Number.isFinite(availableAt) && availableAt > atTime) {
       blockers.push({ outcome: 'cooldown', nextAvailableAt: new Date(availableAt).toISOString() });
     }
   }
 
-  if (target.limitCount && target.limitWindowDays) {
-    const fromTime = atTime - target.limitWindowDays * 86_400_000;
-    const relevant = target.limitGroup
-      ? spends.filter(item => targetLimitGroup(state, item) === target.limitGroup)
-      : ownSpends;
-    const recent = relevant
+  let limitRemaining: number | undefined;
+  if (target.limitCount && target.limitWindowValue) {
+    const windowMilliseconds = durationMilliseconds(target.limitWindowValue, target.limitWindowUnit);
+    const fromTime = atTime - windowMilliseconds;
+    const recent = ownSpends
       .map(item => new Date(item.occurredAt).getTime())
       .filter(time => Number.isFinite(time) && time > fromTime && time <= atTime)
       .sort((left, right) => left - right);
-    if (recent.length >= target.limitCount) {
-      const boundary = recent[recent.length - target.limitCount] + target.limitWindowDays * 86_400_000;
+    limitRemaining = Math.max(0, target.limitCount - recent.length);
+    if (limitRemaining === 0) {
+      const boundary = recent[recent.length - target.limitCount] + windowMilliseconds;
       blockers.push({ outcome: 'limit-reached', nextAvailableAt: new Date(boundary).toISOString() });
     }
   }
-  if (blockers.length > 0) return { ...blockers[0], blockers };
-  return { outcome: 'available' };
+  const limitInfo = limitRemaining === undefined ? {} : { limitRemaining, limitCount: target.limitCount ?? undefined };
+  if (blockers.length > 0) return { ...blockers[0], blockers, ...limitInfo };
+  return { outcome: 'available', ...limitInfo };
 };
 
 const consumeKey = (
@@ -763,7 +841,7 @@ export const redeemReward = (
   if (usesKey && !keyResult.key) return { state, transaction: null, outcome: 'missing-key' };
   const spent: WalletTransaction = {
     id: transactionId, kind: 'spend', amount: usesCredits ? -Number(cost) : 0, occurredAt: now(runtime),
-    label: reward.title, rewardId: reward.id, limitGroup: reward.limitGroup,
+    label: reward.title, rewardId: reward.id,
     ...(keyResult.key ? { keyId: keyResult.key.id } : {}),
   };
   return {
@@ -798,7 +876,6 @@ export const refundRedemption = (
   const refunded = transaction(runtime, {
     kind: 'refund', amount: spent.amount === 0 ? 0 : -spent.amount, label: `Refund: ${spent.label}`,
     rewardId: spent.rewardId, purchaseId: spent.purchaseId, keyId: spent.keyId,
-    limitGroup: spent.limitGroup,
     relatedTransactionId: spent.id,
   });
   let keys = state.keys;
@@ -982,7 +1059,6 @@ export const redeemPurchase = (
   const spent: WalletTransaction = {
     id: transactionId, kind: 'spend', amount: -actualCost, occurredAt: timestamp,
     label: purchase.title, purchaseId: purchase.id, keyId: keyResult.key.id,
-    limitGroup: purchase.limitGroup,
   };
   const updatedPurchase: PurchaseItem = {
     ...purchase,

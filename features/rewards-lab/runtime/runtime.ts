@@ -6,13 +6,16 @@ import {
   RewardDefinitionInput,
   RewardCatalogView,
   RewardGrade,
+  RewardGroup,
   RewardsLabState,
   WalletTransaction,
   addRewardDefinition,
+  addRewardGroup,
   addPurchaseItem,
   adjustWalletBalance,
   archiveRewardDefinition,
   deleteRewardDefinition,
+  deleteRewardGroup,
   claimTaskCompletion,
   createDefaultRewardsLabState,
   ensureTaskMinimumGrade,
@@ -22,11 +25,13 @@ import {
   redeemPurchase,
   redeemReward,
   reorderRewardDefinitions,
+  reorderRewardGroups,
   refundRedemption,
   reverseTaskCompletion,
   setTaskGrade as setDomainTaskGrade,
   setRewardCatalogView,
   updateRewardDefinition,
+  updateRewardGroup,
   updatePurchaseItem,
   upgradeRewardKeys,
   undoLatestKeyUpgrade,
@@ -98,6 +103,10 @@ export interface RewardsLabRuntime {
   handleTaskLifecycle(event: RewardsLabLifecycleEvent): boolean;
   addReward(input: RewardDefinitionInput): RewardDefinition | null;
   updateReward(rewardId: string, input: RewardDefinitionInput): RewardDefinition | null;
+  addRewardGroup(title: string): RewardGroup | null;
+  updateRewardGroup(groupId: string, title: string): RewardGroup | null;
+  deleteRewardGroup(groupId: string): boolean;
+  reorderRewardGroups(orderedGroupIds: string[]): boolean;
   archiveReward(rewardId: string): boolean;
   deleteReward(rewardId: string): boolean;
   reorderRewards(orderedRewardIds: string[]): boolean;
@@ -451,6 +460,49 @@ export const createRewardsLabRuntime = (
         if (unavailable()) return false;
         const result = archiveRewardDefinition(snapshot.state!, rewardId, economyRuntime);
         return result.reward ? persist(result.state) : false;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    addRewardGroup: title => {
+      try {
+        if (unavailable()) return null;
+        const result = addRewardGroup(snapshot.state!, title, economyRuntime);
+        return persist(result.state) ? result.group : null;
+      } catch (error) {
+        fail(errorMessage(error));
+        return null;
+      }
+    },
+
+    updateRewardGroup: (groupId, title) => {
+      try {
+        if (unavailable()) return null;
+        const result = updateRewardGroup(snapshot.state!, groupId, title, economyRuntime);
+        if (!result.group) return null;
+        return persist(result.state) ? result.group : null;
+      } catch (error) {
+        fail(errorMessage(error));
+        return null;
+      }
+    },
+
+    deleteRewardGroup: groupId => {
+      try {
+        if (unavailable()) return false;
+        const result = deleteRewardGroup(snapshot.state!, groupId);
+        return result.group ? persist(result.state) : false;
+      } catch (error) {
+        return fail(errorMessage(error));
+      }
+    },
+
+    reorderRewardGroups: orderedGroupIds => {
+      try {
+        if (unavailable()) return false;
+        const nextState = reorderRewardGroups(snapshot.state!, orderedGroupIds);
+        return nextState === snapshot.state ? false : persist(nextState);
       } catch (error) {
         return fail(errorMessage(error));
       }

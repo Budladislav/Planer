@@ -38,6 +38,7 @@ const goal = (id: string, completedAt: string | null): LongTermGoal => ({
   startedAt: '2026-08-01T08:00:00.000Z',
   updatedAt: completedAt ?? '2026-08-01T08:00:00.000Z',
   completedAt,
+  why: 'A meaningful reason',
   currentState: 'Halfway there',
   nextStep: 'Keep going',
   notes: [],

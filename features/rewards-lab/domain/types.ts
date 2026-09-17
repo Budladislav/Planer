@@ -1,4 +1,4 @@
-export const REWARDS_LAB_SCHEMA_VERSION = 5 as const;
+export const REWARDS_LAB_SCHEMA_VERSION = 6 as const;
 export const REWARDS_ECONOMY_VERSION = 3 as const;
 export const REWARDS_ECONOMY_V3_RELEASED_AT = '2026-09-07T00:00:00.000Z';
 
@@ -13,6 +13,7 @@ export const REWARD_GRADES = {
 export type RewardGrade = keyof typeof REWARD_GRADES;
 export type RewardPaymentMode = 'credits' | 'key' | 'credits-and-key';
 export type RewardCatalogView = 'detailed' | 'compact';
+export type RewardDurationUnit = 'hours' | 'days';
 export type RewardImportanceReason = 'week' | 'month' | 'year' | 'goal' | 'event';
 export type RewardRoll = 2 | 3 | 4;
 export type RewardLuckSlot = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -114,17 +115,24 @@ export interface WalletTransaction {
   rewardId?: string;
   purchaseId?: string;
   keyId?: string;
-  /** Snapshot used by rolling limits after a catalog item is deleted. */
-  limitGroup?: string;
   relatedTransactionId?: string;
   economyVersion?: RewardsEconomyVersion;
 }
 
 export interface RewardLimitSettings {
-  cooldownDays: number;
+  cooldownValue: number;
+  cooldownUnit: RewardDurationUnit;
   limitCount: number | null;
-  limitWindowDays: number | null;
-  limitGroup: string;
+  limitWindowValue: number | null;
+  limitWindowUnit: RewardDurationUnit;
+}
+
+export interface RewardGroup {
+  id: string;
+  title: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RewardDefinition extends RewardLimitSettings {
@@ -138,6 +146,7 @@ export interface RewardDefinition extends RewardLimitSettings {
   note: string;
   active: boolean;
   repeatable: boolean;
+  groupId: string | null;
   starterTemplateId?: string;
   createdAt: string;
   updatedAt: string;
@@ -186,6 +195,7 @@ export interface RewardsLabState {
   ledger: WalletTransaction[];
   keys: RewardKey[];
   keyUpgrades: RewardKeyUpgrade[];
+  rewardGroups: RewardGroup[];
   rewards: RewardDefinition[];
   rewardCatalogView: RewardCatalogView;
   purchases: PurchaseItem[];
@@ -217,6 +227,7 @@ export const createDefaultRewardsLabState = (): RewardsLabState => ({
   ledger: [],
   keys: [],
   keyUpgrades: [],
+  rewardGroups: [],
   rewards: [],
   rewardCatalogView: 'detailed',
   purchases: [],

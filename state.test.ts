@@ -615,18 +615,20 @@ describe('appReducer day notes and long-term goals', () => {
     });
     const goal = added.goals[0];
     expect(goal).toEqual(expect.objectContaining({
+      why: '',
       title: 'Renew permit', status: 'active', startedAt: null, notes: [],
     }));
 
     const detailed = appReducer(added, {
       type: 'UPDATE_GOAL',
-      payload: { id: goal.id, currentState: 'Documents collected', nextStep: 'Book appointment' },
+      payload: { id: goal.id, why: 'A calmer life', currentState: 'Documents collected', nextStep: 'Book appointment' },
     });
     const noted = appReducer(detailed, {
       type: 'ADD_GOAL_NOTE',
       payload: { goalId: goal.id, text: '  Photos are ready  ' },
     });
     expect(noted.goals[0].notes[0].text).toBe('Photos are ready');
+    expect(noted.goals[0].why).toBe('A calmer life');
 
     const completed = appReducer(noted, { type: 'COMPLETE_GOAL', payload: goal.id });
     expect(completed.goals[0]).toEqual(expect.objectContaining({ status: 'completed', completedAt: '2026-09-04T10:00:00.000Z' }));

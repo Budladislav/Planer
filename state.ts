@@ -28,7 +28,7 @@ import {
 } from './weekly-template';
 import { normalizeNavigationItems, normalizeStartupView } from './navigation';
 
-export const CURRENT_SCHEMA_VERSION = 17;
+export const CURRENT_SCHEMA_VERSION = 18;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -132,6 +132,7 @@ const migrateGoals = (value: unknown, now: string): LongTermGoal[] => {
       startedAt,
       updatedAt: asString(goal.updatedAt, createdAt),
       completedAt: status === 'completed' ? asString(goal.completedAt, now) : null,
+      why: asString(goal.why, ''),
       currentState: asString(goal.currentState, ''),
       nextStep: asString(goal.nextStep, ''),
       notes: migrateGoalNotes(goal.notes, now),
@@ -955,6 +956,7 @@ export const appReducer = (state: AppState, action: Action): AppState => {
           startedAt: action.payload.startDateKnown ? now : null,
           updatedAt: now,
           completedAt: null,
+          why: '',
           currentState: '',
           nextStep: '',
           notes: [],

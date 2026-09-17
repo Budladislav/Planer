@@ -15,7 +15,9 @@ import {
   RedemptionAvailability,
   RewardDefinition,
   RewardDefinitionInput,
+  RewardDurationUnit,
   RewardGrade,
+  RewardGroup,
   RewardPaymentMode,
   RewardsLabState,
   getRedemptionAvailability,
@@ -32,6 +34,7 @@ import {
 
 interface RewardFormProps {
   reward: RewardDefinition | null;
+  groups: RewardGroup[];
   onCancel: () => void;
   onSubmit: (input: RewardDefinitionInput) => boolean;
 }
@@ -42,7 +45,7 @@ const paymentModes: Array<{ id: RewardPaymentMode; label: string; description: s
   { id: 'credits-and-key', label: 'Credits and key', description: 'Both conditions must be met.' },
 ];
 
-export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
+export const RewardForm = ({ reward, groups, onCancel, onSubmit }: RewardFormProps) => {
   const { t } = useI18n();
   const [title, setTitle] = useState(reward?.title ?? '');
   const [cost, setCost] = useState(reward?.paymentMode === 'key' ? '' : reward?.cost.toString() ?? '');
@@ -51,10 +54,12 @@ export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
   const [paymentMode, setPaymentMode] = useState<RewardPaymentMode>(reward?.paymentMode ?? 'credits-and-key');
   const [variableCost, setVariableCost] = useState(reward?.variableCost ?? false);
   const [repeatable, setRepeatable] = useState(reward?.repeatable ?? true);
-  const [cooldownDays, setCooldownDays] = useState(reward?.cooldownDays.toString() ?? '0');
+  const [cooldownValue, setCooldownValue] = useState(reward?.cooldownValue.toString() ?? '0');
+  const [cooldownUnit, setCooldownUnit] = useState<RewardDurationUnit>(reward?.cooldownUnit ?? 'days');
   const [limitCount, setLimitCount] = useState(reward?.limitCount?.toString() ?? '');
-  const [limitWindowDays, setLimitWindowDays] = useState(reward?.limitWindowDays?.toString() ?? '');
-  const [limitGroup, setLimitGroup] = useState(reward?.limitGroup ?? '');
+  const [limitWindowValue, setLimitWindowValue] = useState(reward?.limitWindowValue?.toString() ?? '');
+  const [limitWindowUnit, setLimitWindowUnit] = useState<RewardDurationUnit>(reward?.limitWindowUnit ?? 'days');
+  const [groupId, setGroupId] = useState(reward?.groupId ?? '');
   const [error, setError] = useState<string | null>(null);
   const usesCredits = paymentMode !== 'key';
   const usesKey = paymentMode !== 'credits';
@@ -62,21 +67,22 @@ export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const numericCost = usesCredits ? Number(cost) : 0;
-    const cooldown = Number(cooldownDays || 0);
+    const cooldown = Number(cooldownValue || 0);
     const count = limitCount ? Number(limitCount) : null;
-    const windowDays = limitWindowDays ? Number(limitWindowDays) : null;
+    const windowValue = limitWindowValue ? Number(limitWindowValue) : null;
     if (!title.trim() || (usesCredits && (!Number.isInteger(numericCost) || numericCost <= 0))
       || !Number.isInteger(cooldown) || cooldown < 0
       || (count !== null && (!Number.isInteger(count) || count <= 0))
-      || (count !== null && (windowDays === null || !Number.isInteger(windowDays) || windowDays <= 0))) {
+      || (count !== null && (windowValue === null || !Number.isInteger(windowValue) || windowValue <= 0))) {
       setError(t('Check the title, price and limit values.'));
       return;
     }
     const saved = onSubmit({
       title, cost: numericCost, note, grade, paymentMode,
       variableCost: usesCredits && variableCost, repeatable,
-      cooldownDays: cooldown, limitCount: count, limitWindowDays: count ? windowDays : null,
-      limitGroup, active: reward?.active ?? true,
+      cooldownValue: cooldown, cooldownUnit, limitCount: count,
+      limitWindowValue: count ? windowValue : null, limitWindowUnit,
+      groupId: groupId || null, active: reward?.active ?? true,
     });
     if (!saved) setError(t('The reward could not be saved. Your planner data is unaffected.'));
   };
@@ -109,11 +115,11 @@ export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
         {usesKey && <label className="text-sm font-medium text-slate-700">{t('Key grade')}<select value={grade} onChange={event => setGrade(event.target.value as RewardGrade)} className={`${fieldClass} mt-1`}>{rewardGrades.map(item => <option key={item} value={item}>{t(REWARD_GRADES[item].label)}</option>)}</select></label>}
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="text-sm font-medium text-slate-700">{t('Cooldown, days')}<input value={cooldownDays} onChange={event => setCooldownDays(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="0" step="1" /></label>
+        <label className="text-sm font-medium text-slate-700">{t('Cooldown')}<span className="mt-1 flex gap-1"><input value={cooldownValue} onChange={event => setCooldownValue(event.target.value)} className={`${fieldClass} min-w-0 basis-0 flex-1`} type="number" min="0" step="1" /><select value={cooldownUnit} onChange={event => setCooldownUnit(event.target.value as RewardDurationUnit)} className={`${fieldClass} w-[4.5rem] flex-none px-2`}><option value="hours">{t('hours')}</option><option value="days">{t('days')}</option></select></span></label>
         <label className="text-sm font-medium text-slate-700">{t('Limit, times')}<input value={limitCount} onChange={event => setLimitCount(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="1" step="1" placeholder={t('No limit')} /></label>
-        <label className="text-sm font-medium text-slate-700">{t('Rolling period, days')}<input value={limitWindowDays} onChange={event => setLimitWindowDays(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="1" step="1" disabled={!limitCount} /></label>
+        <label className="text-sm font-medium text-slate-700">{t('Rolling period')}<span className="mt-1 flex gap-1"><input value={limitWindowValue} onChange={event => setLimitWindowValue(event.target.value)} className={`${fieldClass} min-w-0 basis-0 flex-1`} type="number" min="1" step="1" disabled={!limitCount} /><select value={limitWindowUnit} onChange={event => setLimitWindowUnit(event.target.value as RewardDurationUnit)} className={`${fieldClass} w-[4.5rem] flex-none px-2`} disabled={!limitCount}><option value="hours">{t('hours')}</option><option value="days">{t('days')}</option></select></span></label>
       </div>
-      <label className="mt-3 block text-sm font-medium text-slate-700">{t('Shared limit group')} <span className="font-normal text-slate-400">{t('(optional)')}</span><input value={limitGroup} onChange={event => setLimitGroup(event.target.value)} className={`${fieldClass} mt-1`} maxLength={60} placeholder={t('For example: games')} /></label>
+      <label className="mt-3 block text-sm font-medium text-slate-700">{t('Reward section')} <span className="font-normal text-slate-400">{t('(optional)')}</span><select value={groupId} onChange={event => setGroupId(event.target.value)} className={`${fieldClass} mt-1`}><option value="">{t('No section')}</option>{groups.map(group => <option key={group.id} value={group.id}>{group.title}</option>)}</select></label>
       <label className="mt-3 block text-sm font-medium text-slate-700">{t('Note')} <span className="font-normal text-slate-400">{t('(optional)')}</span><textarea value={note} onChange={event => setNote(event.target.value)} className={`${fieldClass} mt-1 min-h-16 resize-y`} maxLength={300} /></label>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {usesCredits && <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-white/70 px-3 py-2 text-sm text-slate-700"><input type="checkbox" checked={variableCost} onChange={event => setVariableCost(event.target.checked)} className="mt-0.5 h-4 w-4 rounded" /><span><span className="block font-medium">{t('Enter actual price when redeeming')}</span><span className="text-xs text-slate-500">{t('The catalog price is used as an estimate.')}</span></span></label>}
@@ -125,14 +131,45 @@ export const RewardForm = ({ reward, onCancel, onSubmit }: RewardFormProps) => {
   );
 };
 
+const formatDuration = (milliseconds: number, t: (key: string, params?: Record<string, string | number>) => string): string => {
+  const minutes = Math.max(1, Math.ceil(milliseconds / 60_000));
+  if (minutes < 60) return t('{count} min', { count: minutes });
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 48) return t('{count} hr', { count: hours });
+  return t('{count} d', { count: Math.ceil(hours / 24) });
+};
+
+const availabilityMoment = (iso: string, t: (key: string, params?: Record<string, string | number>) => string, locale: string) => {
+  const date = new Date(iso);
+  const duration = formatDuration(Math.max(0, date.getTime() - Date.now()), t);
+  const absolute = date.toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return t('in {duration} · {date}', { duration, date: absolute });
+};
+
 const availabilityLabel = (outcome: RedemptionAvailability, t: (key: string, params?: Record<string, string | number>) => string, locale: string) => {
   if (outcome.outcome === 'insufficient-balance') return t('Need {count} more', { count: outcome.missingAmount ?? 0 });
   if (outcome.outcome === 'missing-key') return t('No matching key');
   if (outcome.outcome === 'already-redeemed') return t('Redeemed');
   if ((outcome.outcome === 'cooldown' || outcome.outcome === 'limit-reached') && outcome.nextAvailableAt) {
-    return t('Available {date}', { date: new Date(outcome.nextAvailableAt).toLocaleDateString(locale) });
+    return outcome.outcome === 'cooldown'
+      ? t('Cooldown: {time}', { time: availabilityMoment(outcome.nextAvailableAt, t, locale) })
+      : t('Limit: {time}', { time: availabilityMoment(outcome.nextAvailableAt, t, locale) });
   }
   return t('Redeem');
+};
+
+const availabilityActionLabel = (availability: RedemptionAvailability, t: (key: string, params?: Record<string, string | number>) => string, locale: string) => {
+  const blockers = availability.blockers ?? [];
+  const resourceBlocker = blockers.find(blocker => !blocker.nextAvailableAt);
+  if (resourceBlocker) return availabilityLabel(resourceBlocker, t, locale);
+  const timeBlockers = blockers.filter(blocker => blocker.nextAvailableAt);
+  if (timeBlockers.length > 0) {
+    const latest = timeBlockers.reduce((result, blocker) => (
+      Date.parse(blocker.nextAvailableAt ?? '') > Date.parse(result) ? blocker.nextAvailableAt ?? result : result
+    ), timeBlockers[0].nextAvailableAt as string);
+    return t('Available {time}', { time: availabilityMoment(latest, t, locale) });
+  }
+  return availabilityLabel(availability, t, locale);
 };
 
 const rewardAvailability = (reward: RewardDefinition, state: RewardsLabState): RedemptionAvailability => {
@@ -170,6 +207,16 @@ const Blockers = ({ availability, compact = false }: { availability: RedemptionA
   );
 };
 
+const LimitRemaining = ({ availability }: { availability: RedemptionAvailability }) => {
+  const { t } = useI18n();
+  if (availability.limitRemaining === undefined || availability.limitCount === undefined) return null;
+  return (
+    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${availability.limitRemaining > 0 ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
+      {t('{remaining} of {count} left', { remaining: availability.limitRemaining, count: availability.limitCount })}
+    </span>
+  );
+};
+
 export const RewardCard = ({ reward, state, onEdit, onArchive, onDelete, onRedeem, dragHandle }: {
   reward: RewardDefinition;
   state: RewardsLabState;
@@ -190,8 +237,9 @@ export const RewardCard = ({ reward, state, onEdit, onArchive, onDelete, onRedee
           {reward.note && <p className="mt-1 break-words text-sm text-slate-600">{reward.note}</p>}
           <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-slate-500">
             {reward.variableCost && <span className="rounded bg-slate-100 px-1.5 py-0.5">{t('Actual price on redemption')}</span>}
-            {reward.cooldownDays > 0 && <span className="rounded bg-slate-100 px-1.5 py-0.5">{t('{count} day cooldown', { count: reward.cooldownDays })}</span>}
-            {reward.limitCount && reward.limitWindowDays && <span className="rounded bg-slate-100 px-1.5 py-0.5">{reward.limitCount}/{reward.limitWindowDays} {t('days')}</span>}
+            {reward.cooldownValue > 0 && <span className="rounded bg-slate-100 px-1.5 py-0.5">{t('Cooldown: {count} {unit}', { count: reward.cooldownValue, unit: t(reward.cooldownUnit) })}</span>}
+            {reward.limitCount && reward.limitWindowValue && <span className="rounded bg-slate-100 px-1.5 py-0.5">{reward.limitCount}/{reward.limitWindowValue} {t(reward.limitWindowUnit)}</span>}
+            <LimitRemaining availability={availability} />
           </div>
           {!available && <Blockers availability={availability} />}
         </div>
@@ -199,7 +247,7 @@ export const RewardCard = ({ reward, state, onEdit, onArchive, onDelete, onRedee
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
         <div className="flex items-center gap-1">{dragHandle}<button type="button" onClick={() => onEdit(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Edit {title}', { title: reward.title })}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onArchive(reward)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={t('Archive {title}', { title: reward.title })}><Archive className="h-4 w-4" /></button><button type="button" onClick={() => onDelete(reward)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label={t('Delete {title}', { title: reward.title })}><Trash2 className="h-4 w-4" /></button></div>
-        <button type="button" onClick={() => onRedeem(reward)} className={primaryButton} disabled={!available}><Gift className="h-4 w-4" />{availabilityLabel(availability, t, locale)}</button>
+        <button type="button" onClick={() => onRedeem(reward)} className={primaryButton} disabled={!available}><Gift className="h-4 w-4" />{available ? t('Redeem') : availabilityActionLabel(availability, t, locale)}</button>
       </div>
     </article>
   );
@@ -226,9 +274,12 @@ export const CompactRewardCard = ({ reward, state, onRedeem, dragHandle }: {
         <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug text-slate-900">{reward.title}</h3>
         <div>
           <RewardPrice reward={reward} state={state} compact />
-          {available
-            ? <span className="mt-1 inline-flex rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">{t('Available')}</span>
-            : <Blockers availability={availability} compact />}
+          <div className="mt-1 flex flex-wrap gap-1">
+            <LimitRemaining availability={availability} />
+            {available
+              ? <span className="inline-flex rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">{t('Available')}</span>
+              : <Blockers availability={availability} compact />}
+          </div>
         </div>
       </button>
       <div className="absolute right-1 top-1">{dragHandle}</div>

@@ -171,8 +171,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         </main>
 
         <nav ref={navRef} className={`mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden ${centerMobileNavigation ? 'justify-center' : ''}`} aria-label={t('Main navigation')}>
-          <MobileNavItem view="settings" icon={Settings} label={t('Settings')} />
-          <div className={`relative ${centerMobileNavigation ? 'flex-none' : 'min-w-0 flex-1'}`}>
+          <div className="relative z-10 flex-none bg-white">
+            <MobileNavItem view="settings" icon={Settings} label={t('Settings')} />
+          </div>
+          <div className={`relative overflow-hidden ${centerMobileNavigation ? 'flex-none' : 'min-w-0 flex-1'}`}>
             <div
               ref={scrollRef}
               onScroll={updateScrollEdges}

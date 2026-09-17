@@ -7,6 +7,7 @@ import {
   normalizeStartupView,
   shouldCenterMobileNavigation,
 } from './navigation';
+import layoutSource from './components/Layout.tsx?raw';
 
 describe('adaptive navigation', () => {
   it('normalizes configured items without duplicates and restores a safe default', () => {
@@ -37,5 +38,11 @@ describe('adaptive navigation', () => {
     expect(normalizeStartupView('rewards')).toBe('rewards');
     expect(normalizeStartupView('settings')).toBe('today');
     expect(normalizeStartupView(null)).toBe('today');
+  });
+
+  it('clips the scrollable mobile tabs behind a separate fixed Settings slot', () => {
+    expect(layoutSource).toContain('className="relative z-10 flex-none bg-white"');
+    expect(layoutSource).toContain('relative overflow-hidden');
+    expect(layoutSource).toContain('mobile-nav-scroll');
   });
 });

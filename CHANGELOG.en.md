@@ -2,6 +2,34 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.3.0] — 17.09.2026 — “Meaning and Rhythm”
+
+### Added
+
+- Big goals now have a multiline Why field that is preserved in backups and included in TXT reports.
+- Reward cooldowns and rolling limits can use either days or hours, including rules such as once every 16 hours.
+- The reward catalog supports named visual sections that can be created, renamed, reordered, and removed without deleting rewards.
+- Completed tasks in Today and date views can be expanded, read in full, and have their text corrected.
+- Rewards statistics show credits and keys looted today, this week, and this month, while earlier days, weeks, and months appear in a comparable list with incremental history loading.
+
+### Changed
+
+- Reward cards show remaining uses, every active blocker, and the exact next availability in both relative and calendar form.
+- Rewards move between sections through an explicit editor choice while manual ordering remains available inside each section.
+- Unused shared limit groups have been removed; every reward now calculates its own restrictions independently.
+- A completed task now expands directly into a full-width editor inside its existing card, without a separate panel or edit button.
+- Cooldown and rolling-period controls give more width to the numeric value and less to the hours/days selector.
+
+### Fixed
+
+- Scrollable mobile navigation items no longer slide underneath the fixed Settings item.
+- Long completed-task text is no longer trapped behind a truncated compact row.
+
+### Safety
+
+- The planner schema advances from 17 to 18 and Rewards storage from 5 to 6; existing day-based durations migrate without changing their length.
+- Credits, keys, grades, purchases and transaction history are not recalculated; the economy version remains unchanged.
+
 ## [6.2.1] — 12.09.2026 — “Rewards at Hand”
 
 ### Added

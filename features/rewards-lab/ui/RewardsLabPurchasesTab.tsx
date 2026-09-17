@@ -5,6 +5,7 @@ import {
   PurchaseItemInput,
   PurchaseStatus,
   REWARD_GRADES,
+  RewardDurationUnit,
   RewardGrade,
   RewardsLabState,
   getRedemptionAvailability,
@@ -34,9 +35,11 @@ const PurchaseForm = ({ purchase, onCancel, onSubmit }: {
   const [status, setStatus] = useState<PurchaseStatus>(purchase?.status ?? 'considering');
   const [url, setUrl] = useState(purchase?.url ?? '');
   const [note, setNote] = useState(purchase?.note ?? '');
-  const [cooldownDays, setCooldownDays] = useState(purchase?.cooldownDays.toString() ?? '0');
+  const [cooldownValue, setCooldownValue] = useState(purchase?.cooldownValue.toString() ?? '0');
+  const [cooldownUnit, setCooldownUnit] = useState<RewardDurationUnit>(purchase?.cooldownUnit ?? 'days');
   const [limitCount, setLimitCount] = useState(purchase?.limitCount?.toString() ?? '');
-  const [limitWindowDays, setLimitWindowDays] = useState(purchase?.limitWindowDays?.toString() ?? '');
+  const [limitWindowValue, setLimitWindowValue] = useState(purchase?.limitWindowValue?.toString() ?? '');
+  const [limitWindowUnit, setLimitWindowUnit] = useState<RewardDurationUnit>(purchase?.limitWindowUnit ?? 'days');
   const [error, setError] = useState<string | null>(null);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -44,23 +47,23 @@ const PurchaseForm = ({ purchase, onCancel, onSubmit }: {
     const estimate = Number(estimatedCost);
     const minimum = priceMin ? Number(priceMin) : null;
     const maximum = priceMax ? Number(priceMax) : null;
-    const cooldown = Number(cooldownDays || 0);
+    const cooldown = Number(cooldownValue || 0);
     const count = limitCount ? Number(limitCount) : null;
-    const windowDays = limitWindowDays ? Number(limitWindowDays) : null;
+    const windowValue = limitWindowValue ? Number(limitWindowValue) : null;
     if (!title.trim() || !Number.isInteger(estimate) || estimate <= 0
       || (minimum !== null && (!Number.isInteger(minimum) || minimum <= 0))
       || (maximum !== null && (!Number.isInteger(maximum) || maximum <= 0))
       || (minimum !== null && maximum !== null && minimum > maximum)
       || !Number.isInteger(cooldown) || cooldown < 0
-      || (count !== null && (!Number.isInteger(count) || count <= 0 || !windowDays || !Number.isInteger(windowDays)))) {
+      || (count !== null && (!Number.isInteger(count) || count <= 0 || !windowValue || !Number.isInteger(windowValue)))) {
       setError(t('Check the title, price and limit values.'));
       return;
     }
     const saved = onSubmit({
       title, estimatedCost: estimate, priceMin: minimum, priceMax: maximum,
       grade, status: purchase?.status === 'purchased' ? 'purchased' : status,
-      url, note, cooldownDays: cooldown, limitCount: count,
-      limitWindowDays: count ? windowDays : null, limitGroup: purchase?.limitGroup ?? '',
+      url, note, cooldownValue: cooldown, cooldownUnit, limitCount: count,
+      limitWindowValue: count ? windowValue : null, limitWindowUnit,
     });
     if (!saved) setError(t('The purchase could not be saved.'));
   };
@@ -81,9 +84,9 @@ const PurchaseForm = ({ purchase, onCancel, onSubmit }: {
       <label className="mt-3 block text-sm font-medium text-slate-700">{t('Link')} <span className="font-normal text-slate-400">{t('(optional)')}</span><input value={url} onChange={event => setUrl(event.target.value)} className={`${fieldClass} mt-1`} type="url" maxLength={500} /></label>
       <label className="mt-3 block text-sm font-medium text-slate-700">{t('Note')} <span className="font-normal text-slate-400">{t('(optional)')}</span><textarea value={note} onChange={event => setNote(event.target.value)} className={`${fieldClass} mt-1 min-h-16 resize-y`} maxLength={500} /></label>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="text-sm font-medium text-slate-700">{t('Cooldown, days')}<input value={cooldownDays} onChange={event => setCooldownDays(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="0" /></label>
+        <label className="text-sm font-medium text-slate-700">{t('Cooldown')}<span className="mt-1 flex gap-1"><input value={cooldownValue} onChange={event => setCooldownValue(event.target.value)} className={`${fieldClass} min-w-0 basis-0 flex-1`} type="number" min="0" /><select value={cooldownUnit} onChange={event => setCooldownUnit(event.target.value as RewardDurationUnit)} className={`${fieldClass} w-[4.5rem] flex-none px-2`}><option value="hours">{t('hours')}</option><option value="days">{t('days')}</option></select></span></label>
         <label className="text-sm font-medium text-slate-700">{t('Limit, times')}<input value={limitCount} onChange={event => setLimitCount(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="1" placeholder={t('No limit')} /></label>
-        <label className="text-sm font-medium text-slate-700">{t('Rolling period, days')}<input value={limitWindowDays} onChange={event => setLimitWindowDays(event.target.value)} className={`${fieldClass} mt-1`} type="number" min="1" disabled={!limitCount} /></label>
+        <label className="text-sm font-medium text-slate-700">{t('Rolling period')}<span className="mt-1 flex gap-1"><input value={limitWindowValue} onChange={event => setLimitWindowValue(event.target.value)} className={`${fieldClass} min-w-0 basis-0 flex-1`} type="number" min="1" disabled={!limitCount} /><select value={limitWindowUnit} onChange={event => setLimitWindowUnit(event.target.value as RewardDurationUnit)} className={`${fieldClass} w-[4.5rem] flex-none px-2`} disabled={!limitCount}><option value="hours">{t('hours')}</option><option value="days">{t('days')}</option></select></span></label>
       </div>
       {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
       <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onCancel} className={secondaryButton}>{t('Cancel')}</button><button type="submit" className={primaryButton}><Save className="h-4 w-4" />{t('Save')}</button></div>

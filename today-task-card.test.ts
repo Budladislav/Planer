@@ -66,7 +66,7 @@ describe('Today task card presentation', () => {
   });
 
   it('combines the active grade marker with its promotion button', () => {
-    const activeTodayCard = todayViewSource.slice(0, todayViewSource.indexOf('const DayOverview'));
+    const activeTodayCard = todayViewSource.slice(todayViewSource.indexOf('const SortableTaskItem'), todayViewSource.indexOf('const CompletedTaskItem'));
     expect(activeTodayCard).not.toContain('<RewardGradeMarker');
     expect(periodTaskCardSource).not.toContain('<RewardGradeMarker');
     expect(weekTaskItemsSource).not.toContain('<RewardGradeMarker');
@@ -136,5 +136,15 @@ describe('Today task card presentation', () => {
     expect(weekMetaBadges).not.toContain('<Plus');
     expect(monthMetaBadges).toContain('<NotebookPen');
     expect(monthMetaBadges).not.toContain('<Plus');
+  });
+
+  it('expands completed tasks for full text and allows title-only editing', () => {
+    const completedCard = todayViewSource.slice(todayViewSource.indexOf('const CompletedTaskItem'), todayViewSource.indexOf('const DayOverview'));
+    expect(completedCard).toContain("t('Show full completed task text')");
+    expect(completedCard).toContain('<textarea');
+    expect(completedCard).toContain('onClick={() => setExpanded(true)}');
+    expect(completedCard).not.toContain("t('Edit completed task text')");
+    expect(completedCard).toContain("onUpdate(task.id, { title: nextTitle })");
+    expect(completedCard).not.toContain('completedAt:');
   });
 });

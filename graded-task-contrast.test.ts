@@ -11,7 +11,7 @@ const stylesSource = readFileSync(new URL('./index.css', import.meta.url), 'utf8
 describe('graded completed task contrast', () => {
   it('uses one shared layered row for completed task surfaces outside TaskCard', () => {
     expect(primitivesSource).toContain("join('graded-task-row', className)");
-    expect(todaySource).toContain('<GradedTaskRow key={task.id}');
+    expect(todaySource).toContain('<GradedTaskRow className="overflow-hidden">');
     expect(weekSource).toContain('<GradedTaskRow key={task.id}');
     expect(stylesSource).toContain('.graded-task-row > :not(.reward-grade-surface)');
     expect(stylesSource).toContain('.reward-grade-surface');

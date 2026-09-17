@@ -225,6 +225,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, linkedTasks, highlighted, onD
   const [expanded, setExpanded] = useState(goal.status === 'active');
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(goal.title);
+  const [why, setWhy] = useState(goal.why);
   const [currentState, setCurrentState] = useState(goal.currentState);
   const [nextStep, setNextStep] = useState(goal.nextStep);
   const [noteDraft, setNoteDraft] = useState('');
@@ -365,6 +366,18 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, linkedTasks, highlighted, onD
 
       {expanded && (
         <div className="space-y-4 border-t border-slate-100 p-3">
+          <label className="block text-xs font-semibold text-slate-500">
+            {t('Why')}
+            <textarea
+              value={why}
+              onChange={event => setWhy(event.target.value)}
+              onBlur={() => update({ why: why.trim() })}
+              rows={3}
+              maxLength={1000}
+              placeholder={t('Why this goal matters…')}
+              className="field mt-1 w-full resize-y font-normal"
+            />
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-slate-500">
               {t('Current situation')}

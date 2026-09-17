@@ -15,10 +15,10 @@ describe('starter reward catalog', () => {
     expect(installed.added).toHaveLength(22);
     expect(installed.state.starterCatalogInstalled).toBe(true);
     expect(installed.state.rewards.find(item => item.starterTemplateId === 'song')).toMatchObject({
-      title: 'Одна выбранная песня', cost: 2, grade: 'common', limitCount: 3, limitWindowDays: 1,
+      title: 'Одна выбранная песня', cost: 2, grade: 'common', limitCount: 3, limitWindowValue: 1, limitWindowUnit: 'days',
     });
     expect(installed.state.rewards.find(item => item.starterTemplateId === 'cinema')).toMatchObject({
-      variableCost: true, grade: 'rare', cooldownDays: 7, limitCount: 2, limitWindowDays: 30,
+      variableCost: true, grade: 'rare', cooldownValue: 7, cooldownUnit: 'days', limitCount: 2, limitWindowValue: 30,
     });
   });
 

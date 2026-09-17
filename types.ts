@@ -56,6 +56,7 @@ export interface LongTermGoal {
   startedAt: string | null;
   updatedAt: string;
   completedAt: string | null;
+  why: string;
   currentState: string;
   nextStep: string;
   notes: GoalNote[];

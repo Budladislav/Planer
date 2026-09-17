@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FAIR_BAG_SLOTS,
   addRewardDefinition,
+  addRewardGroup,
   addPurchaseItem,
   adjustWalletBalance,
   archiveRewardDefinition,
@@ -9,6 +10,7 @@ import {
   drawFromFairBag,
   drawRewardKey,
   deleteRewardDefinition,
+  deleteRewardGroup,
   ensureTaskMinimumGrade,
   getAvailableKeyCounts,
   getRedemptionAvailability,
@@ -18,12 +20,14 @@ import {
   redeemReward,
   redeemPurchase,
   refundRedemption,
+  reorderRewardGroups,
   reorderRewardDefinitions,
   regradeReversedTaskClaim,
   reverseTaskCompletion,
   setTaskGrade,
   setRewardCatalogView,
   updateRewardDefinition,
+  updateRewardGroup,
   undoLatestKeyUpgrade,
   upgradeRewardKeys,
 } from './economy';
@@ -426,7 +430,7 @@ describe('reward catalog and wallet', () => {
     expect(restored.state.keys.find(key => key.id === keyId)?.status).toBe('available');
   });
 
-  it('applies cooldowns and shared rolling limits to active redemptions', () => {
+  it('applies hourly cooldowns and rolling limits to active redemptions', () => {
     const runtime = makeRuntime();
     const keys = Array.from({ length: 3 }, (_, index) => ({
       id: `limit-key-${index}`, grade: 'common' as const, status: 'available' as const,
@@ -434,21 +438,27 @@ describe('reward catalog and wallet', () => {
     }));
     const state = adjustWalletBalance({ ...createDefaultRewardsLabState(), keys }, 20, 'Seed', runtime).state;
     const first = addRewardDefinition(state, {
-      title: 'Game 30', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+      title: 'Game 30', cost: 2, limitCount: 1, limitWindowValue: 16, limitWindowUnit: 'hours',
+      cooldownValue: 4, cooldownUnit: 'hours',
     }, runtime);
     const second = addRewardDefinition(first.state, {
-      title: 'Game 60', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games', cooldownDays: 2,
+      title: 'Game 60', cost: 2, limitCount: 1, limitWindowValue: 16, limitWindowUnit: 'hours',
     }, runtime);
     const redeemed = redeemReward(second.state, first.reward.id, {
       ...runtime, now: () => '2026-08-28T12:00:00.000Z',
     });
     const availability = getRedemptionAvailability(redeemed.state, {
-      ...second.reward, kind: 'reward', active: true,
-    }, new Date('2026-08-29T12:00:00.000Z'));
+      ...first.reward, kind: 'reward', active: true,
+    }, new Date('2026-08-28T20:00:00.000Z'));
     expect(availability.outcome).toBe('limit-reached');
+    expect(availability.limitRemaining).toBe(0);
+    expect(availability.nextAvailableAt).toBe('2026-08-29T04:00:00.000Z');
+    expect(getRedemptionAvailability(redeemed.state, {
+      ...second.reward, kind: 'reward', active: true,
+    }, new Date('2026-08-28T20:00:00.000Z'))).toMatchObject({ outcome: 'available', limitRemaining: 1 });
   });
 
-  it('deletes a reward without losing wallet history, undo or shared rolling limits', () => {
+  it('deletes a reward without losing wallet history or undo', () => {
     const runtime = makeRuntime();
     const keys = Array.from({ length: 2 }, (_, index) => ({
       id: `delete-key-${index}`, grade: 'common' as const, status: 'available' as const,
@@ -456,27 +466,46 @@ describe('reward catalog and wallet', () => {
     }));
     const funded = adjustWalletBalance({ ...createDefaultRewardsLabState(), keys }, 10, 'Seed', runtime).state;
     const first = addRewardDefinition(funded, {
-      title: 'Game 30', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+      title: 'Game 30', cost: 2, limitCount: 1, limitWindowValue: 7,
     }, runtime);
     const second = addRewardDefinition(first.state, {
-      title: 'Game 60', cost: 2, limitCount: 1, limitWindowDays: 7, limitGroup: 'games',
+      title: 'Game 60', cost: 2, limitCount: 1, limitWindowValue: 7,
     }, runtime);
     const redeemed = redeemReward(second.state, first.reward.id, runtime);
     const deleted = deleteRewardDefinition(redeemed.state, first.reward.id);
 
     expect(deleted.reward?.title).toBe('Game 30');
     expect(deleted.state.rewards.some(reward => reward.id === first.reward.id)).toBe(false);
-    expect(deleted.state.ledger.find(item => item.id === redeemed.transaction!.id)).toMatchObject({
-      label: 'Game 30', limitGroup: 'games',
-    });
+    expect(deleted.state.ledger.find(item => item.id === redeemed.transaction!.id)).toMatchObject({ label: 'Game 30' });
     expect(getRedemptionAvailability(deleted.state, {
       ...second.reward, kind: 'reward', active: true,
-    }, new Date('2026-08-29T12:00:00.000Z')).outcome).toBe('limit-reached');
+    }, new Date('2026-08-29T12:00:00.000Z')).outcome).toBe('available');
 
     const refunded = refundRedemption(deleted.state, redeemed.transaction!.id, runtime);
     expect(refunded.outcome).toBe('refunded');
     expect(getWalletBalance(refunded.state)).toBe(10);
     expect(getAvailableKeyCounts(refunded.state).common).toBe(2);
+  });
+
+  it('creates, renames, reorders and safely removes visual reward sections', () => {
+    const runtime = makeRuntime();
+    const first = addRewardGroup(createDefaultRewardsLabState(), 'Music', runtime);
+    const second = addRewardGroup(first.state, 'Outings', runtime);
+    const reward = addRewardDefinition(second.state, {
+      title: 'Cinema', cost: 5, paymentMode: 'credits', groupId: second.group.id,
+    }, runtime);
+
+    expect(reward.reward.groupId).toBe(second.group.id);
+    const renamed = updateRewardGroup(reward.state, second.group.id, 'Outside', runtime);
+    expect(renamed.group?.title).toBe('Outside');
+    const reordered = reorderRewardGroups(renamed.state, [second.group.id, first.group.id]);
+    expect([...reordered.rewardGroups].sort((left, right) => left.displayOrder - right.displayOrder).map(group => group.title))
+      .toEqual(['Outside', 'Music']);
+
+    const deleted = deleteRewardGroup(reordered, second.group.id);
+    expect(deleted.group?.title).toBe('Outside');
+    expect(deleted.state.rewardGroups).toHaveLength(1);
+    expect(deleted.state.rewards[0].groupId).toBeNull();
   });
 
   it('purchases a wishlist item at its actual price and restores it on refund', () => {

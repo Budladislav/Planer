@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addRewardDefinition, claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, redeemReward, setTaskGrade } from '../domain';
+import { addRewardDefinition, addRewardGroup, claimTaskCompletion, createDefaultRewardsLabState, getWalletBalance, redeemReward, setTaskGrade } from '../domain';
 import {
   LEGACY_REWARDS_LAB_ARCHIVE_KEY,
   LEGACY_REWARDS_LAB_EXPERIMENT_FLAGS_KEY,
@@ -94,6 +94,25 @@ describe('Rewards Lab sidecar storage', () => {
     expect(loadRewardsLabState(storage)).toEqual(rewarded);
   });
 
+  it('round-trips visual sections and hourly cooldown and limit settings', () => {
+    const storage = new MemoryStorage();
+    const runtime = { now: () => '2026-09-16T10:00:00.000Z', createId: () => 'section-1' };
+    const grouped = addRewardGroup(freshStoredState(), 'Music', runtime);
+    const rewarded = addRewardDefinition(grouped.state, {
+      title: 'One song', cost: 1, paymentMode: 'credits', groupId: grouped.group.id,
+      cooldownValue: 8, cooldownUnit: 'hours', limitCount: 1, limitWindowValue: 16, limitWindowUnit: 'hours',
+    }, { now: runtime.now, createId: () => 'reward-1' });
+
+    expect(saveRewardsLabState(storage, rewarded.state)).toBe(true);
+    expect(loadRewardsLabState(storage)).toMatchObject({
+      rewardGroups: [{ id: 'section-1', title: 'Music' }],
+      rewards: [{
+        id: 'reward-1', groupId: 'section-1', cooldownValue: 8, cooldownUnit: 'hours',
+        limitCount: 1, limitWindowValue: 16, limitWindowUnit: 'hours',
+      }],
+    });
+  });
+
   it('returns a fresh default for malformed or unknown schemas', () => {
     const storage = new MemoryStorage();
     storage.setItem(REWARDS_LAB_STORAGE_KEY, '{bad json');
@@ -137,7 +156,7 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 6,
       economyVersion: 3,
       currencyName: 'Креды',
       animationsEnabled: false,
@@ -182,14 +201,14 @@ describe('Rewards Lab sidecar storage', () => {
 
     const migrated = loadRewardsLabState(storage);
     expect(migrated).toMatchObject({
-      schemaVersion: 5, economyVersion: 3, currencyName: 'Креды',
+      schemaVersion: 6, economyVersion: 3, currencyName: 'Креды',
       fairBag: { remaining: [1, 2, 3], cycle: 4 }, keyDropState: { dryStreak: 0 },
       keys: [], purchases: [], starterCatalogInstalled: false,
     });
     expect(migrated.claims.task).toMatchObject({ economyVersion: 2, luckSlot: 4, amount: 7 });
     expect(migrated.rewards).toHaveLength(1);
     expect(migrated.rewards[0]).toMatchObject({
-      grade: 'common', variableCost: false, cooldownDays: 0,
+      grade: 'common', variableCost: false, cooldownValue: 0, cooldownUnit: 'days',
       paymentMode: 'credits-and-key', displayOrder: 0,
     });
     expect(migrated.rewardCatalogView).toBe('detailed');
@@ -219,7 +238,7 @@ describe('Rewards Lab sidecar storage', () => {
     }));
 
     const migrated = loadRewardsLabState(storage);
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.rewardCatalogView).toBe('detailed');
     expect(migrated.rewards).toMatchObject([
       { id: 'old-a', paymentMode: 'credits-and-key', displayOrder: 0, cost: 15, grade: 'rare' },
@@ -252,7 +271,7 @@ describe('Rewards Lab sidecar storage', () => {
     expect(restored.keys[0].status).toBe('spent');
   });
 
-  it('migrates schema 4 by snapshotting limit groups into existing redemptions', () => {
+  it('migrates schema 4 while retiring shared limit groups without changing history', () => {
     const storage = new MemoryStorage();
     storage.setItem(REWARDS_LAB_STORAGE_KEY, JSON.stringify({
       ...createDefaultRewardsLabState(),
@@ -270,8 +289,10 @@ describe('Rewards Lab sidecar storage', () => {
     }));
 
     const migrated = loadRewardsLabState(storage);
-    expect(migrated.schemaVersion).toBe(5);
-    expect(migrated.ledger[0]).toMatchObject({ id: 'spend-old', limitGroup: 'games' });
+    expect(migrated.schemaVersion).toBe(6);
+    expect(migrated.ledger[0]).toMatchObject({ id: 'spend-old', label: 'Game' });
+    expect(migrated.ledger[0]).not.toHaveProperty('limitGroup');
+    expect(migrated.rewards[0]).toMatchObject({ cooldownValue: 0, cooldownUnit: 'days', limitWindowValue: 7, limitWindowUnit: 'days' });
   });
 
   it('sanitizes invalid nested values without importing them into the wallet', () => {

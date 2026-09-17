@@ -9,8 +9,10 @@ import {
   REWARDS_LAB_SCHEMA_VERSION,
   RewardClaim,
   RewardDefinition,
+  RewardDurationUnit,
   RewardGrade,
   RewardGradeCorrection,
+  RewardGroup,
   RewardKey,
   RewardKeyStatus,
   RewardKeyUpgrade,
@@ -195,7 +197,7 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     || !nonEmptyString(value.occurredAt) || typeof value.label !== 'string'
     || !optionalString(value.taskId) || !optionalString(value.claimId)
     || !optionalString(value.rewardId) || !optionalString(value.purchaseId)
-    || !optionalString(value.keyId) || !optionalString(value.limitGroup)
+    || !optionalString(value.keyId)
     || !optionalString(value.relatedTransactionId)
     || (Number(value.amount) === 0 && value.kind === 'spend'
       && (!nonEmptyString(value.rewardId) || !nonEmptyString(value.keyId)))
@@ -210,7 +212,6 @@ const sanitizeTransaction = (value: unknown): WalletTransaction | null => {
     ...(value.rewardId === undefined ? {} : { rewardId: value.rewardId }),
     ...(value.purchaseId === undefined ? {} : { purchaseId: value.purchaseId }),
     ...(value.keyId === undefined ? {} : { keyId: value.keyId }),
-    ...(value.limitGroup === undefined ? {} : { limitGroup: value.limitGroup.trim().slice(0, 60) }),
     ...(value.relatedTransactionId === undefined ? {} : { relatedTransactionId: value.relatedTransactionId }),
     ...(value.economyVersion === undefined ? {} : { economyVersion: value.economyVersion }),
   };
@@ -227,12 +228,30 @@ const sanitizeLedger = (value: unknown): WalletTransaction[] => {
   });
 };
 
-const limitSettings = (value: Record<string, unknown>) => ({
-  cooldownDays: Number.isInteger(value.cooldownDays) && Number(value.cooldownDays) >= 0 ? Number(value.cooldownDays) : 0,
-  limitCount: optionalPositiveInteger(value.limitCount) ? value.limitCount ?? null : null,
-  limitWindowDays: optionalPositiveInteger(value.limitWindowDays) ? value.limitWindowDays ?? null : null,
-  limitGroup: typeof value.limitGroup === 'string' ? value.limitGroup.trim().slice(0, 60) : '',
-});
+const durationUnit = (value: unknown): RewardDurationUnit => value === 'hours' ? 'hours' : 'days';
+
+const limitSettings = (value: Record<string, unknown>) => {
+  const cooldownValue = Number.isInteger(value.cooldownValue) && Number(value.cooldownValue) >= 0
+    ? Number(value.cooldownValue)
+    : Number.isInteger(value.cooldownDays) && Number(value.cooldownDays) >= 0
+      ? Number(value.cooldownDays)
+      : 0;
+  const limitCount = optionalPositiveInteger(value.limitCount) ? value.limitCount ?? null : null;
+  const limitWindowValue = limitCount !== null
+    ? Object.prototype.hasOwnProperty.call(value, 'limitWindowValue')
+      ? optionalPositiveInteger(value.limitWindowValue) ? value.limitWindowValue ?? null : null
+      : optionalPositiveInteger(value.limitWindowDays)
+        ? value.limitWindowDays ?? null
+        : null
+    : null;
+  return {
+    cooldownValue,
+    cooldownUnit: Object.prototype.hasOwnProperty.call(value, 'cooldownValue') ? durationUnit(value.cooldownUnit) : 'days' as const,
+    limitCount,
+    limitWindowValue,
+    limitWindowUnit: Object.prototype.hasOwnProperty.call(value, 'limitWindowValue') ? durationUnit(value.limitWindowUnit) : 'days' as const,
+  };
+};
 
 const sanitizeReward = (value: unknown): RewardDefinition | null => {
   if (!isRecord(value) || !nonEmptyString(value.id) || !nonEmptyString(value.title)
@@ -251,10 +270,34 @@ const sanitizeReward = (value: unknown): RewardDefinition | null => {
     displayOrder: Number.isInteger(value.displayOrder) && Number(value.displayOrder) >= 0
       ? Number(value.displayOrder)
       : 0,
+    groupId: nonEmptyString(value.groupId) ? value.groupId : null,
     ...limitSettings(value),
     ...(nonEmptyString(value.starterTemplateId) ? { starterTemplateId: value.starterTemplateId } : {}),
     createdAt: value.createdAt, updatedAt: value.updatedAt,
   };
+};
+
+const sanitizeRewardGroups = (value: unknown): RewardGroup[] => {
+  if (!Array.isArray(value)) return [];
+  const ids = new Set<string>();
+  const titles = new Set<string>();
+  return value.flatMap(raw => {
+    if (!isRecord(raw) || !nonEmptyString(raw.id) || !nonEmptyString(raw.title)
+      || !nonEmptyString(raw.createdAt) || !nonEmptyString(raw.updatedAt) || ids.has(raw.id)) return [];
+    const title = raw.title.trim().slice(0, 60);
+    const normalizedTitle = title.toLocaleLowerCase();
+    if (!title || titles.has(normalizedTitle)) return [];
+    ids.add(raw.id);
+    titles.add(normalizedTitle);
+    return [{
+      id: raw.id,
+      title,
+      displayOrder: Number.isInteger(raw.displayOrder) && Number(raw.displayOrder) >= 0 ? Number(raw.displayOrder) : 0,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    }];
+  }).sort((left, right) => left.displayOrder - right.displayOrder || left.createdAt.localeCompare(right.createdAt))
+    .map((group, index) => ({ ...group, displayOrder: index }));
 };
 
 const sanitizeRewards = (value: unknown): RewardDefinition[] => {
@@ -363,13 +406,19 @@ const sanitizeMetrics = (value: unknown): RewardsLabMetrics => {
 export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   const defaults = createDefaultRewardsLabState();
   if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2
-    && value.schemaVersion !== 3 && value.schemaVersion !== 4 && value.schemaVersion !== 5)) {
+    && value.schemaVersion !== 3 && value.schemaVersion !== 4 && value.schemaVersion !== 5
+    && value.schemaVersion !== 6)) {
     return defaults;
   }
   const previousSchema = Number(value.schemaVersion);
   const claims = sanitizeClaims(value.claims);
   const keys = previousSchema >= 3 ? sanitizeKeys(value.keys) : [];
-  const sanitizedRewards = sanitizeRewards(value.rewards);
+  const rewardGroups = previousSchema >= 6 ? sanitizeRewardGroups(value.rewardGroups) : [];
+  const validGroupIds = new Set(rewardGroups.map(group => group.id));
+  const sanitizedRewards = sanitizeRewards(value.rewards).map(reward => ({
+    ...reward,
+    groupId: reward.groupId && validGroupIds.has(reward.groupId) ? reward.groupId : null,
+  }));
   const rewards = (previousSchema >= 4
     ? sanitizedRewards.sort((left, right) => left.displayOrder - right.displayOrder || left.createdAt.localeCompare(right.createdAt))
     : sanitizedRewards).map((reward, index) => ({
@@ -378,15 +427,7 @@ export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
   }));
   const storedCurrency = nonEmptyString(value.currencyName) ? value.currencyName.trim().slice(0, 40) : defaults.currencyName;
   const purchases = previousSchema >= 3 ? sanitizePurchases(value.purchases) : [];
-  const ledger = sanitizeLedger(value.ledger).map(item => {
-    if (item.limitGroup !== undefined || (item.kind !== 'spend' && item.kind !== 'refund')) return item;
-    const targetLimitGroup = item.rewardId
-      ? rewards.find(reward => reward.id === item.rewardId)?.limitGroup
-      : item.purchaseId
-        ? purchases.find(purchase => purchase.id === item.purchaseId)?.limitGroup
-        : undefined;
-    return targetLimitGroup === undefined ? item : { ...item, limitGroup: targetLimitGroup };
-  });
+  const ledger = sanitizeLedger(value.ledger);
   const state: RewardsLabState = {
     schemaVersion: REWARDS_LAB_SCHEMA_VERSION,
     economyVersion: REWARDS_ECONOMY_VERSION,
@@ -406,6 +447,7 @@ export const sanitizeRewardsLabState = (value: unknown): RewardsLabState => {
     ledger,
     keys,
     keyUpgrades: previousSchema >= 3 ? sanitizeKeyUpgrades(value.keyUpgrades, keys) : [],
+    rewardGroups,
     rewards,
     rewardCatalogView: previousSchema >= 4 && value.rewardCatalogView === 'compact' ? 'compact' : 'detailed',
     purchases,
@@ -487,7 +529,8 @@ const restoreRaw = (storage: StorageLike, key: string, value: string | null): vo
 export const restoreRewardsBackupPayload = (storage: StorageLike, value: unknown): boolean => {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.enabled !== 'boolean'
     || !isRecord(value.state) || (value.state.schemaVersion !== 1 && value.state.schemaVersion !== 2
-      && value.state.schemaVersion !== 3 && value.state.schemaVersion !== 4 && value.state.schemaVersion !== 5)
+      && value.state.schemaVersion !== 3 && value.state.schemaVersion !== 4 && value.state.schemaVersion !== 5
+      && value.state.schemaVersion !== 6)
     || (value.legacyLabArchive !== null && sanitizeLegacyArchive(value.legacyLabArchive) === null)) return false;
 
   const previous = {
