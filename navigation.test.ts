@@ -5,6 +5,7 @@ import {
   getMobileNavigationCapacity,
   normalizeNavigationItems,
   normalizeStartupView,
+  resetHorizontalNavigationScroll,
   shouldCenterMobileNavigation,
 } from './navigation';
 import layoutSource from './components/Layout.tsx?raw';
@@ -41,8 +42,18 @@ describe('adaptive navigation', () => {
   });
 
   it('clips the scrollable mobile tabs behind a separate fixed Settings slot', () => {
-    expect(layoutSource).toContain('className="relative z-10 flex-none bg-white"');
-    expect(layoutSource).toContain('relative overflow-hidden');
+    expect(layoutSource).toContain('className="relative z-20 flex-none overflow-hidden bg-white"');
+    expect(layoutSource).toContain('relative z-0 overflow-hidden');
     expect(layoutSource).toContain('mobile-nav-scroll');
+  });
+
+  it('resets a restored nested scroll position to the configured first item', () => {
+    const scrollContainer = { scrollLeft: 212 };
+
+    resetHorizontalNavigationScroll(scrollContainer);
+
+    expect(scrollContainer.scrollLeft).toBe(0);
+    expect(layoutSource).toContain('React.useLayoutEffect');
+    expect(layoutSource).toContain('[navigationConfigurationKey, updateScrollEdges]');
   });
 });

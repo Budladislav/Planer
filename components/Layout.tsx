@@ -6,7 +6,11 @@ import {
 import { useI18n } from '../i18n';
 import { TaktMark } from './ui/TaktMark';
 import { useAppStore } from '../store';
-import { getMobileNavigationCapacity, shouldCenterMobileNavigation } from '../navigation';
+import {
+  getMobileNavigationCapacity,
+  resetHorizontalNavigationScroll,
+  shouldCenterMobileNavigation,
+} from '../navigation';
 import type { PrimaryNavigationView } from '../types';
 
 interface LayoutProps {
@@ -49,6 +53,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     view,
     ...navigationDefinitions[view],
   }));
+  const navigationConfigurationKey = state.uiPreferences.navigationItems.join('|');
   const selectedViews = new Set(state.uiPreferences.navigationItems);
   const settingsChildViews: ViewState[] = [
     'inbox', 'month', 'year', 'weekly-template', 'done', 'reports', 'goals', 'events', 'week', 'today', 'rewards',
@@ -88,6 +93,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     const frame = window.requestAnimationFrame(updateScrollEdges);
     return () => window.cancelAnimationFrame(frame);
   }, [navWidth, primaryNavItems.length, updateScrollEdges]);
+
+  React.useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    // Android Chrome may restore a nested scroller's old position when an installed
+    // PWA starts. Reset only on startup or when the configured menu itself changes.
+    resetHorizontalNavigationScroll(element);
+    updateScrollEdges();
+    const frame = window.requestAnimationFrame(() => {
+      resetHorizontalNavigationScroll(element);
+      updateScrollEdges();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [navigationConfigurationKey, updateScrollEdges]);
 
   const capacity = getMobileNavigationCapacity(navWidth);
   const centerMobileNavigation = shouldCenterMobileNavigation(state.uiPreferences.navigationItems, navWidth);
@@ -170,11 +190,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           {children}
         </main>
 
-        <nav ref={navRef} className={`mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden ${centerMobileNavigation ? 'justify-center' : ''}`} aria-label={t('Main navigation')}>
-          <div className="relative z-10 flex-none bg-white">
+        <nav ref={navRef} className={`mobile-nav-shell fixed bottom-0 left-0 right-0 z-30 isolate flex items-center gap-0.5 rounded-t-2xl border border-b-0 border-line bg-white px-1 pt-1 shadow-float lg:hidden ${centerMobileNavigation ? 'justify-center' : ''}`} aria-label={t('Main navigation')}>
+          <div className="relative z-20 flex-none overflow-hidden bg-white">
             <MobileNavItem view="settings" icon={Settings} label={t('Settings')} />
           </div>
-          <div className={`relative overflow-hidden ${centerMobileNavigation ? 'flex-none' : 'min-w-0 flex-1'}`}>
+          <div className={`relative z-0 overflow-hidden ${centerMobileNavigation ? 'flex-none' : 'min-w-0 flex-1'}`}>
             <div
               ref={scrollRef}
               onScroll={updateScrollEdges}

@@ -54,3 +54,9 @@ export const shouldCenterMobileNavigation = (
   items: readonly PrimaryNavigationView[],
   width: number,
 ): boolean => items.length + 1 < getMobileNavigationCapacity(width);
+
+export const resetHorizontalNavigationScroll = (
+  element: Pick<HTMLElement, 'scrollLeft'> | null,
+): void => {
+  if (element) element.scrollLeft = 0;
+};

@@ -2,6 +2,17 @@
 
 This is the user-facing release history. Dates for older versions were reconstructed from Git history.
 
+## [6.3.1] — 17.09.2026 — “Menu in Place”
+
+### Fixed
+
+- The installed Android PWA bottom navigation now always starts at the first configured section, even when the browser restores an old horizontal scroll position.
+- Scrollable items are additionally isolated from the fixed Settings button and can no longer appear underneath it.
+
+### Security
+
+- User data structure and content are unchanged; no migration is required.
+
 ## [6.3.0] — 17.09.2026 — “Meaning and Rhythm”
 
 ### Added
